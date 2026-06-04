@@ -1,6 +1,6 @@
 # Кодекс поведения участников
 
-> **English (Contributor Covenant):** [docs/en/CODE_OF_CONDUCT.md](docs/en/CODE_OF_CONDUCT.md)
+> **English:** [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html)
 
 ## Наши обязательства
 

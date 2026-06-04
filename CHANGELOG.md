@@ -1,7 +1,5 @@
 # История изменений
 
-> **English:** [docs/en/CHANGELOG.md](docs/en/CHANGELOG.md)
-
 Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/),
 версии — [Semantic Versioning](https://semver.org/lang/ru/).
 

@@ -36,7 +36,7 @@ cmake --build build\Release
 
 ## Versions
 
-Edit [`cmake/PixelStudioVersion.cmake`](../../cmake/PixelStudioVersion.cmake) and [`CHANGELOG.md`](CHANGELOG.md) under `[Unreleased]`.
+Edit [`cmake/PixelStudioVersion.cmake`](../../cmake/PixelStudioVersion.cmake) and [`CHANGELOG.md`](../../CHANGELOG.md) under `[Unreleased]`.
 
 ## Code style
 
@@ -52,7 +52,7 @@ Edit [`cmake/PixelStudioVersion.cmake`](../../cmake/PixelStudioVersion.cmake) an
 
 1. Fork, branch from `main`.
 2. Local Windows build passes; CI `build.yml` green.
-3. Update [CHANGELOG.md](../../CHANGELOG.md) (or [English](CHANGELOG.md)) when user-visible.
+3. Update [CHANGELOG.md](../../CHANGELOG.md) when user-visible.
 4. Complete the PR template.
 5. Screenshots in `docs/screenshots/` for UI changes.
 
@@ -68,4 +68,4 @@ Labels: [`.github/labels.yml`](../../.github/labels.yml). Issue forms are in Rus
 
 ## Code of conduct
 
-[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) · [Русский](../../CODE_OF_CONDUCT.md)
+[CODE_OF_CONDUCT](../../CODE_OF_CONDUCT.md) · [Contributor Covenant (EN)](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html)

@@ -38,7 +38,10 @@ cmake --build build\Release
 
 ## Версии
 
-Правки в [`cmake/PixelStudioVersion.cmake`](cmake/PixelStudioVersion.cmake) и запись в [`CHANGELOG.md`](CHANGELOG.md) в секции `[Unreleased]`.
+Схема **`G.M.m`** + опциональный **fix** (`0.1.0b`, `1.2.3b`): [docs/versioning.md](docs/versioning.md).
+
+Правки в [`cmake/PixelStudioVersion.cmake`](cmake/PixelStudioVersion.cmake) и [`CHANGELOG.md`](CHANGELOG.md) (`[Unreleased]`).  
+На PR — метки `major` / `minor` / `patch` / `version-fix` для Release Drafter.
 
 ## Стиль кода
 
@@ -71,6 +74,6 @@ cmake --build build\Release
 
 ## Кодекс поведения
 
-[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) · [English](docs/en/CODE_OF_CONDUCT.md)
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
 Неприемлемое поведение — через Issues или [SECURITY.md](SECURITY.md), если уместно.

@@ -3,12 +3,11 @@ name: Release
 on:
   push:
     tags:
-      - "v*.*.*"
-      - "v*.*.*.*"
+      - "v*"
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to publish (must exist on remote), e.g. v0.1.0"
+        description: "Tag to publish, e.g. v0.1.0 or v1.2.3b"
         required: true
         type: string
 
@@ -39,7 +38,9 @@ jobs:
           } else {
             '${{ github.ref_name }}'
           }
-          if ($t -notmatch '^v\d') { throw "Invalid tag: $t (expected vMAJOR.MINOR.PATCH)" }
+          if ($t -notmatch '^v\d+(\.\d+){2}([a-zA-Z])?$') {
+            throw "Invalid tag: $t (expected vG.M.m or vG.M.mfix, e.g. v1.2.3b)"
+          }
           "name=$t" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Setup build environment

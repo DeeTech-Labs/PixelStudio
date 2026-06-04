@@ -12,7 +12,7 @@
 | **Русский** (по умолчанию) | этот файл |
 | **English** | [docs/en/README.md](docs/en/README.md) |
 
-Полный указатель: [docs/README.md](docs/README.md) · [docs/en/README.md](docs/en/README.md) (index)
+Указатель документации: [docs/README.md](docs/README.md)
 
 ---
 
@@ -98,7 +98,7 @@ docs/           Документация (RU + docs/en/)
 
 ## Безопасность
 
-[SECURITY.md](SECURITY.md) · [English](docs/en/SECURITY.md)
+[SECURITY.md](SECURITY.md)
 
 ## Лицензия
 

@@ -1,6 +1,15 @@
 name-template: "v$RESOLVED_VERSION"
 tag-template: "v$RESOLVED_VERSION"
-version-resolver: linear
+version-resolver:
+  major:
+    labels:
+      - major
+  minor:
+    labels:
+      - minor
+  patch:
+    labels:
+      - patch
 categories:
   - title: "Features"
     labels: ["enhancement"]
@@ -18,8 +27,10 @@ template: |
 
   $CHANGES
 
-  **Версия:** v$RESOLVED_VERSION
+  **Версия (черновик):** v$RESOLVED_VERSION — формат `G.M.m` (см. [docs/versioning.md](https://github.com/DeeTech-Labs/PixelStudio/blob/main/docs/versioning.md)).
 
-  Установщик Windows публикуется workflow [Release](https://github.com/DeeTech-Labs/PixelStudio/actions/workflows/release.yml) при push тега `v$RESOLVED_VERSION`.
+  **Суффикс fix** (`0.1.0b`, `1.2.3b`): Release Drafter не добавляет букву автоматически. Перед публикацией:
+  1. Обновите `PS_VERSION_FIX` в `cmake/PixelStudioVersion.cmake`
+  2. Переименуйте тег/релиз в `v1.2.3b` (метка PR `version-fix`)
 
-  > Предупреждения «No published release» до первого опубликованного релиза — нормальны: сравнение с предыдущим тегом появится после `v0.1.0`.
+  Установщик: workflow [Release](https://github.com/DeeTech-Labs/PixelStudio/actions/workflows/release.yml) при push тега.

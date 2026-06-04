@@ -22,7 +22,7 @@ Desktop utility to convert images into C/C++ arrays and firmware-friendly format
 
 ## Screenshots
 
-Add PNG files under [`../screenshots/`](../screenshots/) ([guide](screenshots.md)), then uncomment in the Russian or English README:
+Add PNG files under [`../screenshots/`](../screenshots/) ([guide](../screenshots/README.md)), then uncomment in the README:
 
 <!--
 ![Welcome screen](../screenshots/welcome.png)
@@ -100,7 +100,7 @@ Issues: [GitHub Issues](https://github.com/DeeTech-Labs/PixelStudio/issues) (for
 
 ## Security
 
-[SECURITY.md](SECURITY.md) · [Русский](../../SECURITY.md)
+[SECURITY.md](../../SECURITY.md) (Russian)
 
 ## License
 
