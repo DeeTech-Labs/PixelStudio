@@ -11,9 +11,9 @@ inputs:
     required: false
     default: "false"
   modules:
-    description: Extra aqt modules (space-separated), e.g. qt5compat for GraphicalEffects
+    description: Extra aqt modules (space-separated); qt5compat + qtshadertools for installer deploy
     required: false
-    default: "qt5compat"
+    default: "qt5compat qtshadertools"
 
 runs:
   using: composite
@@ -40,6 +40,10 @@ runs:
         $ge = Join-Path $env:QT_ROOT_DIR "qml\Qt5Compat\GraphicalEffects\qmldir"
         if (-not (Test-Path $ge)) {
           throw "Qt5Compat GraphicalEffects missing ($ge). Set action input modules=qt5compat."
+        }
+        $shaderTools = Join-Path $env:QT_ROOT_DIR "bin\Qt6ShaderTools.dll"
+        if (-not (Test-Path $shaderTools)) {
+          throw "Qt6ShaderTools.dll missing ($shaderTools). Add qtshadertools to action modules."
         }
         cmake --version
         & "$env:QT_ROOT_DIR\bin\qmake.exe" -query QT_VERSION

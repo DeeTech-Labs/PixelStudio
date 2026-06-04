@@ -68,7 +68,7 @@ Output: `installer\output\PixelStudio-Setup-<version>.exe`. Version: [`cmake/Pix
 | [`release.yml`](../../.github/workflows/release.yml) | tag `v*.*.*` or manual | Installer + GitHub Release |
 | [`labels.yml`](../../.github/workflows/labels.yml) | `.github/labels.yml` changed | Label sync |
 
-Uses [`.github/actions/setup-windows-qt`](../../.github/actions/setup-windows-qt) (Qt 6.8.2 desktop kit with **qt5compat** for `GraphicalEffects`; release build uses Ninja + `build-installer.ps1`).
+Uses [`.github/actions/setup-windows-qt`](../../.github/actions/setup-windows-qt) (Qt 6.8.2 with **qt5compat** and **qtshadertools** for `windeployqt`; release uses Ninja + `build-installer.ps1`).
 
 ## Troubleshooting
 
@@ -77,6 +77,7 @@ Uses [`.github/actions/setup-windows-qt`](../../.github/actions/setup-windows-qt
 | `Could not find Qt6` | Set `-DCMAKE_PREFIX_PATH` to MSVC kit root |
 | Ninja / compiler missing | x64 Native Tools or VS Developer PowerShell |
 | `windeployqt` missing QML | `--qmldir` → `src\qml` |
+| `windeployqt` / `Qt6ShaderTools.dll` missing | Install **qtshadertools** module (see setup-windows-qt) |
 | Installer staging (`Missing … Qt5Compat/…`) | Install Qt module **qt5compat**, rerun `windeployqt` |
 | SmartScreen on setup.exe | Unsigned installer — expected; use Authenticode signing for production |
 | App won't start after install | Check `qml/Qt5Compat/GraphicalEffects` next to `appPixelStudio.exe` |

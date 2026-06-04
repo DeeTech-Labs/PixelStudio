@@ -84,7 +84,7 @@ $qml = ".\src\qml"
 | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*.*.*` или вручную | Установщик + GitHub Release |
 | [`.github/workflows/labels.yml`](../.github/workflows/labels.yml) | изменение `.github/labels.yml` | Синхронизация меток |
 
-Окружение: [`.github/actions/setup-windows-qt`](../.github/actions/setup-windows-qt) (Qt 6.8.2, модуль **qt5compat** для `Qt5Compat.GraphicalEffects`, Linguist tools; release — Ninja + `build-installer.ps1`).
+Окружение: [`.github/actions/setup-windows-qt`](../.github/actions/setup-windows-qt) (Qt 6.8.2, модули **qt5compat** и **qtshadertools** для `windeployqt`; release — Ninja + `build-installer.ps1`).
 
 ## Устранение неполадок
 
@@ -93,6 +93,7 @@ $qml = ".\src\qml"
 | `Could not find Qt6` | Указать `-DCMAKE_PREFIX_PATH` на корень MSVC kit |
 | Ninja / компилятор не найден | «x64 Native Tools» или Developer PowerShell |
 | `windeployqt` не подхватывает QML | `--qmldir` → `src\qml` |
+| `windeployqt` / `Qt6ShaderTools.dll` not found | В CI установить модуль **qtshadertools** (см. setup-windows-qt) |
 | Ошибка staging (`Missing … qml/Qt5Compat/…`) | В CI/local Qt должен быть модуль **qt5compat**; пересобрать с `windeployqt` |
 | Ошибка staging (`imageformats/qicns.dll` и др.) | В списке только нужные плагины (jpeg/gif/ico/svg); лишние форматы не требуются |
 | SmartScreen при запуске установщика | Неподписанный `.exe` — нормально; для продакшена нужна подпись Authenticode (сертификат) |
