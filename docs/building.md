@@ -84,7 +84,7 @@ $qml = ".\src\qml"
 | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*.*.*` или вручную | Установщик + GitHub Release |
 | [`.github/workflows/labels.yml`](../.github/workflows/labels.yml) | изменение `.github/labels.yml` | Синхронизация меток |
 
-Окружение: [`.github/actions/setup-windows-qt`](../.github/actions/setup-windows-qt) (Qt 6.8.2, Linguist tools; CI — Visual Studio 2022 generator).
+Окружение: [`.github/actions/setup-windows-qt`](../.github/actions/setup-windows-qt) (Qt 6.8.2, модуль **qt5compat** для `Qt5Compat.GraphicalEffects`, Linguist tools; release — Ninja + `build-installer.ps1`).
 
 ## Устранение неполадок
 
@@ -93,10 +93,7 @@ $qml = ".\src\qml"
 | `Could not find Qt6` | Указать `-DCMAKE_PREFIX_PATH` на корень MSVC kit |
 | Ninja / компилятор не найден | «x64 Native Tools» или Developer PowerShell |
 | `windeployqt` не подхватывает QML | `--qmldir` → `src\qml` |
-| Ошибка staging / `Deploy tree is incomplete` | Запустить `build-installer.ps1` без `-SkipDeploy`; нужен `--compiler-runtime` |
-| SmartScreen при скачивании с GitHub | Установщик без подписи: **Подробнее** → **Выполнить в любом случае**; для продакшена — Authenticode (EV-сертификат) |
-| Приложение не открывается после установки | Запуск из меню Пуск; проверить, что в `{app}` есть `vcruntime140.dll` и `platforms\qwindows.dll`; пересобрать установщик через CI |
-
-### Подпись кода (SmartScreen)
-
-Без **Authenticode** Windows помечает новый `.exe` из интернета. Это не баг сборки. Чтобы убрать предупреждение для пользователей, подпишите `PixelStudio-Setup-*.exe` (и при желании `appPixelStudio.exe`) сертификатом издателя и добавьте шаг `signtool` в `release.yml` (секреты `WINDOWS_CERT_*` в репозитории).
+| Ошибка staging (`Missing … qml/Qt5Compat/…`) | В CI/local Qt должен быть модуль **qt5compat**; пересобрать с `windeployqt` |
+| Ошибка staging (`imageformats/qicns.dll` и др.) | В списке только нужные плагины (jpeg/gif/ico/svg); лишние форматы не требуются |
+| SmartScreen при запуске установщика | Неподписанный `.exe` — нормально; для продакшена нужна подпись Authenticode (сертификат) |
+| Приложение не стартует после установки | Запуск из `Program Files\PixelStudio`, проверить наличие `qml\Qt5Compat\GraphicalEffects` рядом с exe |

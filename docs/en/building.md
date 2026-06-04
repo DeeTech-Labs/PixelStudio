@@ -68,7 +68,7 @@ Output: `installer\output\PixelStudio-Setup-<version>.exe`. Version: [`cmake/Pix
 | [`release.yml`](../../.github/workflows/release.yml) | tag `v*.*.*` or manual | Installer + GitHub Release |
 | [`labels.yml`](../../.github/workflows/labels.yml) | `.github/labels.yml` changed | Label sync |
 
-Uses [`.github/actions/setup-windows-qt`](../../.github/actions/setup-windows-qt) (Qt 6.8.2 + `qt5compat` / `qtsvg`; release workflow uses Ninja via `build-installer.ps1`).
+Uses [`.github/actions/setup-windows-qt`](../../.github/actions/setup-windows-qt) (Qt 6.8.2 desktop kit with **qt5compat** for `GraphicalEffects`; release build uses Ninja + `build-installer.ps1`).
 
 ## Troubleshooting
 
@@ -77,6 +77,6 @@ Uses [`.github/actions/setup-windows-qt`](../../.github/actions/setup-windows-qt
 | `Could not find Qt6` | Set `-DCMAKE_PREFIX_PATH` to MSVC kit root |
 | Ninja / compiler missing | x64 Native Tools or VS Developer PowerShell |
 | `windeployqt` missing QML | `--qmldir` → `src\qml` |
-| `Deploy tree is incomplete` | Run `build-installer.ps1` without `-SkipDeploy`; MSVC DLLs are copied from VS Redist |
-| SmartScreen on GitHub download | Unsigned installer: **More info** → **Run anyway**; use Authenticode for production |
-| App does not start after install | Launch from Start menu; ensure `vcruntime140.dll` and `platforms\qwindows.dll` exist under `{app}` |
+| Installer staging (`Missing … Qt5Compat/…`) | Install Qt module **qt5compat**, rerun `windeployqt` |
+| SmartScreen on setup.exe | Unsigned installer — expected; use Authenticode signing for production |
+| App won't start after install | Check `qml/Qt5Compat/GraphicalEffects` next to `appPixelStudio.exe` |

@@ -11,9 +11,9 @@ inputs:
     required: false
     default: "false"
   modules:
-    description: Extra Qt modules for aqtinstall (space-separated)
+    description: Extra aqt modules (space-separated), e.g. qt5compat for GraphicalEffects
     required: false
-    default: "qt5compat qtsvg"
+    default: "qt5compat"
 
 runs:
   using: composite
@@ -26,7 +26,7 @@ runs:
         target: desktop
         arch: win64_msvc2022_64
         cache: true
-        cache-key-prefix: pixelstudio-qt-${{ inputs.qt-version }}
+        cache-key-prefix: pixelstudio-qt-${{ inputs.qt-version }}-${{ inputs.modules }}
         modules: ${{ inputs.modules }}
         tools: ${{ inputs.install-ninja == 'true' && 'tools_ninja' || '' }}
 
@@ -36,6 +36,10 @@ runs:
         if (-not $env:QT_ROOT_DIR) { throw "QT_ROOT_DIR is not set" }
         if (-not (Test-Path "$env:QT_ROOT_DIR\bin\qmake.exe")) {
           throw "Qt not found under QT_ROOT_DIR=$env:QT_ROOT_DIR"
+        }
+        $ge = Join-Path $env:QT_ROOT_DIR "qml\Qt5Compat\GraphicalEffects\qmldir"
+        if (-not (Test-Path $ge)) {
+          throw "Qt5Compat GraphicalEffects missing ($ge). Set action input modules=qt5compat."
         }
         cmake --version
         & "$env:QT_ROOT_DIR\bin\qmake.exe" -query QT_VERSION
