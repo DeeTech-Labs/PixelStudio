@@ -1,0 +1,34 @@
+name: "Вопрос по использованию"
+description: Не баг и не фича — нужна помощь с настройкой или workflow
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Для ошибок используйте шаблон «Сообщить об ошибке». Здесь — вопросы по экспорту, профилям дисплея, форматам.
+
+  - type: input
+    id: version
+    attributes:
+      label: Версия PixelStudio
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Вопрос
+      description: Что вы пытаетесь сделать и где застряли?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Контекст
+      placeholder: |
+        - Контроллер / дисплей
+        - Целевой формат (C array, RGB565, RLE, …)
+        - Что уже пробовали

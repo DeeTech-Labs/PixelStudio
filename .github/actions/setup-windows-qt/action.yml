@@ -1,0 +1,41 @@
+name: Setup Windows Qt build environment
+description: MSVC toolset, Ninja, and Qt 6.8 for PixelStudio CI
+
+inputs:
+  qt-version:
+    description: Qt version (aqtinstall)
+    required: false
+    default: "6.8.2"
+  qt-modules:
+    description: Space-separated extra Qt modules
+    required: false
+    default: "qtquickcontrols2 qtsvg qttools"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{ inputs.qt-version }}
+        host: windows
+        target: desktop
+        arch: win64_msvc2022_64
+        modules: ${{ inputs.qt-modules }}
+        tools: tools_ninja
+        cache: true
+        cache-key-prefix: pixelstudio-qt-${{ inputs.qt-version }}
+
+    - name: Verify toolchain
+      shell: pwsh
+      run: |
+        if (-not $env:QT_ROOT_DIR) { throw "QT_ROOT_DIR is not set" }
+        if (-not (Test-Path "$env:QT_ROOT_DIR\bin\qmake.exe")) {
+          throw "Qt not found under QT_ROOT_DIR=$env:QT_ROOT_DIR"
+        }
+        cmake --version
+        ninja --version
+        & "$env:QT_ROOT_DIR\bin\qmake.exe" -query QT_VERSION

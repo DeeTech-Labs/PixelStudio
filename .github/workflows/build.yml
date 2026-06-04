@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/labels.yml"
+      - "LICENSE"
+      - "NOTICE.txt"
+      - "CODE_OF_CONDUCT.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/labels.yml"
+      - "LICENSE"
+      - "NOTICE.txt"
+      - "CODE_OF_CONDUCT.md"
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    name: Windows (Qt 6.8, Release)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-windows-qt
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S . -B build-ci -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build-ci --parallel
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: appPixelStudio-win64
+          path: build-ci/appPixelStudio.exe
+          if-no-files-found: error
+          retention-days: 14

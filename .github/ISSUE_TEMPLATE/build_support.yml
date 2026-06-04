@@ -1,0 +1,55 @@
+name: "Проблема со сборкой / CI"
+description: CMake, Qt, установщик, GitHub Actions
+title: "[Build]: "
+labels: ["build", "question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        См. [docs/building.md](https://github.com/DeeTech-Labs/PixelStudio/blob/main/docs/building.md).
+        Для падения **CI на PR** приложите ссылку на failed run Actions.
+
+  - type: dropdown
+    id: target
+    attributes:
+      label: Что не получается
+      options:
+        - Локальная сборка (cmake / ninja)
+        - windeployqt / запуск exe
+        - installer/build-installer.ps1
+        - GitHub Actions (CI / Release)
+    validations:
+      required: true
+
+  - type: input
+    id: qt
+    attributes:
+      label: Путь к Qt (локально)
+      placeholder: "C:\Qt6\6.8.2\msvc2022_64"
+    validations:
+      required: false
+
+  - type: input
+    id: vs
+    attributes:
+      label: Visual Studio
+      placeholder: "VS 2022, MSVC v143"
+    validations:
+      required: false
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Выполненные команды
+      placeholder: |
+        cmake -S . -B build\Release ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Текст ошибки / лог
+      description: Последние 30–50 строк вывода
+    validations:
+      required: true

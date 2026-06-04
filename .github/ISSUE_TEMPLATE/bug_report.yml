@@ -1,0 +1,72 @@
+name: "Сообщить об ошибке"
+description: Неверное поведение, сбой или регрессия
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Опишите проблему максимально конкретно: версия, шаги, ожидаемый и фактический результат.
+        Скриншоты и пример изображения (без персональных данных) сильно ускоряют разбор.
+
+  - type: input
+    id: version
+    attributes:
+      label: Версия PixelStudio
+      description: Из «О программе», установщика или тега GitHub
+      placeholder: "0.1.0 / v0.1.0 / commit abc1234"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: Способ установки
+      options:
+        - Установщик с GitHub Releases
+        - Собрал из исходников
+        - Другое
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Шаги воспроизведения
+      placeholder: |
+        1. Открыть проект …
+        2. Загрузить PNG …
+        3. Экспорт в .h …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемое поведение
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Фактическое поведение
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Окружение
+      placeholder: |
+        - Windows 10/11 (сборка …)
+        - Профиль дисплея / пресет (Icon, Splash, …)
+        - Размер и формат изображения
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Логи / скриншоты
+      description: После отправки можно перетащить изображения в комментарий к issue

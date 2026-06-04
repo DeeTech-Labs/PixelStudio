@@ -1,0 +1,40 @@
+name: "Предложить улучшение"
+description: Новая возможность или изменение существующего поведения
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Кратко опишите задачу пользователя. Если есть аналог в других утилитах — укажите для сравнения.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Задача / боль
+      description: Какой сценарий (OLED/TFT, экспорт, UI) вы хотите упростить?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Предлагаемое решение
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Рассмотренные альтернативы
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Важность для вас
+      options:
+        - Желательно
+        - Важно для моего проекта
+        - Блокирует работу
+    validations:
+      required: true

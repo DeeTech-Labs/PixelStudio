@@ -1,0 +1,16 @@
+PixelStudio
+Copyright (c) 2026 DeeTech Labs
+
+This application is distributed under the MIT License (see LICENSE).
+
+Third-party components
+----------------------
+
+This software uses Qt (https://www.qt.io/), licensed under the GNU Lesser
+General Public License (LGPL) version 3. When you distribute binaries built
+from this repository, you must comply with Qt's LGPL obligations (including
+allowing users to relink against modified Qt libraries where applicable).
+
+Other runtime dependencies may be bundled by windeployqt when building the
+Windows installer. Refer to Qt documentation and your build output for the
+exact list of DLLs included in a given release.

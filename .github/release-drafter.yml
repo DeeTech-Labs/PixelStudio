@@ -1,0 +1,22 @@
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
+categories:
+  - title: "Features"
+    labels: ["enhancement"]
+  - title: "Bug fixes"
+    labels: ["bug"]
+  - title: "Build & CI"
+    labels: ["build"]
+  - title: "Documentation"
+    labels: ["documentation"]
+  - title: "Maintenance"
+    labels: ["dependencies"]
+change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
+template: |
+  ## Changes
+
+  $CHANGES
+
+  **Full changelog:** https://github.com/DeeTech-Labs/PixelStudio/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+
+  Install the Windows build from the assets below. Verify SHA256 checksums in the release description when provided.

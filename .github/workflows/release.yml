@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+      - "v*.*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish (must exist on remote), e.g. v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-windows:
+    name: Build installer and publish release
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+
+      - name: Resolve release tag
+        id: tag
+        shell: pwsh
+        run: |
+          $t = if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            '${{ inputs.tag }}'
+          } else {
+            '${{ github.ref_name }}'
+          }
+          if ($t -notmatch '^v\d') { throw "Invalid tag: $t (expected vMAJOR.MINOR.PATCH)" }
+          "name=$t" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-windows-qt
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          $isccDir = "${env:ProgramFiles(x86)}\Inno Setup 6"
+          if (-not (Test-Path "$isccDir\ISCC.exe")) { throw "ISCC.exe not found after install" }
+          echo "$isccDir" >> $env:GITHUB_PATH
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $buildDir = Join-Path $PWD "build\Release"
+          & "$PWD\installer\build-installer.ps1" -QtDir $env:QT_ROOT_DIR -BuildDir $buildDir
+
+      - name: Write release notes
+        id: meta
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem installer/output -Filter "PixelStudio-Setup-*.exe" |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $setup) { throw "Installer not found in installer/output" }
+          $hash = (Get-FileHash $setup.FullName -Algorithm SHA256).Hash
+          @(
+            "## Checksums",
+            "",
+            "| File | SHA256 |",
+            "|------|--------|",
+            "| $($setup.Name) | ``$hash`` |",
+            "",
+            "Built from tag ``${{ steps.tag.outputs.name }}`` on Windows x64 (Qt 6.8.2, MSVC 2022)."
+          ) | Set-Content -Path release-notes-extra.md -Encoding utf8NoBOM
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "path=$($setup.FullName)"
+          "$($setup.Name)  $hash" | Set-Content -Path SHA256SUMS.txt -Encoding utf8NoBOM
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: PixelStudio ${{ steps.tag.outputs.name }}
+          files: |
+            ${{ steps.meta.outputs.path }}
+            SHA256SUMS.txt
+          body_path: release-notes-extra.md
+          generate_release_notes: true
+          fail_on_unmatched_files: true
