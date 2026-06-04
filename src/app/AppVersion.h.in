@@ -1,0 +1,29 @@
+#ifndef PIXELSTUDIO_APP_APPVERSION_H
+#define PIXELSTUDIO_APP_APPVERSION_H
+
+#include <QString>
+
+namespace AppVersion {
+
+inline constexpr int kGlobal = @PS_VERSION_GLOBAL@;
+inline constexpr int kMajor = @PS_VERSION_MAJOR@;
+inline constexpr int kMinor = @PS_VERSION_MINOR@;
+
+// Пустая строка в cmake → kFix = 0 (без суффикса)
+inline constexpr char kFix = @PS_VERSION_FIX_LITERAL@;
+
+inline QString display()
+{
+    QString v = QString::number(kGlobal) + QLatin1Char('.')
+              + QString::number(kMajor) + QLatin1Char('.')
+              + QString::number(kMinor);
+    if (kFix != 0)
+        v += QLatin1Char(kFix);
+    return v;
+}
+
+inline constexpr const char *displayUtf8 = "@PS_VERSION_DISPLAY@";
+
+} // namespace AppVersion
+
+#endif // PIXELSTUDIO_APP_APPVERSION_H

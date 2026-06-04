@@ -1,0 +1,171 @@
+#include "persistence/AppSettings.h"
+
+#include "i18n/AppLocale.h"
+#include "persistence/AppPaths.h"
+#include "persistence/SettingsSchema.h"
+
+#include <QVariantMap>
+
+AppSettings::AppSettings(QObject *parent)
+    : QObject(parent)
+    , m_settings(AppPaths::appSettingsFile(), QSettings::IniFormat)
+{
+    SettingsSchema::migrateAppSettings(m_settings);
+    load();
+}
+
+void AppSettings::load()
+{
+    m_languageCode = m_settings.value(QStringLiteral("app/language"), m_languageCode).toString();
+    if (m_languageCode != QStringLiteral("system") && m_languageCode != QStringLiteral("en") && m_languageCode != QStringLiteral("ru"))
+        m_languageCode = QStringLiteral("system");
+    m_showSidebar = m_settings.value(QStringLiteral("app/showSidebar"), m_showSidebar).toBool();
+    m_codeWrap = m_settings.value(QStringLiteral("app/codeWrap"), m_codeWrap).toBool();
+    m_confirmExit = m_settings.value(QStringLiteral("app/confirmExit"), m_confirmExit).toBool();
+    m_confirmCloseTab = m_settings.value(QStringLiteral("app/confirmCloseTab"), m_confirmCloseTab).toBool();
+    m_restoreLastProject = m_settings.value(QStringLiteral("app/restoreLastProject"), m_restoreLastProject).toBool();
+    m_showWelcomeOnStartup = m_settings.value(QStringLiteral("app/showWelcomeOnStartup"), m_showWelcomeOnStartup).toBool();
+    m_projectAutosave = m_settings.value(QStringLiteral("app/projectAutosave"), m_projectAutosave).toBool();
+    m_projectAutosaveSeconds = qBound(30, m_settings.value(QStringLiteral("app/projectAutosaveSeconds"), m_projectAutosaveSeconds).toInt(), 3600);
+    m_projectsRoot = m_settings.value(QStringLiteral("app/projectsRoot")).toString();
+    m_exportsRoot = m_settings.value(QStringLiteral("app/exportsRoot")).toString();
+    m_documentsRoot = m_settings.value(QStringLiteral("app/documentsRoot")).toString();
+}
+
+void AppSettings::saveValue(const QString &key, const QVariant &value)
+{
+    m_settings.setValue(key, value);
+    m_settings.sync();
+}
+
+QVariantList AppSettings::availableLanguages() const
+{
+    return {
+        QVariantMap{{QStringLiteral("code"), QStringLiteral("system")},
+                    {QStringLiteral("name"), AppLocale::tr("System language")}},
+        QVariantMap{{QStringLiteral("code"), QStringLiteral("ru")},
+                    {QStringLiteral("name"), QStringLiteral("Русский")}},
+        QVariantMap{{QStringLiteral("code"), QStringLiteral("en")},
+                    {QStringLiteral("name"), AppLocale::tr("English")}},
+    };
+}
+
+void AppSettings::resetUiDefaults()
+{
+    setShowSidebar(true);
+    setCodeWrap(false);
+    setConfirmExit(true);
+    setConfirmCloseTab(true);
+}
+
+void AppSettings::setLanguageCode(const QString &code)
+{
+    const QString safe = (code == QStringLiteral("en") || code == QStringLiteral("ru"))
+        ? code
+        : QStringLiteral("system");
+    if (m_languageCode == safe)
+        return;
+    m_languageCode = safe;
+    saveValue(QStringLiteral("app/language"), m_languageCode);
+    emit languageCodeChanged();
+}
+
+void AppSettings::setShowSidebar(bool on)
+{
+    if (m_showSidebar == on)
+        return;
+    m_showSidebar = on;
+    saveValue(QStringLiteral("app/showSidebar"), on);
+    emit showSidebarChanged();
+}
+
+void AppSettings::setCodeWrap(bool on)
+{
+    if (m_codeWrap == on)
+        return;
+    m_codeWrap = on;
+    saveValue(QStringLiteral("app/codeWrap"), on);
+    emit codeWrapChanged();
+}
+
+void AppSettings::setConfirmExit(bool on)
+{
+    if (m_confirmExit == on)
+        return;
+    m_confirmExit = on;
+    saveValue(QStringLiteral("app/confirmExit"), on);
+    emit confirmExitChanged();
+}
+
+void AppSettings::setConfirmCloseTab(bool on)
+{
+    if (m_confirmCloseTab == on)
+        return;
+    m_confirmCloseTab = on;
+    saveValue(QStringLiteral("app/confirmCloseTab"), on);
+    emit confirmCloseTabChanged();
+}
+
+void AppSettings::setRestoreLastProject(bool on)
+{
+    if (m_restoreLastProject == on)
+        return;
+    m_restoreLastProject = on;
+    saveValue(QStringLiteral("app/restoreLastProject"), on);
+    emit restoreLastProjectChanged();
+}
+
+void AppSettings::setShowWelcomeOnStartup(bool on)
+{
+    if (m_showWelcomeOnStartup == on)
+        return;
+    m_showWelcomeOnStartup = on;
+    saveValue(QStringLiteral("app/showWelcomeOnStartup"), on);
+    emit showWelcomeOnStartupChanged();
+}
+
+void AppSettings::setProjectAutosave(bool on)
+{
+    if (m_projectAutosave == on)
+        return;
+    m_projectAutosave = on;
+    saveValue(QStringLiteral("app/projectAutosave"), on);
+    emit projectAutosaveChanged();
+}
+
+void AppSettings::setProjectAutosaveSeconds(int seconds)
+{
+    const int safe = qBound(30, seconds, 3600);
+    if (m_projectAutosaveSeconds == safe)
+        return;
+    m_projectAutosaveSeconds = safe;
+    saveValue(QStringLiteral("app/projectAutosaveSeconds"), safe);
+    emit projectAutosaveSecondsChanged();
+}
+
+void AppSettings::setProjectsRoot(const QString &path)
+{
+    if (m_projectsRoot == path)
+        return;
+    m_projectsRoot = path;
+    saveValue(QStringLiteral("app/projectsRoot"), path);
+    emit projectsRootChanged();
+}
+
+void AppSettings::setExportsRoot(const QString &path)
+{
+    if (m_exportsRoot == path)
+        return;
+    m_exportsRoot = path;
+    saveValue(QStringLiteral("app/exportsRoot"), path);
+    emit exportsRootChanged();
+}
+
+void AppSettings::setDocumentsRoot(const QString &path)
+{
+    if (m_documentsRoot == path)
+        return;
+    m_documentsRoot = path;
+    saveValue(QStringLiteral("app/documentsRoot"), path);
+    emit documentsRootChanged();
+}

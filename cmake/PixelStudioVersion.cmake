@@ -1,0 +1,14 @@
+# Единый источник версии PixelStudio: Global.Major.Minor[+fix]
+# Пример с фиксом: PS_VERSION_FIX "b" → 1.6.4b
+set(PS_VERSION_GLOBAL 0)
+set(PS_VERSION_MAJOR 1)
+set(PS_VERSION_MINOR 0)
+set(PS_VERSION_FIX "")
+
+if(PS_VERSION_FIX STREQUAL "")
+    set(PS_VERSION_DISPLAY "${PS_VERSION_GLOBAL}.${PS_VERSION_MAJOR}.${PS_VERSION_MINOR}")
+    set(PS_VERSION_FIX_CHAR "")
+else()
+    set(PS_VERSION_DISPLAY "${PS_VERSION_GLOBAL}.${PS_VERSION_MAJOR}.${PS_VERSION_MINOR}${PS_VERSION_FIX}")
+    set(PS_VERSION_FIX_CHAR "${PS_VERSION_FIX}")
+endif()
