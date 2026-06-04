@@ -1,36 +1,35 @@
-# Synced to GitHub by .github/workflows/labels.yml (EndBug/label-sync)
 - name: bug
-  color: d73a4a
+  color: "d73a4a"
   description: "Ошибка или регрессия"
 
 - name: enhancement
-  color: a2eeef
+  color: "a2eeef"
   description: "Новая возможность или улучшение"
 
 - name: question
-  color: d876e3
+  color: "d876e3"
   description: "Вопрос по использованию"
 
 - name: build
-  color: fbca04
+  color: "fbca04"
   description: "Сборка, CI/CD, установщик"
 
 - name: documentation
-  color: 0075ca
+  color: "0075ca"
   description: "Документация и README"
 
 - name: duplicate
-  color: cfd3d7
+  color: "cfd3d7"
   description: "Дубликат другого issue"
 
 - name: invalid
-  color: e4e669
+  color: "e4e669"
   description: "Некорректный или неполный отчёт"
 
 - name: "help wanted"
-  color: 008672
+  color: "008672"
   description: "Нужна помощь сообщества"
 
 - name: "good first issue"
-  color: 7057ff
+  color: "7057ff"
   description: "Подходит для первого вклада"
