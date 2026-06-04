@@ -68,7 +68,7 @@ Output: `installer\output\PixelStudio-Setup-<version>.exe`. Version: [`cmake/Pix
 | [`release.yml`](../../.github/workflows/release.yml) | tag `v*.*.*` or manual | Installer + GitHub Release |
 | [`labels.yml`](../../.github/workflows/labels.yml) | `.github/labels.yml` changed | Label sync |
 
-Uses [`.github/actions/setup-windows-qt`](../../.github/actions/setup-windows-qt).
+Uses [`.github/actions/setup-windows-qt`](../../.github/actions/setup-windows-qt) (default Qt desktop kit; CI uses VS 2022 generator, not invalid aqt `modules`).
 
 ## Troubleshooting
 

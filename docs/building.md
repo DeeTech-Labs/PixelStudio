@@ -84,7 +84,7 @@ $qml = ".\src\qml"
 | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*.*.*` или вручную | Установщик + GitHub Release |
 | [`.github/workflows/labels.yml`](../.github/workflows/labels.yml) | изменение `.github/labels.yml` | Синхронизация меток |
 
-Окружение: [`.github/actions/setup-windows-qt`](../.github/actions/setup-windows-qt) (MSVC, Ninja, Qt 6.8.2, cache).
+Окружение: [`.github/actions/setup-windows-qt`](../.github/actions/setup-windows-qt) (Qt 6.8.2, Linguist tools; CI — Visual Studio 2022 generator).
 
 ## Устранение неполадок
 

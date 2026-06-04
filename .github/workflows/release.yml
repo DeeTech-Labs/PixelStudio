@@ -44,6 +44,8 @@ jobs:
 
       - name: Setup build environment
         uses: ./.github/actions/setup-windows-qt
+        with:
+          install-ninja: "true"
 
       - name: Install Inno Setup
         shell: pwsh

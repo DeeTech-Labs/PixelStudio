@@ -1,5 +1,6 @@
 name-template: "v$RESOLVED_VERSION"
 tag-template: "v$RESOLVED_VERSION"
+version-resolver: linear
 categories:
   - title: "Features"
     labels: ["enhancement"]
@@ -13,10 +14,12 @@ categories:
     labels: ["dependencies"]
 change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
 template: |
-  ## Changes
+  ## Изменения
 
   $CHANGES
 
-  **Full changelog:** https://github.com/DeeTech-Labs/PixelStudio/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+  **Версия:** v$RESOLVED_VERSION
 
-  Install the Windows build from the assets below. Verify SHA256 checksums in the release description when provided.
+  Установщик Windows публикуется workflow [Release](https://github.com/DeeTech-Labs/PixelStudio/actions/workflows/release.yml) при push тега `v$RESOLVED_VERSION`.
+
+  > Предупреждения «No published release» до первого опубликованного релиза — нормальны: сравнение с предыдущим тегом появится после `v0.1.0`.
