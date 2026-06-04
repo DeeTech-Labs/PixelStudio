@@ -80,7 +80,7 @@ jobs:
           "$($setup.Name)  $hash" | Set-Content -Path SHA256SUMS.txt -Encoding utf8NoBOM
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.name }}
           name: PixelStudio ${{ steps.tag.outputs.name }}
