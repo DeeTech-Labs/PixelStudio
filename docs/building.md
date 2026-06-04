@@ -93,4 +93,10 @@ $qml = ".\src\qml"
 | `Could not find Qt6` | Указать `-DCMAKE_PREFIX_PATH` на корень MSVC kit |
 | Ninja / компилятор не найден | «x64 Native Tools» или Developer PowerShell |
 | `windeployqt` не подхватывает QML | `--qmldir` → `src\qml` |
-| Ошибка staging установщика | Пересобрать с deploy; список файлов в `installer/build-installer.ps1` |
+| Ошибка staging / `Deploy tree is incomplete` | Запустить `build-installer.ps1` без `-SkipDeploy`; нужен `--compiler-runtime` |
+| SmartScreen при скачивании с GitHub | Установщик без подписи: **Подробнее** → **Выполнить в любом случае**; для продакшена — Authenticode (EV-сертификат) |
+| Приложение не открывается после установки | Запуск из меню Пуск; проверить, что в `{app}` есть `vcruntime140.dll` и `platforms\qwindows.dll`; пересобрать установщик через CI |
+
+### Подпись кода (SmartScreen)
+
+Без **Authenticode** Windows помечает новый `.exe` из интернета. Это не баг сборки. Чтобы убрать предупреждение для пользователей, подпишите `PixelStudio-Setup-*.exe` (и при желании `appPixelStudio.exe`) сертификатом издателя и добавьте шаг `signtool` в `release.yml` (секреты `WINDOWS_CERT_*` в репозитории).

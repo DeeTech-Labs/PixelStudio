@@ -4,7 +4,8 @@ param(
     [string]$QtDir = "C:\Qt6\6.8.2\msvc2022_64",
     [string]$IsccPath = "",
     [switch]$SkipBuild,
-    [switch]$SkipDeploy
+    [switch]$SkipDeploy,
+    [switch]$SkipLaunchTest
 )
 $ErrorActionPreference = "Stop"
 $Root = Split-Path $PSScriptRoot -Parent
@@ -52,12 +53,13 @@ function Invoke-StageInstallerFiles {
     }
     $excludeExtensions = @(
         '.obj', '.lib', '.pdb', '.exp', '.ilk', '.tlog', '.recipe',
-        '.ninja', '.ninja_deps', '.ninja_log', '.cmake', '.txt', '.json',
+        '.ninja', '.ninja_deps', '.ninja_log', '.cmake', '.txt',
         '.a', '.res', '.i', '.pch'
     )
     $excludeFileNames = @(
         'build.ninja', 'cmake_install.cmake', 'CMakeCache.txt',
-        'compile_commands.json', 'pixelstudio_core.lib'
+        'compile_commands.json', 'pixelstudio_core.lib',
+        'vc_redist.x64.exe', 'vc_redist.x86.exe'
     )
 
     $deployRoot = (Resolve-Path $DeployDir).Path.TrimEnd('\')
@@ -77,6 +79,125 @@ function Invoke-StageInstallerFiles {
     }
     if ($staged -lt 1) { throw "No files staged from $DeployDir" }
     Write-Host "Staged $staged files from windeployqt tree -> $StageDir"
+}
+
+# Minimum runtime paths (relative to deploy root) — must match a working windeployqt tree.
+$script:RequiredRuntimePaths = @(
+    'appPixelStudio.exe',
+    'platforms/qwindows.dll',
+    'tls/qschannelbackend.dll',
+    'iconengines/qsvgicon.dll',
+    'imageformats/qsvg.dll',
+    'imageformats/qjpeg.dll',
+    'imageformats/qgif.dll',
+    'imageformats/qico.dll',
+    'Qt6Core.dll',
+    'Qt6Gui.dll',
+    'Qt6Qml.dll',
+    'Qt6Quick.dll',
+    'Qt6QuickControls2.dll',
+    'Qt6Svg.dll',
+    'Qt6Network.dll',
+    'PixelStudio/qmldir',
+    'qml/Qt5Compat/GraphicalEffects/qmldir'
+)
+
+function Assert-ReleaseRuntime {
+    param([string]$DeployDir)
+    $missing = @()
+    foreach ($rel in $script:RequiredRuntimePaths) {
+        if (-not (Test-Path (Join-Path $DeployDir $rel))) {
+            $missing += $rel
+        }
+    }
+    foreach ($dll in @('vcruntime140.dll', 'VCRUNTIME140_1.dll', 'msvcp140.dll')) {
+        if (-not (Test-Path (Join-Path $DeployDir $dll))) {
+            $missing += $dll
+        }
+    }
+    if ($missing.Count -gt 0) {
+        $list = ($missing | ForEach-Object { "  - $_" }) -join "`n"
+        throw "Deploy tree is incomplete (windeployqt --compiler-runtime required):`n$list"
+    }
+}
+
+function Copy-MsvcRuntimeIfMissing {
+    param([string]$DeployDir)
+    $required = @('vcruntime140.dll', 'VCRUNTIME140_1.dll', 'msvcp140.dll')
+    if (-not ($required | Where-Object { -not (Test-Path (Join-Path $DeployDir $_)) })) {
+        return
+    }
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    $vs = & $vswhere -latest -property installationPath 2>$null
+    if (-not $vs) { throw "Visual Studio not found (needed to bundle MSVC runtime DLLs)" }
+    $vcr = Get-ChildItem (Join-Path $vs 'VC\Redist\MSVC') -Recurse -Filter 'vcruntime140.dll' -EA SilentlyContinue |
+        Where-Object { $_.FullName -match '[\\/]x64[\\/]' } |
+        Sort-Object FullName -Descending |
+        Select-Object -First 1
+    if (-not $vcr) { throw "vcruntime140.dll not found under $(Join-Path $vs 'VC\Redist\MSVC')" }
+    $srcDir = $vcr.DirectoryName
+    foreach ($name in $required) {
+        $src = Join-Path $srcDir $name
+        if (-not (Test-Path $src)) { continue }
+        Copy-Item -LiteralPath $src -Destination (Join-Path $DeployDir $name) -Force
+    }
+    $stillMissing = $required | Where-Object { -not (Test-Path (Join-Path $DeployDir $_)) }
+    if ($stillMissing) {
+        throw "MSVC runtime DLLs missing after copy from $srcDir : $($stillMissing -join ', ')"
+    }
+    Write-Host "Bundled MSVC runtime from $srcDir"
+}
+
+function Sync-DeployExtras {
+    param([string]$DeployDir, [string]$QtDir)
+    Copy-MsvcRuntimeIfMissing -DeployDir $DeployDir
+    $qt = $QtDir.TrimEnd('\')
+    $tlsDst = Join-Path $DeployDir 'tls/qschannelbackend.dll'
+    if (-not (Test-Path $tlsDst)) {
+        $tlsSrc = Join-Path $qt 'plugins/tls/qschannelbackend.dll'
+        if (-not (Test-Path $tlsSrc)) { throw "Missing TLS plugin in Qt kit: $tlsSrc" }
+        New-Item -ItemType Directory -Force -Path (Split-Path $tlsDst) | Out-Null
+        Copy-Item -LiteralPath $tlsSrc -Destination $tlsDst -Force
+        Write-Host "Copied tls/qschannelbackend.dll from Qt kit"
+    }
+    $qtConf = Join-Path $DeployDir 'qt.conf'
+    if (-not (Test-Path $qtConf)) {
+        @(
+            '[Paths]',
+            'Prefix = .',
+            'Plugins = .',
+            'QmlImports = qml'
+        ) | Set-Content -Path $qtConf -Encoding ascii
+        Write-Host "Wrote qt.conf"
+    }
+}
+
+function Test-ReleaseLaunch {
+    param([string]$DeployDir)
+    $exe = Join-Path $DeployDir 'appPixelStudio.exe'
+    $oldPath = $env:PATH
+    try {
+        $env:PATH = ($env:PATH -split ';' | Where-Object {
+            $_ -and ($_ -notmatch '(?i)\\Qt6?\\|\\Qt\\|aqtinstall')
+        }) -join ';'
+        Get-Process appPixelStudio -EA SilentlyContinue | Stop-Process -Force -EA SilentlyContinue
+        Start-Sleep -Milliseconds 300
+        $p = Start-Process -FilePath $exe -WorkingDirectory $DeployDir -PassThru
+        Start-Sleep -Seconds 5
+        if ($p.HasExited) {
+            throw "appPixelStudio.exe exited with code $($p.ExitCode) (missing DLL/QML in $DeployDir)"
+        }
+        $win = Get-Process -Id $p.Id -EA SilentlyContinue |
+            Where-Object { $_.MainWindowTitle -match 'PixelStudio' }
+        if (-not $win) {
+            Write-Warning "Process running but PixelStudio window title not detected (headless runner?)"
+        } else {
+            Write-Host "Launch OK: $($win.MainWindowTitle)"
+        }
+    } finally {
+        $env:PATH = $oldPath
+        Get-Process appPixelStudio -EA SilentlyContinue | Stop-Process -Force -EA SilentlyContinue
+    }
 }
 
 function Get-AppVersion {
@@ -137,9 +258,18 @@ if (-not $SkipDeploy) {
     $qmlDir = Join-Path $Root "src\qml"
     & $windeploy --release --compiler-runtime --qmldir $qmlDir $exe
     if ($LASTEXITCODE -ne 0) { throw "windeployqt failed" }
+    Sync-DeployExtras -DeployDir $BuildDir -QtDir $QtDir
+    Assert-ReleaseRuntime -DeployDir $BuildDir
+    if (-not $SkipLaunchTest) {
+        Test-ReleaseLaunch -DeployDir $BuildDir
+    }
+} else {
+    Sync-DeployExtras -DeployDir $BuildDir -QtDir $QtDir
+    Assert-ReleaseRuntime -DeployDir $BuildDir
 }
 
 Invoke-StageInstallerFiles -DeployDir $BuildDir -StageDir $StageDir
+Assert-ReleaseRuntime -DeployDir $StageDir
 
 $iscc = Resolve-Iscc $IsccPath
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null

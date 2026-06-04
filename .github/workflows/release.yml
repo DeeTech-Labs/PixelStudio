@@ -77,7 +77,13 @@ jobs:
             "|------|--------|",
             "| $($setup.Name) | ``$hash`` |",
             "",
-            "Built from tag ``${{ steps.tag.outputs.name }}`` on Windows x64 (Qt 6.8.2, MSVC 2022)."
+            "Built from tag ``${{ steps.tag.outputs.name }}`` on Windows x64 (Qt 6.8.2, MSVC 2022).",
+            "",
+            "## Windows SmartScreen",
+            "",
+            "The installer is **not code-signed** yet. Windows may show *Windows protected your PC*.",
+            "Click **More info** → **Run anyway** to install. This warning is normal for unsigned builds from GitHub.",
+            "After install, launch **PixelStudio** from the Start menu (not from the browser download folder)."
           ) | Set-Content -Path release-notes-extra.md -Encoding utf8NoBOM
           Add-Content -Path $env:GITHUB_OUTPUT -Value "path=$($setup.FullName)"
           "$($setup.Name)  $hash" | Set-Content -Path SHA256SUMS.txt -Encoding utf8NoBOM

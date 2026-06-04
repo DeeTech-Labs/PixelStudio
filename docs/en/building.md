@@ -68,7 +68,7 @@ Output: `installer\output\PixelStudio-Setup-<version>.exe`. Version: [`cmake/Pix
 | [`release.yml`](../../.github/workflows/release.yml) | tag `v*.*.*` or manual | Installer + GitHub Release |
 | [`labels.yml`](../../.github/workflows/labels.yml) | `.github/labels.yml` changed | Label sync |
 
-Uses [`.github/actions/setup-windows-qt`](../../.github/actions/setup-windows-qt) (default Qt desktop kit; CI uses VS 2022 generator, not invalid aqt `modules`).
+Uses [`.github/actions/setup-windows-qt`](../../.github/actions/setup-windows-qt) (Qt 6.8.2 + `qt5compat` / `qtsvg`; release workflow uses Ninja via `build-installer.ps1`).
 
 ## Troubleshooting
 
@@ -77,4 +77,6 @@ Uses [`.github/actions/setup-windows-qt`](../../.github/actions/setup-windows-qt
 | `Could not find Qt6` | Set `-DCMAKE_PREFIX_PATH` to MSVC kit root |
 | Ninja / compiler missing | x64 Native Tools or VS Developer PowerShell |
 | `windeployqt` missing QML | `--qmldir` → `src\qml` |
-| Installer staging mismatch | Rebuild with deploy; see `installer/build-installer.ps1` |
+| `Deploy tree is incomplete` | Run `build-installer.ps1` without `-SkipDeploy`; MSVC DLLs are copied from VS Redist |
+| SmartScreen on GitHub download | Unsigned installer: **More info** → **Run anyway**; use Authenticode for production |
+| App does not start after install | Launch from Start menu; ensure `vcruntime140.dll` and `platforms\qwindows.dll` exist under `{app}` |

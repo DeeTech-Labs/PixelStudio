@@ -10,6 +10,10 @@ inputs:
     description: Install Ninja tool (for build-installer.ps1 / Ninja generator)
     required: false
     default: "false"
+  modules:
+    description: Extra Qt modules for aqtinstall (space-separated)
+    required: false
+    default: "qt5compat qtsvg"
 
 runs:
   using: composite
@@ -23,6 +27,7 @@ runs:
         arch: win64_msvc2022_64
         cache: true
         cache-key-prefix: pixelstudio-qt-${{ inputs.qt-version }}
+        modules: ${{ inputs.modules }}
         tools: ${{ inputs.install-ninja == 'true' && 'tools_ninja' || '' }}
 
     - name: Verify Qt
