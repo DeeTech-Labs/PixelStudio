@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     if (QStyleHints *hints = app.styleHints())
         hints->setColorScheme(Qt::ColorScheme::Dark);
     app.setOrganizationName(QString::fromLatin1(AppPaths::kOrganization));
-    app.setOrganizationDomain(QStringLiteral("detech.local"));
+    app.setOrganizationDomain(QStringLiteral("deetech.local"));
     app.setApplicationName(QString::fromLatin1(AppPaths::kApplication));
     const QString appVersion = AppVersion::display();
     app.setApplicationVersion(appVersion);
@@ -83,21 +83,6 @@ int main(int argc, char *argv[])
         engine.retranslate();
     });
 
-    QObject::connect(
-        &engine,
-        &QQmlApplicationEngine::objectCreationFailed,
-        &app,
-        []() {
-#ifdef Q_OS_WIN
-            MessageBoxW(nullptr,
-                        L"Не удалось загрузить интерфейс (QML).\n"
-                        L"Запускайте bin\\appPixelStudio.exe или PixelStudio.cmd из папки установки.",
-                        L"PixelStudio",
-                        MB_OK | MB_ICONERROR);
-#endif
-            QCoreApplication::exit(-1);
-        },
-        Qt::QueuedConnection);
     QObject::connect(&app, &QGuiApplication::aboutToQuit, &tabController, [&tabController, &converter]() {
         tabController.persist();
         converter.flushPersistence();

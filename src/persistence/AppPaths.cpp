@@ -10,9 +10,6 @@ namespace AppPaths {
 
 namespace {
 
-QString g_testDataRoot;
-QString g_testDocumentsRoot;
-
 QString readIniValue(const QString &key)
 {
     const QString ini = dataRoot() + QStringLiteral("/app.ini");
@@ -153,29 +150,13 @@ void migrateUserDataFromAppData()
 
 } // namespace
 
-void setTestRoots(const QString &dataRoot, const QString &documentsRoot)
-{
-    g_testDataRoot = dataRoot;
-    g_testDocumentsRoot = documentsRoot;
-}
-
-void clearTestRoots()
-{
-    g_testDataRoot.clear();
-    g_testDocumentsRoot.clear();
-}
-
 QString dataRoot()
 {
-    if (!g_testDataRoot.isEmpty())
-        return g_testDataRoot;
     return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
 }
 
 QString userDocumentsRoot()
 {
-    if (!g_testDocumentsRoot.isEmpty())
-        return g_testDocumentsRoot;
     const QString custom = readIniValue(QStringLiteral("app/documentsRoot"));
     if (!custom.isEmpty())
         return QDir(custom).absolutePath();

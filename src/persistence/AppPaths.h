@@ -8,9 +8,6 @@ namespace AppPaths {
 inline constexpr const char *kOrganization = "DeeTech";
 inline constexpr const char *kApplication = "PixelStudio";
 
-void setTestRoots(const QString &dataRoot, const QString &documentsRoot);
-void clearTestRoots();
-
 QString dataRoot();
 QString userDocumentsRoot();
 

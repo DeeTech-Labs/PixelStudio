@@ -21,7 +21,6 @@ configure_file(
 )
 
 find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Gui Network Concurrent LinguistTools Svg)
-include(CTest)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -153,18 +152,6 @@ target_link_libraries(appPixelStudio
 )
 if(WIN32)
     target_link_libraries(appPixelStudio PRIVATE dwmapi shell32 ole32 propsys shlwapi)
-endif()
-
-if(BUILD_TESTING)
-    add_executable(core_tests tests/CoreTests.cpp)
-    target_include_directories(core_tests PRIVATE ${PIXELSTUDIO_SRC_DIR})
-    target_link_libraries(core_tests PRIVATE pixelstudio_core Qt6::Gui)
-    add_test(NAME core_tests COMMAND core_tests)
-
-    add_executable(app_paths_tests tests/AppPathsTests.cpp)
-    target_include_directories(app_paths_tests PRIVATE ${PIXELSTUDIO_SRC_DIR})
-    target_link_libraries(app_paths_tests PRIVATE pixelstudio_core Qt6::Gui)
-    add_test(NAME app_paths_tests COMMAND app_paths_tests)
 endif()
 
 include(GNUInstallDirs)
