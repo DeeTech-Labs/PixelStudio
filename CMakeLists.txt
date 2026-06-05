@@ -67,6 +67,10 @@ set(APP_SOURCES
 
 qt_add_executable(appPixelStudio ${APP_SOURCES})
 
+if(WIN32)
+    target_sources(appPixelStudio PRIVATE resources/ico/PixelStudio.rc)
+endif()
+
 target_include_directories(appPixelStudio PRIVATE
     ${PIXELSTUDIO_SRC_DIR}
     ${PS_GENERATED_INCLUDE_DIR}
