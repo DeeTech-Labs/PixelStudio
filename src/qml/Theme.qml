@@ -5,60 +5,68 @@ pragma Translator: PixelStudio
 QtObject {
     id: root
 
-    property color accent: "#3B9EFF"
-    property color accentHover: "#5CADFF"
-    property color accentPressed: "#2563EB"
-    property color accentMuted: "#1E3A5F"
-    property color accentOnAccent: "#FFFFFF"
-    property color accentSoft: "#3B9EFF18"
-    property color accentGlow: "#3B9EFF33"
+    // Retro-pixel accent (teal)
+    property color accent: "#40e0d0"
+    property color accentHover: "#52edd9"
+    property color accentPressed: "#1f9a88"
+    property color accentMuted: "#40e0d044"
+    property color accentOnAccent: "#0d1117"
+    property color accentSoft: "#40e0d018"
+    property color accentGlow: "#40e0d033"
+    property color accentDark: "#1f9a88"
+    property color accentTop: "#52edd9"
+    property color accentBottom: "#36d4c4"
 
     property color primary: accent
     property color primaryHover: accentHover
     property color primaryPressed: accentPressed
     property color primaryMuted: accentMuted
 
-    property color background: "#1A1A1A"
-    property color backgroundElevated: "#212121"
-    property color canvas: "#141414"
-    property color surface: "#2B2B2B"
-    property color surfaceRaised: "#333333"
-    property color surfaceHover: "#3D3D3D"
-    property color surfaceOverlay: "#454545"
-    property color surfaceInput: "#262626"
-    property color surfaceInset: "#181818"
+    property color background: "#0d1117"
+    property color backgroundElevated: "#0a0e14"
+    property color canvas: "#0b0e14"
+    property color surface: "#161b22"
+    property color surfaceRaised: "#1c2129"
+    property color surfaceHover: "#21262d"
+    property color surfaceOverlay: "#262c36"
+    property color surfaceInput: "#161b22"
+    property color surfaceInset: "#0d1117"
 
-    property color text: "#E8E8E8"
-    property color textSecondary: "#A3A3A3"
-    property color textMuted: "#8A8A8A"
-    property color sectionLabel: "#C8C8C8"
+    property color text: "#ffffff"
+    property color textSecondary: "#8b949e"
+    property color textMuted: "#6e7681"
+    property color sectionLabel: "#8b949e"
 
-    property color border: "#404040"
-    property color borderFocus: accentHover
-    property color divider: "#2E2E2E"
+    property color border: "#30363d"
+    property color borderFocus: accent
+    property color divider: "#21262d"
 
-    property color success: "#4ADE80"
-    property color error: "#F87171"
-    property color warning: "#FACC15"
+    property color success: "#3fb950"
+    property color error: "#f85149"
+    property color warning: "#d29922"
 
-    property color shadow: "#00000055"
-    property color shadowMd: "#00000077"
-    property color previewBackdrop: canvas
-    property color floatingPanel: "#2B2B2BF0"
-    property color checkerA: "#252525"
-    property color checkerB: "#1C1C1C"
-    property color railActive: "#3B9EFF22"
-    property color railHover: "#FFFFFF0A"
+    property color shadow: "#00000066"
+    property color shadowMd: "#00000088"
+    property color previewBackdrop: "#0b0e14"
+    property color floatingPanel: "#161b22f0"
+    property color checkerA: "#1a1f26"
+    property color checkerB: "#12161c"
+    property color railActive: "#40e0d022"
+    property color railHover: "#ffffff0a"
+    property color decorativeDisabled: "#3d444d"
 
-    property int fontSizeXs: 11
-    property int fontSizeSm: 12
+    property int fontSizeXs: 10
+    property int fontSizeSm: 11
     property int fontSizeBase: 13
     property int fontSizeLg: 14
     property int fontSizeXl: 15
     property int fontSize2xl: 18
+    property int fontSizePixel: 10
+    property int fontSizePixelLg: 20
 
     property string fontFamily: "'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif"
     property string fontFamilyMono: "'Cascadia Code', Consolas, monospace"
+    property string fontFamilyPixel: "Press Start 2P"
 
     property int spacingXs: 4
     property int spacingSm: 6
@@ -71,23 +79,30 @@ QtObject {
     property int radiusMd: 6
     property int radiusLg: 8
     property int radiusXl: 10
-    property int radiusPill: 999
+    property int radiusPill: 10
+
+    property int pixelBorderWidth: 1
+    property int panelBracketSize: 4
 
     property int headerHeight: 44
-    property int statusHeight: 26
-    property int inspectorWidth: 380
-    property int inspectorNavWidth: 48
-    property int codeDockHeight: 220
+    property int menuBarHeight: 28
+    property int tabBarHeight: 32
+    property int toolbarHeight: 32
+    property int statusHeight: 24
+    property int inspectorWidth: 300
+    property int inspectorNavWidth: 0
+    property int leftDockWidth: 220
+    property int codeDockHeight: 200
     property int scrollContentGutter: 8
-    property int inspectorPadding: 16
-    property int controlHeight: 32
-    property int controlHeightSm: 26
-    property int frameHeaderHeight: 36
-    property int frameFooterHeight: 32
+    property int inspectorPadding: 12
+    property int controlHeight: 30
+    property int controlHeightSm: 24
+    property int frameHeaderHeight: 28
+    property int frameFooterHeight: 28
 
-    property int scrollBarWidth: 5
-    property int scrollBarRadius: 2
-    property int splitHandleSize: 6
+    property int scrollBarWidth: 8
+    property int scrollBarRadius: 4
+    property int splitHandleSize: 4
 
     property int durationFast: 80
     property int durationNormal: 140

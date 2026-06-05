@@ -22,13 +22,137 @@ Item {
         width: root.width
         spacing: studio.spacingLg
 
-        Label {
-            Layout.fillWidth: true
-            visible: converter.hasImage
-            font.family: studio.fontFamilyMono
-            font.pixelSize: studio.fontSizeSm
-            color: studio.textMuted
-            text: converter.sourceWidth + " × " + converter.sourceHeight + " " + qsTr("source")
+        StudioSection {
+            studio: root.studio
+            title: qsTr("Image info")
+            hint: qsTr("Metadata for the active source image.")
+
+            GridLayout {
+                Layout.fillWidth: true
+                columns: 2
+                columnSpacing: studio.spacingMd
+                rowSpacing: studio.spacingXs
+
+                Label { text: qsTr("Size"); font.pixelSize: studio.fontSizeXs; color: studio.textMuted }
+                Label {
+                    text: converter.hasImage
+                        ? converter.sourceWidth + " × " + converter.sourceHeight
+                        : "—"
+                    font.family: studio.fontFamilyMono
+                    font.pixelSize: studio.fontSizeXs
+                    color: studio.text
+                }
+                Label { text: qsTr("Colors"); font.pixelSize: studio.fontSizeXs; color: studio.textMuted }
+                Label {
+                    text: converter.previewColorCount > 0 ? converter.previewColorCount : "—"
+                    font.family: studio.fontFamilyMono
+                    font.pixelSize: studio.fontSizeXs
+                    color: studio.text
+                }
+                Label { text: qsTr("BPP"); font.pixelSize: studio.fontSizeXs; color: studio.textMuted }
+                Label {
+                    text: converter.hasPreview ? converter.encodingModeName : "—"
+                    font.family: studio.fontFamilyMono
+                    font.pixelSize: studio.fontSizeXs
+                    color: studio.text
+                }
+                Label { text: qsTr("Format"); font.pixelSize: studio.fontSizeXs; color: studio.textMuted }
+                Label {
+                    text: converter.imageFormatName.length > 0 ? converter.imageFormatName : "—"
+                    font.family: studio.fontFamilyMono
+                    font.pixelSize: studio.fontSizeXs
+                    color: studio.text
+                }
+            }
+        }
+
+        StudioSection {
+            studio: root.studio
+            title: qsTr("Adjustments")
+            hint: qsTr("Contrast, dithering and color reduction before rasterization.")
+
+            StudioSlider {
+                Layout.fillWidth: true
+                studio: root.studio
+                label: qsTr("Contrast")
+                enabled: !toneLocked
+                from: 0; to: 200
+                value: converter.contrast
+                valueText: (converter.contrast / 100).toFixed(2)
+                onValueCommitted: (v) => converter.setContrast(Math.round(v))
+            }
+            StudioCheck {
+                studio: root.studio
+                text: qsTr("Dither")
+                checked: converter.dithering
+                onToggled: converter.setDithering(checked)
+            }
+            StudioCombo {
+                id: encQuickCombo
+                Layout.fillWidth: true
+                studio: root.studio
+                readonly property int _localeRev: converter.localizationRevision
+                model: _localeRev >= 0 ? converter.availableEncodingModesForUi() : []
+                textRole: "name"
+                Component.onCompleted: syncEncQuick()
+                onActivated: {
+                    const item = model[currentIndex]
+                    if (item && item.mode !== undefined)
+                        converter.setEncodingMode(item.mode)
+                }
+                function syncEncQuick() {
+                    for (let i = 0; i < model.length; ++i) {
+                        if (model[i].mode === converter.encodingMode) {
+                            currentIndex = i
+                            return
+                        }
+                    }
+                }
+            }
+            StudioSlider {
+                Layout.fillWidth: true
+                studio: root.studio
+                label: qsTr("Max colors")
+                from: 0; to: 30
+                value: converter.posterizeRgb
+                onValueCommitted: (v) => converter.setPosterizeRgb(Math.round(v))
+            }
+        }
+
+        StudioSection {
+            studio: root.studio
+            title: qsTr("Advanced")
+            collapsible: true
+            expanded: root.monoOutput
+
+            StudioCombo {
+                id: ditherComboTop
+                Layout.fillWidth: true
+                studio: root.studio
+                model: [
+                    qsTr("None"),
+                    qsTr("Floyd–Steinberg"),
+                    qsTr("JJN"),
+                    qsTr("Bayer")
+                ]
+                Component.onCompleted: currentIndex = converter.ditherMode
+                onActivated: converter.setDitherMode(currentIndex)
+            }
+            StudioCheck {
+                studio: root.studio
+                text: qsTr("Serpentine")
+                checked: converter.ditherMode === 1
+                enabled: false
+            }
+            StudioSlider {
+                Layout.fillWidth: true
+                studio: root.studio
+                label: qsTr("Edge threshold")
+                from: 0; to: 100
+                value: converter.sobelEdges
+                valueText: converter.sobelEdges + "%"
+                onValueCommitted: (v) => converter.setSobelEdges(Math.round(v))
+            }
         }
 
         StudioSection {
@@ -373,7 +497,11 @@ Item {
         function onRotationChanged() { rotationSeg.selectedValue = converter.rotation }
         function onScaleModeChanged() { scaleCombo.currentIndex = converter.scaleMode }
         function onContourModeChanged() { contourCombo.currentIndex = converter.contourMode }
-        function onDitherModeChanged() { ditherCombo.currentIndex = converter.ditherMode }
+        function onDitherModeChanged() {
+            ditherCombo.currentIndex = converter.ditherMode
+            ditherComboTop.currentIndex = converter.ditherMode
+        }
         function onTonePresetChanged() { toneCombo.currentIndex = converter.tonePreset }
+        function onEncodingModeChanged() { encQuickCombo.syncEncQuick() }
     }
 }

@@ -18,18 +18,22 @@ CheckBox {
     ToolTip.text: toolTipText
 
     indicator: Rectangle {
-        implicitWidth: 18
-        implicitHeight: 18
-        radius: studio.radiusSm
-        color: root.checked ? studio.accent : studio.surfaceInput
-        border.width: root.checked ? 0 : 1
-        border.color: root.checked ? studio.accent : studio.textMuted
-        Text {
-            anchors.centerIn: parent
-            visible: root.checked
-            text: "✓"
-            font.pixelSize: 11
-            color: studio.accentOnAccent
+        implicitWidth: 36
+        implicitHeight: 16
+        radius: studio.radiusPill
+        color: studio.surfaceInset
+        border.width: 1
+        border.color: studio.border
+        Rectangle {
+            width: 16
+            height: 12
+            radius: studio.radiusSm
+            anchors.verticalCenter: parent.verticalCenter
+            x: root.checked ? parent.width - width - 2 : 2
+            color: root.checked ? studio.accent : studio.decorativeDisabled
+            border.width: 1
+            border.color: root.checked ? studio.accent : studio.border
+            Behavior on x { NumberAnimation { duration: studio.durationFast } }
         }
     }
 

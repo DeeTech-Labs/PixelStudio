@@ -54,11 +54,11 @@ Item {
                 }
                 Label {
                     Layout.fillWidth: true
-                    text: root.title
+                    text: root.title.toUpperCase()
                     font.family: studio.fontFamily
-                    font.pixelSize: studio.fontSizeBase
+                    font.pixelSize: studio.fontSizeXs
                     font.weight: Font.DemiBold
-                    color: studio.text
+                    color: studio.sectionLabel
                     verticalAlignment: Text.AlignVCenter
                 }
             }

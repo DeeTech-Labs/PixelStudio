@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
     const QList<QObject *> roots = engine.rootObjects();
     for (QObject *obj : roots) {
         if (auto *window = qobject_cast<QQuickWindow *>(obj)) {
-            window->setColor(QColor(0x1A, 0x1A, 0x1A));
+            window->setColor(QColor(0x0d, 0x11, 0x17));
             QTimer::singleShot(0, window, [window, syncTaskbarRecent]() {
 #ifdef Q_OS_WIN
                 const HWND hwnd = reinterpret_cast<HWND>(window->winId());

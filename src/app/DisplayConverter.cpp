@@ -22,6 +22,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
+#include <QImage>
+#include <QSet>
 #include <QSize>
 #include <QtConcurrent>
 #include <QGuiApplication>
@@ -42,6 +44,63 @@ bool encodingIsColorMode(int mode)
 bool encodingIsMonoMode(int mode)
 {
     return PixelFormatCatalog::isMono(static_cast<DisplayCodeGenerator::EncodingMode>(mode));
+}
+
+QString rgbToHex(int r, int g, int b)
+{
+    return QStringLiteral("#%1%2%3")
+        .arg(r, 2, 16, QChar('0'))
+        .arg(g, 2, 16, QChar('0'))
+        .arg(b, 2, 16, QChar('0'))
+        .toUpper();
+}
+
+QVariantList paletteFromRgbList(const QVector<quint32> &colors)
+{
+    QVariantList out;
+    out.reserve(colors.size());
+    for (quint32 c : colors) {
+        out.append(rgbToHex(int((c >> 16) & 0xFF), int((c >> 8) & 0xFF), int(c & 0xFF)));
+    }
+    return out;
+}
+
+QVariantList paletteFromPreviewImage(const QImage &img, int maxColors = 256)
+{
+    QVariantList out;
+    if (img.isNull() || maxColors < 1)
+        return out;
+
+    const QImage sample = (img.width() > 160 || img.height() > 160)
+        ? img.scaled(160, 160, Qt::KeepAspectRatio, Qt::FastTransformation)
+        : img;
+
+    QSet<quint32> seen;
+    QVector<quint32> ordered;
+    ordered.reserve(qMin(maxColors, sample.width() * sample.height()));
+
+    for (int y = 0; y < sample.height(); ++y) {
+        for (int x = 0; x < sample.width(); ++x) {
+            const QRgb px = sample.pixel(x, y);
+            const int a = qAlpha(px);
+            if (a < 8)
+                continue;
+            const quint32 key = quint32(0xFF000000)
+                | quint32(qRed(px) << 16)
+                | quint32(qGreen(px) << 8)
+                | quint32(qBlue(px));
+            if (seen.contains(key))
+                continue;
+            seen.insert(key);
+            ordered.append(key);
+            if (ordered.size() >= maxColors)
+                break;
+        }
+        if (ordered.size() >= maxColors)
+            break;
+    }
+
+    return paletteFromRgbList(ordered);
 }
 
 } // namespace
@@ -251,6 +310,31 @@ QString DisplayConverter::monoLayoutName() const
     if (m_monoLayout == Layout::VerticalColumn)
         return QCoreApplication::translate("PixelStudio", "Vertical column");
     return QCoreApplication::translate("PixelStudio", "Row-packed");
+}
+
+QVariantList DisplayConverter::previewPalette() const
+{
+    if (!m_lastResult.indexedPalette.isEmpty())
+        return paletteFromRgbList(m_lastResult.indexedPalette);
+    if (!m_lastResult.preview.isNull())
+        return paletteFromPreviewImage(m_lastResult.preview);
+    return {};
+}
+
+int DisplayConverter::previewColorCount() const
+{
+    return previewPalette().size();
+}
+
+QString DisplayConverter::imageFormatName() const
+{
+    if (!hasImage())
+        return QString();
+    const QString path = m_sourcePath.toLocalFile();
+    const int dot = path.lastIndexOf(QLatin1Char('.'));
+    if (dot >= 0 && dot < path.size() - 1)
+        return path.mid(dot + 1).toUpper();
+    return QCoreApplication::translate("PixelStudio", "Image");
 }
 
 int DisplayConverter::sourceWidth() const

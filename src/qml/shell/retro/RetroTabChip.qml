@@ -7,6 +7,7 @@ pragma Translator: PixelStudio
 
 Rectangle {
     id: chip
+
     required property var studio
     required property var tab
     required property int tabIndex
@@ -17,20 +18,25 @@ Rectangle {
     property bool isActive: tab.id === tabController.activeTabId
     property bool dragging: false
     property int pendingDropIndex: -1
+    property int tabBarHeight: 28
+    property string contextTabId: tab.id
 
-    height: tabBarHeight
-    width: Math.max(108, tabRow.implicitWidth + studio.spacingLg * 2)
-    radius: studio.radiusMd
-    color: isActive ? studio.surfaceRaised : (tabMouse.containsMouse ? studio.railHover : studio.surfaceInset)
-    border.width: isActive ? 1 : 0
-    border.color: isActive ? studio.accent : "transparent"
+    implicitWidth: Math.max(96, tabRow.implicitWidth + studio.spacingMd * 2)
+    implicitHeight: tabBarHeight
+    radius: studio.radiusSm
+    color: isActive ? studio.surfaceRaised : studio.surface
+    border.width: studio.pixelBorderWidth
+    border.color: isActive ? studio.accent : studio.border
     opacity: dragging ? 0.78 : 1
     z: dragging ? 20 : 0
 
-    property int tabBarHeight: 32
-    property string contextTabId: tab.id
-
-    Behavior on color { ColorAnimation { duration: 100 } }
+    Rectangle {
+        visible: isActive
+        anchors.bottom: parent.bottom
+        width: parent.width
+        height: 2
+        color: studio.accent
+    }
 
     Menu {
         id: tabContextMenu
@@ -76,47 +82,31 @@ Rectangle {
         }
 
         Label {
-            Layout.maximumWidth: 160
+            Layout.maximumWidth: 140
             text: tab.title
-            font.family: studio.fontFamily
-            font.pixelSize: studio.fontSizeSm
-            font.weight: isActive ? Font.DemiBold : Font.Normal
-            color: isActive ? studio.text : studio.textSecondary
+            font.family: isActive ? studio.fontFamilyPixel : studio.fontFamily
+            font.pixelSize: isActive ? studio.fontSizePixel : studio.fontSizeSm
+            color: isActive ? studio.accent : studio.textSecondary
             elide: Text.ElideRight
-        }
-
-        ToolButton {
-            id: pinBtn
-            visible: !tab.isWelcome
-            implicitWidth: 22
-            implicitHeight: 22
-            onClicked: tabController.setTabPinned(tab.id, !tab.pinned)
-            background: Rectangle {
-                radius: studio.radiusSm
-                color: pinBtn.hovered ? studio.surfaceHover : "transparent"
-            }
-            contentItem: StudioIcon {
-                name: "pin"
-                iconSize: 11
-                tint: tab.pinned ? studio.accent : studio.textMuted
-            }
         }
 
         ToolButton {
             id: closeBtn
             visible: tab.closable
-            implicitWidth: 22
-            implicitHeight: 22
+            implicitWidth: 18
+            implicitHeight: 18
             onClicked: chip.closeRequested()
             background: Rectangle {
                 radius: studio.radiusSm
                 color: closeBtn.hovered ? studio.error : "transparent"
                 opacity: closeBtn.hovered ? 0.35 : 0
             }
-            contentItem: StudioIcon {
-                name: "x"
-                iconSize: 11
-                tint: closeBtn.hovered ? studio.text : studio.textSecondary
+            contentItem: Label {
+                text: "×"
+                font.pixelSize: studio.fontSizeSm
+                color: studio.textSecondary
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
             }
         }
     }
@@ -124,11 +114,10 @@ Rectangle {
     MouseArea {
         id: tabMouse
         anchors.fill: parent
-        anchors.rightMargin: tab.isWelcome ? 0 : 52
+        anchors.rightMargin: tab.closable ? 22 : 0
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
-        propagateComposedEvents: true
 
         property real pressX: 0
         property bool didDrag: false

@@ -46,6 +46,7 @@ set(PIXELSTUDIO_CORE_SOURCES
     src/persistence/RecentPreview.cpp
     src/persistence/StoredPath.cpp
     src/persistence/SettingsSchema.cpp
+    src/app/CodeSyntaxTheme.cpp
     src/io/ImageLoader.cpp
     src/io/BinaryExporter.cpp
     src/io/HeaderImportService.cpp
@@ -106,15 +107,35 @@ set(PIXELSTUDIO_QML_FILES
     src/qml/controls/StudioScroll.qml
     src/qml/studio/StudioFrame.qml
     src/qml/studio/StudioViewport.qml
+    src/qml/studio/PixelPanel.qml
+    src/qml/studio/PixelFrame.qml
+    src/qml/studio/PixelButton.qml
+    src/qml/studio/PixelTab.qml
+    src/qml/studio/PixelDivider.qml
+    src/qml/studio/RetroBackdrop.qml
     src/qml/workspace/StudioDropCanvas.qml
-    src/qml/workspace/StudioWorkspace.qml
     src/qml/workspace/StudioExportHub.qml
+    src/qml/workspace/RetroStudioLayout.qml
+    src/qml/workspace/CodePanel.qml
+    src/qml/workspace/CodeSyntaxView.qml
+    src/qml/workspace/dock/LeftAssetDock.qml
+    src/qml/workspace/dock/PalettePanel.qml
+    src/qml/workspace/dock/ProjectPanel.qml
     src/qml/panels/InspectorDock.qml
     src/qml/panels/InspectorPageDisplay.qml
     src/qml/panels/InspectorPageImage.qml
     src/qml/panels/InspectorPageExport.qml
     src/qml/panels/ExportActionsPanel.qml
-    src/qml/shell/CodeDock.qml
+    src/qml/shell/retro/RetroShell.qml
+    src/qml/shell/retro/RetroTabBar.qml
+    src/qml/shell/retro/RetroTabChip.qml
+    src/qml/shell/retro/RetroToolbar.qml
+    src/qml/shell/retro/RetroStatusBar.qml
+    src/qml/shell/retro/RetroToast.qml
+    src/qml/shell/retro/RetroDialog.qml
+    src/qml/dialogs/AboutDialog.qml
+    src/qml/dialogs/CodeSyntaxColorsDialog.qml
+    src/qml/dialogs/ConfirmDialogs.qml
     src/qml/welcome/WelcomeScreen.qml
     src/qml/welcome/WelcomeBackdrop.qml
     src/qml/welcome/WelcomeDisplayViz.qml
@@ -122,8 +143,6 @@ set(PIXELSTUDIO_QML_FILES
     src/qml/welcome/WelcomeFooterNav.qml
     src/qml/welcome/WelcomeBrandMark.qml
     src/qml/welcome/WelcomeSparkle.qml
-    src/qml/shell/StudioTabBar.qml
-    src/qml/shell/StudioTabChip.qml
 )
 
 # QML qsTr() defaults to file name as context; all studio QML use context "PixelStudio".

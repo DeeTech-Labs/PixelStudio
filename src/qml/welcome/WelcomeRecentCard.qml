@@ -27,16 +27,16 @@ Rectangle {
     readonly property bool hasProjectMeta: projectMeta.length > 0
     readonly property bool hasDateTime: dateTimeText.length > 0
 
-    readonly property color cardBg: "#161b22"
-    readonly property color cardBorder: "#30363d"
-    readonly property color accent: "#40e0d0"
-    readonly property color metaColor: "#8b949e"
+    readonly property color cardBg: studio.surface
+    readonly property color cardBorder: studio.border
+    readonly property color accent: studio.accent
+    readonly property color metaColor: studio.textSecondary
 
     implicitHeight: thumbSize + outerPadding * 2
-    radius: 12
+    radius: studio.radiusLg
     color: cardBg
     border.width: 1
-    border.color: hover.hovered ? accent : cardBorder
+    border.color: hover.hovered ? accent : studio.accent
     clip: false
 
     HoverHandler { id: hover }
@@ -51,7 +51,7 @@ Rectangle {
             Layout.preferredWidth: thumbSize
             Layout.preferredHeight: thumbSize
             Layout.alignment: Qt.AlignVCenter
-            radius: 8
+            radius: studio.radiusMd
             color: "#0d1117"
             clip: true
             border.width: 1

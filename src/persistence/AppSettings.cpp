@@ -1,5 +1,6 @@
 #include "persistence/AppSettings.h"
 
+#include "app/CodeSyntaxTheme.h"
 #include "i18n/AppLocale.h"
 #include "persistence/AppPaths.h"
 #include "persistence/SettingsSchema.h"
@@ -9,6 +10,7 @@
 AppSettings::AppSettings(QObject *parent)
     : QObject(parent)
     , m_settings(AppPaths::appSettingsFile(), QSettings::IniFormat)
+    , m_codeSyntax(new CodeSyntaxTheme(this))
 {
     SettingsSchema::migrateAppSettings(m_settings);
     load();
@@ -30,6 +32,7 @@ void AppSettings::load()
     m_projectsRoot = m_settings.value(QStringLiteral("app/projectsRoot")).toString();
     m_exportsRoot = m_settings.value(QStringLiteral("app/exportsRoot")).toString();
     m_documentsRoot = m_settings.value(QStringLiteral("app/documentsRoot")).toString();
+    m_codeSyntax->load(m_settings);
 }
 
 void AppSettings::saveValue(const QString &key, const QVariant &value)
@@ -56,6 +59,7 @@ void AppSettings::resetUiDefaults()
     setCodeWrap(false);
     setConfirmExit(true);
     setConfirmCloseTab(true);
+    m_codeSyntax->resetDefaults();
 }
 
 void AppSettings::setLanguageCode(const QString &code)

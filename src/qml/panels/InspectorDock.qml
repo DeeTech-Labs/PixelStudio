@@ -7,63 +7,69 @@ pragma Translator: PixelStudio
 
 Rectangle {
     id: root
+
     required property var studio
     required property var exportBridge
     property int pageIndex: 0
     signal notify(string message)
 
-    color: studio.surface
-    border.width: 1
-    border.color: studio.divider
+    radius: studio.radiusMd
+    color: studio.surfaceInset
+    border.width: studio.pixelBorderWidth
+    border.color: studio.border
+    clip: true
 
     readonly property var pages: {
         const _ = appSettings.languageCode + converter.localizationRevision
         return [
-            { id: 0, icon: "layout-grid", title: qsTr("Display") },
-            { id: 1, icon: "sliders-horizontal", title: qsTr("Image") },
-            { id: 2, icon: "download", title: qsTr("Export") }
+            { id: 0, title: qsTr("Image") },
+            { id: 1, title: qsTr("Display") },
+            { id: 2, title: qsTr("Export") }
         ]
     }
 
-    RowLayout {
+    ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
         Rectangle {
-            Layout.preferredWidth: studio.inspectorNavWidth
-            Layout.fillHeight: true
-            color: studio.surfaceInset
+            Layout.fillWidth: true
+            Layout.preferredHeight: 30
+            color: studio.surface
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.topMargin: studio.spacingSm
-                spacing: 2
+            Label {
+                anchors.left: parent.left
+                anchors.leftMargin: studio.spacingSm
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("Inspector").toUpperCase()
+                font.family: studio.fontFamilyPixel
+                font.pixelSize: studio.fontSizePixel
+                color: studio.accent
+            }
+
+            Row {
+                anchors.right: parent.right
+                anchors.rightMargin: studio.spacingSm
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: studio.spacingXs
 
                 Repeater {
                     model: root.pages
-                    delegate: StudioNavIcon {
+                    delegate: PixelTab {
                         required property var modelData
-                        required property int index
-                        Layout.fillWidth: true
                         studio: root.studio
-                        iconName: modelData.icon
-                        readonly property int _navLang: appSettings.languageCode.length
-                            + converter.localizationRevision
-                        label: {
-                            const _ = _navLang
-                            switch (modelData.id) {
-                            case 0: return qsTr("Display")
-                            case 1: return qsTr("Image")
-                            case 2: return qsTr("Export")
-                            }
-                            return ""
-                        }
+                        label: modelData.title
                         selected: root.pageIndex === modelData.id
                         onClicked: root.pageIndex = modelData.id
                     }
                 }
+            }
 
-                Item { Layout.fillWidth: true; Layout.fillHeight: true }
+            Rectangle {
+                anchors.bottom: parent.bottom
+                width: parent.width
+                height: 1
+                color: studio.border
             }
         }
 
@@ -72,12 +78,12 @@ Rectangle {
             Layout.fillHeight: true
             studio: root.studio
 
-            InspectorPageDisplay {
+            InspectorPageImage {
                 Layout.fillWidth: true
                 visible: root.pageIndex === 0
                 studio: root.studio
             }
-            InspectorPageImage {
+            InspectorPageDisplay {
                 Layout.fillWidth: true
                 visible: root.pageIndex === 1
                 studio: root.studio

@@ -5,6 +5,8 @@
 #include <QSettings>
 #include <QVariantList>
 
+class CodeSyntaxTheme;
+
 class AppSettings : public QObject
 {
     Q_OBJECT
@@ -20,9 +22,12 @@ class AppSettings : public QObject
     Q_PROPERTY(QString projectsRoot READ projectsRoot WRITE setProjectsRoot NOTIFY projectsRootChanged)
     Q_PROPERTY(QString exportsRoot READ exportsRoot WRITE setExportsRoot NOTIFY exportsRootChanged)
     Q_PROPERTY(QString documentsRoot READ documentsRoot WRITE setDocumentsRoot NOTIFY documentsRootChanged)
+    Q_PROPERTY(CodeSyntaxTheme *codeSyntax READ codeSyntax CONSTANT)
 
 public:
     explicit AppSettings(QObject *parent = nullptr);
+
+    CodeSyntaxTheme *codeSyntax() const { return m_codeSyntax; }
 
     QString languageCode() const { return m_languageCode; }
     bool showSidebar() const { return m_showSidebar; }
@@ -85,6 +90,7 @@ private:
     QString m_projectsRoot;
     QString m_exportsRoot;
     QString m_documentsRoot;
+    CodeSyntaxTheme *m_codeSyntax = nullptr;
 };
 
 #endif // PIXELSTUDIO_PERSISTENCE_APPSETTINGS_H

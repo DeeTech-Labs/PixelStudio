@@ -104,6 +104,9 @@ class DisplayConverter : public QObject
     Q_PROPERTY(bool rgb565BigEndian READ rgb565BigEndian WRITE setRgb565BigEndian NOTIFY rgb565BigEndianChanged)
     Q_PROPERTY(int codeDmaAlign READ codeDmaAlign WRITE setCodeDmaAlign NOTIFY codeDmaAlignChanged)
     Q_PROPERTY(bool linearColorSpace READ linearColorSpace WRITE setLinearColorSpace NOTIFY linearColorSpaceChanged)
+    Q_PROPERTY(QVariantList previewPalette READ previewPalette NOTIFY previewPathChanged)
+    Q_PROPERTY(int previewColorCount READ previewColorCount NOTIFY previewPathChanged)
+    Q_PROPERTY(QString imageFormatName READ imageFormatName NOTIFY hasImageChanged)
 
 public:
     explicit DisplayConverter(SessionSettings *session, AppSettings *appSettings = nullptr, QObject *parent = nullptr);
@@ -182,6 +185,9 @@ public:
     bool codeStaticStorage() const { return m_codeGenOptions.staticStorage; }
     bool rgb565BigEndian() const { return m_codeGenOptions.rgb565BigEndian; }
     int codeDmaAlign() const { return m_codeGenOptions.dmaPaddingAlign; }
+    QVariantList previewPalette() const;
+    int previewColorCount() const;
+    QString imageFormatName() const;
     bool linearColorSpace() const { return m_linearColorSpace; }
 
     Q_INVOKABLE void setArrayName(const QString &name);

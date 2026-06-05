@@ -39,8 +39,8 @@ Button {
             if (hover.hovered) return studio.surfaceRaised
             return studio.surfaceInput
         }
-        border.width: primary ? 0 : 1
-        border.color: studio.border
+        border.width: 1
+        border.color: root.primary ? studio.accent : studio.border
     }
 
     topPadding: 0

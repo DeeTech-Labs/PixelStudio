@@ -23,30 +23,23 @@ DropArea {
             root.fileDropped(drop.urls)
     }
 
-    FontLoader {
-        id: pixelFontLoader
-        source: "qrc:/fonts/PressStart2P-Regular.ttf"
-    }
-
-    readonly property string fontPixel: pixelFontLoader.status === FontLoader.Ready
-        ? pixelFontLoader.name
-        : studio.fontFamilyMono
+    readonly property string fontPixel: studio.fontFamilyPixel
     readonly property string fontUi: studio.fontFamily
 
-    readonly property color wBg: "#0d1117"
-    readonly property color wCard: "#161b22"
-    readonly property color wBorder: "#30363d"
-    readonly property color wText: "#ffffff"
-    readonly property color wText2: "#8b949e"
-    readonly property color wAccent: "#40e0d0"
-    readonly property color wAccentDark: "#1f9a88"
-    readonly property color wAccentTop: "#52edd9"
-    readonly property color wAccentBottom: "#36d4c4"
+    readonly property color wBg: studio.background
+    readonly property color wCard: studio.surface
+    readonly property color wBorder: studio.border
+    readonly property color wText: studio.text
+    readonly property color wText2: studio.textSecondary
+    readonly property color wAccent: studio.accent
+    readonly property color wAccentDark: studio.accentDark
+    readonly property color wAccentTop: studio.accentTop
+    readonly property color wAccentBottom: studio.accentBottom
 
     readonly property int designWidth: 1100
     readonly property int designHeight: 960
     readonly property real titleStretchY: 1.28
-    readonly property int recentMax: 6
+    readonly property int recentMax: 4
     readonly property int recentColumns: 2
     readonly property int recentCardThumb: 80
     readonly property int recentCardHeight: recentCardThumb + 24

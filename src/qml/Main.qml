@@ -10,21 +10,45 @@ ApplicationWindow {
     id: window
     width: 1200
     height: 780
+
+    function stripMenuMnemonic(text) {
+        let out = ""
+        for (let i = 0; i < text.length; ++i) {
+            const ch = text[i]
+            if (ch === "&") {
+                if (i + 1 < text.length && text[i + 1] === "&") {
+                    out += "&"
+                    ++i
+                } else if (i + 1 < text.length) {
+                    out += text[++i]
+                }
+            } else {
+                out += ch
+            }
+        }
+        return out
+    }
     minimumWidth: 960
     minimumHeight: 600
     visible: true
 
     Theme { id: appPalette }
 
+    FontLoader {
+        id: pixelFontLoader
+        source: "qrc:/fonts/PressStart2P-Regular.ttf"
+        onStatusChanged: {
+            if (status === FontLoader.Ready)
+                appPalette.fontFamilyPixel = name
+        }
+    }
+
     font.family: appPalette.fontFamily
     font.pixelSize: appPalette.fontSizeBase
     color: appPalette.background
 
     background: Rectangle {
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: appPalette.backgroundElevated }
-            GradientStop { position: 1.0; color: appPalette.background }
-        }
+        color: appPalette.background
     }
 
     title: tabController.activeIsWelcome
@@ -143,7 +167,7 @@ ApplicationWindow {
             if (tabController.activeIsWelcome)
                 tabController.newProjectTab(qsTr("Untitled"))
             if (appSettings.showSidebar)
-                inspectorDock.pageIndex = 4
+                studioLayout.inspectorPageIndex = 2
         }
         function importHeader() { importHeaderDialog.open() }
         function configureWatchFolder() { watchInputDialog.open() }
@@ -182,8 +206,25 @@ ApplicationWindow {
 
     menuBar: MenuBar {
         background: Rectangle {
-            color: appPalette.surfaceInset
-            implicitHeight: 28
+            color: appPalette.surface
+            border.width: 1
+            border.color: appPalette.border
+            implicitHeight: appPalette.menuBarHeight
+        }
+        delegate: MenuBarItem {
+            id: menuBarItem
+            contentItem: Label {
+                text: window.stripMenuMnemonic(menuBarItem.text).toUpperCase()
+                font.family: appPalette.fontFamilyPixel
+                font.pixelSize: appPalette.fontSizePixel
+                color: menuBarItem.highlighted ? appPalette.accent : appPalette.textSecondary
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+            background: Rectangle {
+                radius: appPalette.radiusSm
+                color: menuBarItem.highlighted ? appPalette.railHover : "transparent"
+            }
         }
         Menu {
             title: qsTr("&File")
@@ -722,28 +763,15 @@ ApplicationWindow {
         }
     }
 
-    Dialog {
+    AboutDialog {
         id: aboutDialog
-        title: qsTr("About PixelStudio")
-        modal: true
-        anchors.centerIn: parent
-        standardButtons: Dialog.Ok
-        padding: appPalette.spacingLg
-        property int bodyWidth: window.dialogBodyWidth(360, appPalette.spacingXl * 4)
-        width: bodyWidth + 2 * padding
-        background: Rectangle {
-            radius: appPalette.radiusLg
-            color: appPalette.surface
-            border.width: 1
-            border.color: appPalette.border
-        }
-        contentItem: Label {
-            width: aboutDialog.bodyWidth
-            wrapMode: Text.WordWrap
-            text: qsTr("Converts images to C arrays for OLED and TFT displays.")
-            font.family: appPalette.fontFamily
-            color: appPalette.text
-        }
+        studio: appPalette
+        bodyWidth: window.dialogBodyWidth(360, appPalette.spacingXl * 4)
+    }
+
+    CodeSyntaxColorsDialog {
+        id: syntaxColorsDialog
+        studio: appPalette
     }
 
     Dialog {
@@ -757,10 +785,10 @@ ApplicationWindow {
         width: bodyWidth + 2 * padding
 
         background: Rectangle {
-            radius: appPalette.radiusLg
+            radius: appPalette.radiusMd
             color: appPalette.surface
-            border.width: 1
-            border.color: appPalette.border
+            border.width: 2
+            border.color: appPalette.accent
         }
 
         ColumnLayout {
@@ -799,6 +827,12 @@ ApplicationWindow {
                     text: qsTr("Wrap generated code")
                     checked: appSettings.codeWrap
                     onToggled: appSettings.setCodeWrap(checked)
+                }
+                StudioButton {
+                    Layout.fillWidth: true
+                    studio: appPalette
+                    text: qsTr("Code syntax colors…")
+                    onClicked: syntaxColorsDialog.open()
                 }
                 StudioCheck {
                     Layout.fillWidth: true
@@ -965,10 +999,10 @@ ApplicationWindow {
             statusMessage(qsTr("Session reset"))
         }
         background: Rectangle {
-            radius: appPalette.radiusLg
+            radius: appPalette.radiusMd
             color: appPalette.surface
-            border.width: 1
-            border.color: appPalette.border
+            border.width: 2
+            border.color: appPalette.accent
         }
         contentItem: Label {
             width: resetSessionConfirmDialog.bodyWidth
@@ -997,10 +1031,10 @@ ApplicationWindow {
         }
         onRejected: pendingCloseTabId = ""
         background: Rectangle {
-            radius: appPalette.radiusLg
+            radius: appPalette.radiusMd
             color: appPalette.surface
-            border.width: 1
-            border.color: appPalette.border
+            border.width: 2
+            border.color: appPalette.accent
         }
         contentItem: ColumnLayout {
             width: closeTabConfirmDialog.bodyWidth
@@ -1035,10 +1069,10 @@ ApplicationWindow {
             window.close()
         }
         background: Rectangle {
-            radius: appPalette.radiusLg
+            radius: appPalette.radiusMd
             color: appPalette.surface
-            border.width: 1
-            border.color: appPalette.border
+            border.width: 2
+            border.color: appPalette.accent
         }
         contentItem: Label {
             width: exitConfirmDialog.bodyWidth
@@ -1049,20 +1083,35 @@ ApplicationWindow {
         }
     }
 
-    ColumnLayout {
-        anchors.fill: parent
-        spacing: 0
+    readonly property string statusSpecs: {
+        if (!converter.hasPreview)
+            return ""
+        return converter.displayWidth + " × " + converter.displayHeight
+            + "  " + converter.encodingModeName
+            + "  " + converter.previewColorCount + " " + qsTr("Colors")
+    }
 
-        StudioTabBar {
-            Layout.fillWidth: true
-            studio: appPalette
-            onCloseTabRequested: (tabId) => requestCloseTab(tabId)
-            onOpenImageTabRequested: openDialog.open()
-        }
+    RetroShell {
+        id: retroShell
+        anchors.fill: parent
+        studio: appPalette
+        statusText: toast.text.length > 0 ? toast.text : qsTr("Ready")
+        specsText: statusSpecs
+        toastText: toast.visible ? toast.text : ""
+
+        onCloseTabRequested: (tabId) => requestCloseTab(tabId)
+        onOpenImageTabRequested: openDialog.open()
+        onSettingsRequested: preferencesDialog.open()
+        onNewProjectRequested: tabController.newProjectTab(qsTr("Untitled"))
+        onOpenRequested: openDialog.open()
+        onSaveRequested: exportBridge.saveProject()
+        onToggleGridRequested: converter.setShowGrid(!converter.showGrid)
+        onViewDualRequested: setWorkspaceView(0)
+        onViewSourceRequested: setWorkspaceView(1)
+        onViewOutputRequested: setWorkspaceView(3)
 
         WelcomeScreen {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+            anchors.fill: parent
             visible: tabController.activeIsWelcome
             studio: appPalette
             onOpenImageRequested: openDialog.open()
@@ -1078,85 +1127,27 @@ ApplicationWindow {
             onSettingsRequested: preferencesDialog.open()
         }
 
-        SplitView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+        RetroStudioLayout {
+            id: studioLayout
+            anchors.fill: parent
             visible: !tabController.activeIsWelcome
-            Layout.margins: tabController.activeIsWelcome ? 0 : appPalette.spacingSm
-            orientation: Qt.Horizontal
-
-            handle: Rectangle {
-                implicitWidth: appPalette.splitHandleSize
-                implicitHeight: appPalette.splitHandleSize
-                color: SplitHandle.pressed ? appPalette.surfaceHover
-                    : (SplitHandle.hovered ? appPalette.border : "transparent")
-            }
-
-            SplitView {
-                SplitView.fillWidth: true
-                orientation: Qt.Vertical
-
-                handle: Rectangle {
-                    implicitWidth: appPalette.splitHandleSize
-                    implicitHeight: appPalette.splitHandleSize
-                    color: SplitHandle.pressed ? appPalette.surfaceHover
-                        : (SplitHandle.hovered ? appPalette.border : "transparent")
-                }
-
-                StudioWorkspace {
-                    SplitView.fillHeight: true
-                    SplitView.minimumHeight: 200
-                    studio: appPalette
-                    viewMode: tabController.activeViewMode
-                    exportBridge: exportBridge
-                    onOpenRequested: function() { openDialog.open() }
-                    onPasteRequested: importClipboard()
-                    onViewModeRequested: (mode) => setWorkspaceView(mode)
-                }
-
-                CodeDock {
-                    SplitView.fillWidth: true
-                    SplitView.preferredHeight: appPalette.codeDockHeight
-                    SplitView.minimumHeight: 100
-                    studio: appPalette
-                    onSaveCode: function() { saveCodeDialog.open() }
-                    onSaveBin: function() { saveBinDialog.open() }
-                }
-            }
-
-            InspectorDock {
-                id: inspectorDock
-                visible: appSettings.showSidebar
-                SplitView.preferredWidth: appSettings.showSidebar ? appPalette.inspectorWidth : 0
-                SplitView.minimumWidth: appSettings.showSidebar ? 280 : 0
-                SplitView.maximumWidth: appSettings.showSidebar ? 480 : 0
-                studio: appPalette
-                exportBridge: exportBridge
-                onNotify: (msg) => statusMessage(msg)
-            }
+            studio: appPalette
+            viewMode: tabController.activeViewMode
+            exportBridge: exportBridge
+            onOpenRequested: function() { openDialog.open() }
+            onPasteRequested: importClipboard()
+            onViewModeRequested: (mode) => setWorkspaceView(mode)
+            onAssetOpenRequested: (path) => openLocalPath(path)
+            onSaveCodeRequested: saveCodeDialog.open()
+            onSaveBinRequested: saveBinDialog.open()
+            onNotify: (msg) => statusMessage(msg)
         }
+    }
 
-        Rectangle {
-            id: toast
-            property string text: ""
-            visible: false
-            Layout.alignment: Qt.AlignHCenter
-            Layout.bottomMargin: appPalette.spacingMd
-            implicitWidth: toastLabel.implicitWidth + appPalette.spacingXl * 2
-            implicitHeight: 36
-            radius: appPalette.radiusMd
-            color: appPalette.text
-            border.width: 0
-
-            Label {
-                id: toastLabel
-                anchors.centerIn: parent
-                text: toast.text
-                font.family: appPalette.fontFamily
-                font.pixelSize: appPalette.fontSizeSm
-                color: appPalette.surface
-            }
-        }
+    QtObject {
+        id: toast
+        property string text: ""
+        property bool visible: false
     }
 
     Timer {

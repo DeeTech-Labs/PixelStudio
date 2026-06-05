@@ -25,7 +25,7 @@ Button {
     ToolTip.text: toolTipText
 
     background: Rectangle {
-        radius: studio.radiusSm
+        radius: studio.radiusMd
         color: root.toggled ? studio.accentSoft
             : (root.pressed ? studio.surfaceHover
                : (hover.hovered ? studio.railHover : "transparent"))

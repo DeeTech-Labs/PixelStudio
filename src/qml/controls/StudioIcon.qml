@@ -18,7 +18,7 @@ Item {
         source: name.length > 0 ? ("qrc:/icons/" + name + ".svg") : ""
         sourceSize: Qt.size(root.iconSize * 2, root.iconSize * 2)
         fillMode: Image.PreserveAspectFit
-        smooth: true
+        smooth: false
         visible: false
     }
 

@@ -58,31 +58,33 @@ Item {
                 x: slider.leftPadding
                 y: (slider.height - height) / 2
                 width: slider.availableWidth
-                height: 4
+                height: 6
                 Rectangle {
                     width: parent.width
                     height: parent.height
-                    radius: 2
+                    radius: studio.radiusPill
                     color: studio.surfaceInset
+                    border.width: 1
+                    border.color: studio.border
                 }
                 Rectangle {
                     width: slider.visualPosition * parent.width
                     height: parent.height
-                    radius: 2
-                    color: studio.accentMuted
+                    radius: studio.radiusPill
+                    color: studio.accent
                 }
             }
 
             handle: Rectangle {
                 x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
                 y: (slider.height - height) / 2
-                width: 14
-                height: 14
+                width: 12
+                height: 12
                 radius: studio.radiusSm
                 color: slider.pressed ? studio.accentPressed
                     : (slider.hovered ? studio.accentHover : studio.accent)
                 border.width: 1
-                border.color: studio.border
+                border.color: studio.text
             }
         }
     }
