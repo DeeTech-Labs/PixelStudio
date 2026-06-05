@@ -18,7 +18,7 @@ struct SessionSnapshot
     bool dithering = true;
     int monoThreshold = 128;
     QString arrayName = QStringLiteral("image_data");
-    int encodingMode = static_cast<int>(DisplayCodeGenerator::EncodingMode::Mono8HorizontalMsb);
+    int encodingMode = static_cast<int>(DisplayCodeGenerator::EncodingMode::Mono1Bit);
     int monoLayout = static_cast<int>(DisplayCodeGenerator::MonoLayout::RowPacked);
     int rotation = 0;
     bool flipHorizontal = false;
@@ -30,6 +30,9 @@ struct SessionSnapshot
     bool codeIncludeComments = true;
     bool codeUseProgmem = true;
     bool codeStaticStorage = true;
+    bool rgb565BigEndian = false;
+    int codeDmaAlign = 4;
+    bool linearColorSpace = true;
 };
 
 struct SessionUiState
@@ -48,6 +51,8 @@ class SessionSettings : public QObject
 public:
     explicit SessionSettings(QObject *parent = nullptr);
 
+    static SessionSnapshot defaultSnapshot();
+
     void load(SessionSnapshot *snapshot) const;
     void save(const SessionSnapshot &snapshot);
 
@@ -55,6 +60,7 @@ public:
     void saveUiState(const SessionUiState &state);
 
     void addRecentFile(const QUrl &url);
+    void removeRecentPath(const QString &absolutePath);
     void pruneMissingRecentFiles();
     QVariantList recentFiles() const;
 

@@ -91,7 +91,7 @@ HeaderImportResult HeaderImportService::importHeader(const QUrl &url)
     const QVector<int> values = parseNumbers(text.mid(text.indexOf(QLatin1Char('{'))));
     const bool rgb = text.contains(QStringLiteral("uint16_t")) || values.size() >= out.width * out.height;
     out.colorMode = rgb ? DisplayProfile::Rgb565 : DisplayProfile::Mono1Bit;
-    out.encodingMode = rgb ? DisplayCodeGenerator::EncodingMode::Rgb565 : DisplayCodeGenerator::EncodingMode::Mono8HorizontalMsb;
+    out.encodingMode = rgb ? DisplayCodeGenerator::EncodingMode::Rgb565 : DisplayCodeGenerator::EncodingMode::Mono1Bit;
     out.preview = rgb ? rgb565Preview(values, out.width, out.height) : monoPreview(values, out.width, out.height);
     out.ok = !out.preview.isNull();
     return out;

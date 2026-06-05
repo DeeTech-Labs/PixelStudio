@@ -3,6 +3,7 @@
 #include "app/DisplayConverter.h"
 #include "i18n/AppLocale.h"
 #include "persistence/AppPaths.h"
+#include "persistence/StoredPath.h"
 #include "persistence/ProjectFormat.h"
 #include "persistence/ProjectService.h"
 
@@ -244,8 +245,14 @@ void StudioTabController::stashActiveTab()
     active->title = displayTitle();
 
     if (!m_converter->projectFile().isEmpty()) {
-        active->projectPath = m_converter->projectFile().toLocalFile();
-        active->cachePath.clear();
+        const QString path = m_converter->projectFile().toLocalFile();
+        active->projectPath = path;
+        if (AppPaths::isTabCachePath(path)) {
+            if (active->cachePath.isEmpty())
+                active->cachePath = path;
+        } else {
+            active->cachePath.clear();
+        }
         m_converter->saveProject();
         return;
     }
@@ -258,7 +265,6 @@ void StudioTabController::stashActiveTab()
             + active->id + ProjectFormat::extension();
     }
     m_converter->saveProjectAs(QUrl::fromLocalFile(active->cachePath));
-    active->projectPath.clear();
 }
 
 bool StudioTabController::restoreTab(const TabEntry &entry)
@@ -340,8 +346,8 @@ void StudioTabController::loadTabsFromSettings()
         t.title = m.value(QStringLiteral("title")).toString();
         t.pinned = m.value(QStringLiteral("pinned")).toBool();
         t.isWelcome = m.value(QStringLiteral("isWelcome")).toBool();
-        t.projectPath = m.value(QStringLiteral("projectPath")).toString();
-        t.cachePath = m.value(QStringLiteral("cachePath")).toString();
+        t.projectPath = StoredPath::decode(m.value(QStringLiteral("projectPath")).toString());
+        t.cachePath = StoredPath::decode(m.value(QStringLiteral("cachePath")).toString());
         t.viewMode = normalizeViewMode(m.value(QStringLiteral("viewMode"), 0).toInt());
         if (t.isWelcome)
             t.id = QString::fromLatin1(kWelcomeTabId);
@@ -366,8 +372,8 @@ void StudioTabController::saveTabsToSettings()
             {QStringLiteral("title"), t.title},
             {QStringLiteral("pinned"), t.pinned},
             {QStringLiteral("isWelcome"), t.isWelcome},
-            {QStringLiteral("projectPath"), t.projectPath},
-            {QStringLiteral("cachePath"), t.cachePath},
+            {QStringLiteral("projectPath"), StoredPath::encode(t.projectPath)},
+            {QStringLiteral("cachePath"), StoredPath::encode(t.cachePath)},
             {QStringLiteral("viewMode"), t.viewMode},
         });
     }
@@ -523,11 +529,13 @@ QString StudioTabController::openFileTab(const QString &localPath)
     if (isProjectPath(localPath))
         return openProjectTab(QUrl::fromLocalFile(localPath));
 
-    const QString id = newProjectTab(QString());
+    const bool reuseActiveTab = !activeIsWelcome() && m_converter && !m_converter->hasImage();
+    const QString id = reuseActiveTab ? m_activeTabId : newProjectTab(QString());
     if (id.isEmpty())
         return {};
     if (!m_converter->loadImage(QUrl::fromLocalFile(localPath))) {
-        closeTab(id);
+        if (!reuseActiveTab)
+            closeTab(id);
         return {};
     }
     syncActiveTabTitle();
@@ -668,8 +676,10 @@ void StudioTabController::onProjectChanged()
     if (!active || active->isWelcome || !m_converter)
         return;
     if (!m_converter->projectFile().isEmpty()) {
-        active->projectPath = m_converter->projectFile().toLocalFile();
-        if (!active->cachePath.isEmpty()) {
+        const QString path = m_converter->projectFile().toLocalFile();
+        active->projectPath = path;
+        if (!active->cachePath.isEmpty()
+            && tabPathKey(active->cachePath) != tabPathKey(path)) {
             QFile::remove(active->cachePath);
             active->cachePath.clear();
         }

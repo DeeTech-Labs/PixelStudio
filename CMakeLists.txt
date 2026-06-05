@@ -34,6 +34,8 @@ set(PIXELSTUDIO_CORE_SOURCES
     src/processing/ConvertPipeline.cpp
     src/processing/ControllerCatalog.cpp
     src/processing/EncodingAnalyzer.cpp
+    src/processing/PixelFormatCatalog.cpp
+    src/processing/PixelFormatPacking.cpp
     src/export/BatchExportService.cpp
     src/export/SpriteAtlasService.cpp
     src/persistence/AppPaths.cpp
@@ -41,6 +43,7 @@ set(PIXELSTUDIO_CORE_SOURCES
     src/persistence/SessionSettings.cpp
     src/persistence/ProjectService.cpp
     src/persistence/ProjectFormat.cpp
+    src/persistence/RecentPreview.cpp
     src/persistence/StoredPath.cpp
     src/persistence/SettingsSchema.cpp
     src/io/ImageLoader.cpp
@@ -116,6 +119,9 @@ set(PIXELSTUDIO_QML_FILES
     src/qml/welcome/WelcomeBackdrop.qml
     src/qml/welcome/WelcomeDisplayViz.qml
     src/qml/welcome/WelcomeRecentCard.qml
+    src/qml/welcome/WelcomeFooterNav.qml
+    src/qml/welcome/WelcomeBrandMark.qml
+    src/qml/welcome/WelcomeSparkle.qml
     src/qml/shell/StudioTabBar.qml
     src/qml/shell/StudioTabChip.qml
 )
@@ -135,6 +141,15 @@ qt_add_resources(appPixelStudio "app_icons"
     PREFIX /icons
     BASE resources/icons
     FILES ${PIXELSTUDIO_ICON_SVGS}
+)
+
+qt_add_resources(appPixelStudio "app_welcome_assets"
+    PREFIX /
+    BASE resources
+    FILES
+        resources/fonts/PressStart2P-Regular.ttf
+        resources/ico/PixelStudio.ico
+        resources/ico/PixelStudio.png
 )
 
 qt_add_qml_module(appPixelStudio

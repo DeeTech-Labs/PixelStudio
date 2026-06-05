@@ -127,7 +127,9 @@ BatchExportResult BatchExportService::runJob(BatchExportJob job, std::atomic<boo
                                                  raster.rgb233,
                                                  raster.rgb24,
                                                  name,
-                                                 job.monoLayout);
+                                                 job.monoLayout,
+                                                 job.codeGenOptions,
+                                                 raster.indexedPalette);
         output += QLatin1Char('\n');
 
         result.progress = qRound((qreal(i + 1) / qreal(job.files.size())) * 100.0);

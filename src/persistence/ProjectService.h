@@ -23,6 +23,8 @@ struct StudioProject
     int offsetY = 0;
     SessionSnapshot session;
     QVector<ProjectAsset> assets;
+    QByteArray sourceImagePng;
+    QByteArray resultPreviewPng;
 };
 
 class ProjectService

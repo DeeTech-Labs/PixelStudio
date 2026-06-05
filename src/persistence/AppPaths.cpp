@@ -80,11 +80,11 @@ void relocateMisplacedConfigFiles()
             continue;
         for (const QString &name : names) {
             const QString misplaced = QDir(dir).absoluteFilePath(name);
-            if (!QFile::exists(misplaced))
+            if (!QFileInfo::exists(misplaced))
                 continue;
             const QString target = QDir(canonical).absoluteFilePath(name);
             ensureDir(canonical);
-            if (!QFile::exists(target)) {
+            if (!QFileInfo::exists(target)) {
                 QFile::rename(misplaced, target);
             } else {
                 QFile::remove(misplaced);
@@ -148,6 +148,29 @@ void migrateUserDataFromAppData()
     }
 }
 
+void migrateLegacyCacheDirs()
+{
+    const QString root = dataRoot();
+    const auto moveDirContents = [&](const QString &fromDir, const QString &toDir) {
+        QDir src(fromDir);
+        if (!src.exists())
+            return;
+        ensureDir(toDir);
+        const QFileInfoList files = src.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
+        for (const QFileInfo &fi : files) {
+            const QString target = QDir(toDir).absoluteFilePath(fi.fileName());
+            if (QFileInfo::exists(target))
+                QFile::remove(fi.absoluteFilePath());
+            else
+                QFile::rename(fi.absoluteFilePath(), target);
+        }
+        src.removeRecursively();
+    };
+
+    moveDirContents(root + QStringLiteral("/tab_cache"), tabCacheDir());
+    moveDirContents(root + QStringLiteral("/recent_previews"), recentThumbnailsDir());
+}
+
 } // namespace
 
 QString dataRoot()
@@ -193,15 +216,74 @@ QString watchDir()
     return userDocumentsRoot() + QStringLiteral("/watch");
 }
 
+QString cacheDir()
+{
+    return dataRoot() + QStringLiteral("/cache");
+}
+
 QString tabCacheDir()
 {
-    return dataRoot() + QStringLiteral("/tab_cache");
+    return cacheDir() + QStringLiteral("/tabs");
+}
+
+QString recentThumbnailsDir()
+{
+    return cacheDir() + QStringLiteral("/recent");
+}
+
+QString runtimePreviewsDir()
+{
+    return cacheDir() + QStringLiteral("/runtime");
+}
+
+namespace {
+
+QString cacheRelativePath(const QString &absolutePath)
+{
+    if (absolutePath.isEmpty())
+        return QString();
+    const QString native = QDir::cleanPath(QDir::fromNativeSeparators(absolutePath));
+    const QString data = QDir::cleanPath(dataRoot());
+    if (!native.startsWith(data, Qt::CaseInsensitive))
+        return QString();
+    QString rel = native.mid(data.size()).trimmed();
+    if (rel.startsWith(QLatin1Char('/')) || rel.startsWith(QLatin1Char('\\')))
+        rel = rel.mid(1);
+    return rel;
+}
+
+} // namespace
+
+bool isTabCachePath(const QString &absolutePath)
+{
+    const QString rel = cacheRelativePath(absolutePath);
+    return rel.startsWith(QStringLiteral("cache/tabs/"), Qt::CaseInsensitive);
+}
+
+bool isTransientCachePath(const QString &absolutePath)
+{
+    const QString rel = cacheRelativePath(absolutePath);
+    return rel.startsWith(QStringLiteral("cache/runtime/"), Qt::CaseInsensitive)
+        || rel.startsWith(QStringLiteral("cache/recent/"), Qt::CaseInsensitive);
+}
+
+bool isExcludedFromRecentPath(const QString &absolutePath)
+{
+    return isTransientCachePath(absolutePath);
+}
+
+bool isInternalDataPath(const QString &absolutePath)
+{
+    return isTabCachePath(absolutePath) || isTransientCachePath(absolutePath);
 }
 
 void ensureLayout()
 {
     ensureDir(dataRoot());
+    ensureDir(cacheDir());
     ensureDir(tabCacheDir());
+    ensureDir(recentThumbnailsDir());
+    ensureDir(runtimePreviewsDir());
     ensureDir(userDocumentsRoot());
     ensureDir(projectsDir());
     ensureDir(exportsDir());
@@ -210,7 +292,10 @@ void ensureLayout()
     if (!migrationCompleted()) {
         migrateLegacyStore();
         migrateUserDataFromAppData();
+        migrateLegacyCacheDirs();
         markMigrationCompleted();
+    } else {
+        migrateLegacyCacheDirs();
     }
     relocateMisplacedConfigFiles();
 }

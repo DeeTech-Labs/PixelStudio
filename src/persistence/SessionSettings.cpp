@@ -1,10 +1,15 @@
 #include "persistence/SessionSettings.h"
 
+#include "processing/PixelFormatCatalog.h"
 #include "persistence/AppPaths.h"
+#include "persistence/ProjectFormat.h"
 #include "persistence/SettingsSchema.h"
 #include "persistence/StoredPath.h"
 
+#include <QDateTime>
 #include <QFileInfo>
+#include <QImageReader>
+#include <QLocale>
 #include <QUrl>
 
 namespace {
@@ -86,6 +91,11 @@ void SessionSettings::syncNow()
     m_settings.sync();
 }
 
+SessionSnapshot SessionSettings::defaultSnapshot()
+{
+    return SessionSnapshot{};
+}
+
 void SessionSettings::load(SessionSnapshot *snapshot) const
 {
     if (!snapshot)
@@ -98,7 +108,8 @@ void SessionSettings::load(SessionSnapshot *snapshot) const
     snapshot->dithering = m_settings.value(QStringLiteral("dithering"), snapshot->dithering).toBool();
     snapshot->monoThreshold = m_settings.value(QStringLiteral("monoThreshold"), snapshot->monoThreshold).toInt();
     snapshot->arrayName = m_settings.value(QStringLiteral("arrayName"), snapshot->arrayName).toString();
-    snapshot->encodingMode = m_settings.value(QStringLiteral("encodingMode"), snapshot->encodingMode).toInt();
+    snapshot->encodingMode = static_cast<int>(PixelFormatCatalog::migrateLegacy(
+        m_settings.value(QStringLiteral("encodingMode"), snapshot->encodingMode).toInt()));
     snapshot->monoLayout = m_settings.value(QStringLiteral("monoLayout"), snapshot->monoLayout).toInt();
     snapshot->rotation = m_settings.value(QStringLiteral("rotation"), 0).toInt();
     snapshot->flipHorizontal = m_settings.value(QStringLiteral("flipH"), false).toBool();
@@ -109,6 +120,9 @@ void SessionSettings::load(SessionSnapshot *snapshot) const
     snapshot->codeIncludeComments = m_settings.value(QStringLiteral("code/includeComments"), true).toBool();
     snapshot->codeUseProgmem = m_settings.value(QStringLiteral("code/useProgmem"), true).toBool();
     snapshot->codeStaticStorage = m_settings.value(QStringLiteral("code/staticStorage"), true).toBool();
+    snapshot->rgb565BigEndian = m_settings.value(QStringLiteral("code/rgb565BigEndian"), false).toBool();
+    snapshot->codeDmaAlign = m_settings.value(QStringLiteral("code/dmaAlign"), 4).toInt();
+    snapshot->linearColorSpace = m_settings.value(QStringLiteral("code/linearColorSpace"), true).toBool();
     readFilterParams(m_settings, &snapshot->filterParams);
 }
 
@@ -132,6 +146,9 @@ void SessionSettings::save(const SessionSnapshot &snapshot)
     m_settings.setValue(QStringLiteral("code/includeComments"), snapshot.codeIncludeComments);
     m_settings.setValue(QStringLiteral("code/useProgmem"), snapshot.codeUseProgmem);
     m_settings.setValue(QStringLiteral("code/staticStorage"), snapshot.codeStaticStorage);
+    m_settings.setValue(QStringLiteral("code/rgb565BigEndian"), snapshot.rgb565BigEndian);
+    m_settings.setValue(QStringLiteral("code/dmaAlign"), snapshot.codeDmaAlign);
+    m_settings.setValue(QStringLiteral("code/linearColorSpace"), snapshot.linearColorSpace);
     writeFilterParams(m_settings, snapshot.filterParams);
     syncNow();
 }
@@ -141,6 +158,8 @@ void SessionSettings::loadUiState(SessionUiState *state) const
     if (!state)
         return;
     state->lastProjectFile = StoredPath::decode(m_settings.value(QStringLiteral("ui/lastProjectFile")).toString());
+    if (AppPaths::isInternalDataPath(state->lastProjectFile))
+        state->lastProjectFile.clear();
     state->lastOpenImageDir = StoredPath::decode(m_settings.value(QStringLiteral("ui/lastOpenImageDir")).toString());
     state->lastExportDir = StoredPath::decode(m_settings.value(QStringLiteral("ui/lastExportDir")).toString());
     state->watchInputFolder = StoredPath::decode(m_settings.value(QStringLiteral("ui/watchInput")).toString());
@@ -166,8 +185,9 @@ void SessionSettings::pruneMissingRecentFiles()
     kept.reserve(stored.size());
     for (const QString &entry : stored) {
         const QString path = StoredPath::decode(entry);
-        if (QFileInfo::exists(path))
-            kept.append(entry);
+        if (AppPaths::isExcludedFromRecentPath(path) || !QFileInfo::exists(path))
+            continue;
+        kept.append(entry);
     }
     if (kept == stored)
         return;
@@ -186,6 +206,8 @@ void SessionSettings::addRecentFile(const QUrl &url)
 
     const QString canonical = QFileInfo(path).canonicalFilePath();
     const QString keyPath = canonical.isEmpty() ? path : canonical;
+    if (AppPaths::isExcludedFromRecentPath(keyPath))
+        return;
     const QString encoded = StoredPath::encode(keyPath);
     QStringList recent = m_settings.value(QStringLiteral("recentFiles")).toStringList();
     for (auto it = recent.begin(); it != recent.end();) {
@@ -205,6 +227,33 @@ void SessionSettings::addRecentFile(const QUrl &url)
     emit recentFilesChanged();
 }
 
+void SessionSettings::removeRecentPath(const QString &absolutePath)
+{
+    if (absolutePath.isEmpty())
+        return;
+
+    const QString canonical = QFileInfo(absolutePath).canonicalFilePath();
+    const QString keyPath = canonical.isEmpty() ? absolutePath : canonical;
+    QStringList recent = m_settings.value(QStringLiteral("recentFiles")).toStringList();
+    bool changed = false;
+    for (auto it = recent.begin(); it != recent.end();) {
+        const QString stored = StoredPath::decode(*it);
+        const QString storedCanonical = QFileInfo(stored).canonicalFilePath();
+        const QString storedKey = storedCanonical.isEmpty() ? stored : storedCanonical;
+        if (storedKey == keyPath || stored == absolutePath || stored == keyPath) {
+            it = recent.erase(it);
+            changed = true;
+        } else {
+            ++it;
+        }
+    }
+    if (!changed)
+        return;
+    m_settings.setValue(QStringLiteral("recentFiles"), recent);
+    syncNow();
+    emit recentFilesChanged();
+}
+
 QVariantList SessionSettings::recentFiles() const
 {
     const QStringList stored = m_settings.value(QStringLiteral("recentFiles")).toStringList();
@@ -213,7 +262,7 @@ QVariantList SessionSettings::recentFiles() const
     QStringList seenKeys;
     for (const QString &entry : stored) {
         const QString path = StoredPath::decode(entry);
-        if (!QFileInfo::exists(path))
+        if (AppPaths::isExcludedFromRecentPath(path) || !QFileInfo::exists(path))
             continue;
         const QString canonical = QFileInfo(path).canonicalFilePath();
         const QString key = canonical.isEmpty() ? path : canonical;
@@ -222,10 +271,35 @@ QVariantList SessionSettings::recentFiles() const
         seenKeys.append(key);
 
         QVariantMap row;
+        const QFileInfo fi(path);
         row.insert(QStringLiteral("path"), path);
-        row.insert(QStringLiteral("name"), QFileInfo(path).fileName());
-        if (isRasterImagePath(path))
+        row.insert(QStringLiteral("name"), fi.fileName());
+
+        if (ProjectFormat::isProjectPath(path)) {
+            ProjectFormat::RecentSummary summary;
+            if (ProjectFormat::loadRecentSummary(path, &summary)) {
+                if (!summary.title.isEmpty())
+                    row.insert(QStringLiteral("name"), summary.title);
+                if (!summary.specsMeta.isEmpty())
+                    row.insert(QStringLiteral("projectMeta"), summary.specsMeta);
+                if (!summary.thumbnailPath.isEmpty())
+                    row.insert(QStringLiteral("thumbnailUrl"),
+                                QUrl::fromLocalFile(summary.thumbnailPath).toString());
+            }
+        } else if (isRasterImagePath(path)) {
             row.insert(QStringLiteral("thumbnailUrl"), QUrl::fromLocalFile(path).toString());
+            QImageReader reader(path);
+            const QSize size = reader.size();
+            if (size.isValid()) {
+                row.insert(QStringLiteral("projectMeta"),
+                           QStringLiteral("%1x%2px").arg(size.width()).arg(size.height()));
+            }
+        }
+
+        const QDateTime modified = fi.lastModified();
+        const QLocale locale;
+        row.insert(QStringLiteral("modifiedText"),
+                   locale.toString(modified, QStringLiteral("MMM d, yyyy • h:mm AP")));
         out.append(row);
     }
     return out;
@@ -233,7 +307,7 @@ QVariantList SessionSettings::recentFiles() const
 
 void SessionSettings::addRecentExport(const QString &absolutePath)
 {
-    if (absolutePath.isEmpty())
+    if (absolutePath.isEmpty() || AppPaths::isInternalDataPath(absolutePath))
         return;
     const QString encoded = StoredPath::encode(absolutePath);
     QStringList recent = m_settings.value(QStringLiteral("recentExports")).toStringList();
@@ -252,8 +326,10 @@ void SessionSettings::pruneMissingRecentExports()
     const QStringList stored = m_settings.value(QStringLiteral("recentExports")).toStringList();
     QStringList kept;
     for (const QString &entry : stored) {
-        if (QFileInfo::exists(StoredPath::decode(entry)))
-            kept.append(entry);
+        const QString path = StoredPath::decode(entry);
+        if (AppPaths::isInternalDataPath(path) || !QFileInfo::exists(path))
+            continue;
+        kept.append(entry);
     }
     if (kept == stored)
         return;
@@ -268,7 +344,7 @@ QVariantList SessionSettings::recentExports() const
     QVariantList out;
     for (const QString &entry : stored) {
         const QString path = StoredPath::decode(entry);
-        if (!QFileInfo::exists(path))
+        if (AppPaths::isInternalDataPath(path) || !QFileInfo::exists(path))
             continue;
         QVariantMap row;
         row.insert(QStringLiteral("path"), path);

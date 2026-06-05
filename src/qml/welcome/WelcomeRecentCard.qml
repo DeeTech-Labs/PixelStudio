@@ -1,112 +1,166 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
+import PixelStudio
 
 pragma Translator: PixelStudio
 
 Rectangle {
     id: root
     required property var studio
+    required property string fontPixel
+    required property string fontUi
     required property string fileName
     required property string filePath
     property string thumbnailUrl: ""
+    property string projectMeta: ""
+    property string dateTimeText: ""
+
+    property int thumbSize: 80
+    property int outerPadding: 12
+    property int innerSpacing: 12
 
     signal openRequested()
 
     readonly property bool hasThumbnail: thumbnailUrl.length > 0
-
     readonly property url thumbUrl: hasThumbnail ? thumbnailUrl : ""
+    readonly property bool hasProjectMeta: projectMeta.length > 0
+    readonly property bool hasDateTime: dateTimeText.length > 0
 
-    width: 220
-    height: 72
-    radius: studio.radiusLg
-    color: hover.hovered ? studio.surfaceRaised : Qt.rgba(38/255, 38/255, 38/255, 0.9)
+    readonly property color cardBg: "#161b22"
+    readonly property color cardBorder: "#30363d"
+    readonly property color accent: "#40e0d0"
+    readonly property color metaColor: "#8b949e"
+
+    implicitHeight: thumbSize + outerPadding * 2
+    radius: 12
+    color: cardBg
     border.width: 1
-    border.color: hover.hovered ? Qt.rgba(59/255, 158/255, 1, 0.45) : studio.border
-
-    property real lift: hover.hovered ? -2 : 0
-
-    transform: Translate { y: root.lift }
-    Behavior on lift { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-    Behavior on color { ColorAnimation { duration: 140 } }
-    Behavior on border.color { ColorAnimation { duration: 140 } }
+    border.color: hover.hovered ? accent : cardBorder
+    clip: false
 
     HoverHandler { id: hover }
 
-    Row {
+    RowLayout {
         anchors.fill: parent
-        anchors.margins: studio.spacingMd
-        spacing: studio.spacingMd
+        anchors.margins: outerPadding
+        spacing: innerSpacing
 
         Rectangle {
-            id: thumbFrame
-            width: 40
-            height: 40
-            radius: studio.radiusMd
-            anchors.verticalCenter: parent.verticalCenter
-            color: "#141820"
+            id: preview
+            Layout.preferredWidth: thumbSize
+            Layout.preferredHeight: thumbSize
+            Layout.alignment: Qt.AlignVCenter
+            radius: 8
+            color: "#0d1117"
             clip: true
             border.width: 1
-            border.color: Qt.rgba(255, 255, 255, 0.08)
+            border.color: cardBorder
 
             Image {
                 id: thumb
                 anchors.fill: parent
                 visible: root.hasThumbnail && status === Image.Ready
                 source: root.thumbUrl
-                sourceSize: Qt.size(thumbFrame.width * 2, thumbFrame.height * 2)
+                sourceSize: Qt.size(preview.width * 2, preview.height * 2)
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 cache: true
-                smooth: true
+                smooth: false
                 mipmap: true
             }
 
             Rectangle {
                 anchors.fill: parent
                 visible: root.hasThumbnail && thumb.status === Image.Loading
-                color: studio.surfaceInset
+                color: Qt.rgba(1, 1, 1, 0.03)
             }
 
-            Item {
+            Rectangle {
                 anchors.fill: parent
                 visible: !root.hasThumbnail
                          || thumb.status === Image.Error
                          || (root.hasThumbnail && thumb.status !== Image.Ready && thumb.status !== Image.Loading)
-
-                Rectangle {
-                    anchors.fill: parent
-                    color: studio.accentSoft
-                    border.width: 1
-                    border.color: Qt.rgba(59/255, 158/255, 1, 0.25)
-                }
-                Label {
-                    anchors.centerIn: parent
-                    text: root.hasThumbnail ? "\u29C9" : "\u25A1"
-                    font.pixelSize: 18
-                    color: studio.accent
-                }
+                color: Qt.rgba(45/255, 212/255, 191/255, 0.06)
             }
         }
 
-        Column {
-            width: parent.width - 40 - studio.spacingMd * 3
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 2
-            Label {
-                width: parent.width
-                text: root.fileName
-                font.pixelSize: studio.fontSizeBase
-                font.weight: Font.Medium
-                color: studio.text
-                elide: Text.ElideRight
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: 0
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+
+                Text {
+                    Layout.fillWidth: true
+                    text: root.fileName
+                    font.family: root.fontUi
+                    font.pixelSize: 14
+                    font.weight: Font.DemiBold
+                    color: "#ffffff"
+                    elide: Text.ElideRight
+                    maximumLineCount: 1
+                }
+
+                Item {
+                    Layout.preferredWidth: 22
+                    Layout.preferredHeight: 22
+                    Layout.alignment: Qt.AlignTop
+
+                    StudioIcon {
+                        anchors.centerIn: parent
+                        name: "dots-vertical"
+                        iconSize: 18
+                        tint: hover.hovered ? root.accent : root.metaColor
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.openRequested()
+                    }
+                }
             }
-            Label {
-                width: parent.width
-                text: root.filePath
-                font.family: studio.fontFamilyMono
-                font.pixelSize: studio.fontSizeXs
-                color: studio.textMuted
-                elide: Text.ElideMiddle
+
+            Text {
+                Layout.fillWidth: true
+                Layout.topMargin: 4
+                text: root.projectMeta
+                visible: root.hasProjectMeta
+                font.family: root.fontUi
+                font.pixelSize: 12
+                color: metaColor
+                elide: Text.ElideRight
+                maximumLineCount: 1
+            }
+
+            Item { Layout.fillHeight: true }
+
+            RowLayout {
+                Layout.fillWidth: true
+                visible: root.hasDateTime
+                spacing: 8
+
+                StudioIcon {
+                    name: "calendar"
+                    iconSize: 14
+                    tint: metaColor
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: root.dateTimeText
+                    font.family: root.fontUi
+                    font.pixelSize: 12
+                    color: metaColor
+                    elide: Text.ElideRight
+                    maximumLineCount: 1
+                }
             }
         }
     }
@@ -115,5 +169,6 @@ Rectangle {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         onClicked: root.openRequested()
+        z: -1
     }
 }

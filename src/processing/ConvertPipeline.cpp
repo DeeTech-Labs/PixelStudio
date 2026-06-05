@@ -29,5 +29,6 @@ DisplayRasterizer::Result ConvertPipeline::rasterize(const QImage &oriented,
                                       params.filterParams,
                                       params.encodingMode,
                                       params.monoThreshold,
-                                      params.invertMono);
+                                      params.invertMono,
+                                      params.linearColorSpace);
 }

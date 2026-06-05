@@ -18,8 +18,9 @@ struct SpriteAtlasRequest
     int frameHeight = 0;
     int padding = 0;
     bool fixedGrid = false;
-    DisplayCodeGenerator::EncodingMode encodingMode = DisplayCodeGenerator::EncodingMode::Mono8HorizontalMsb;
+    DisplayCodeGenerator::EncodingMode encodingMode = DisplayCodeGenerator::EncodingMode::Mono1Bit;
     DisplayCodeGenerator::MonoLayout monoLayout = DisplayCodeGenerator::MonoLayout::RowPacked;
+    DisplayCodeGenerator::CodeGenOptions codeGenOptions;
 };
 
 struct SpriteAtlasResult

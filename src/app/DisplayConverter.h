@@ -6,7 +6,6 @@
 #include <QUrl>
 #include <QString>
 #include <QVariantList>
-#include <QTemporaryFile>
 #include <QFutureWatcher>
 #include <QTimer>
 #include <QColor>
@@ -102,6 +101,9 @@ class DisplayConverter : public QObject
     Q_PROPERTY(bool codeIncludeComments READ codeIncludeComments WRITE setCodeIncludeComments NOTIFY codeGenOptionsChanged)
     Q_PROPERTY(bool codeUseProgmem READ codeUseProgmem WRITE setCodeUseProgmem NOTIFY codeGenOptionsChanged)
     Q_PROPERTY(bool codeStaticStorage READ codeStaticStorage WRITE setCodeStaticStorage NOTIFY codeGenOptionsChanged)
+    Q_PROPERTY(bool rgb565BigEndian READ rgb565BigEndian WRITE setRgb565BigEndian NOTIFY rgb565BigEndianChanged)
+    Q_PROPERTY(int codeDmaAlign READ codeDmaAlign WRITE setCodeDmaAlign NOTIFY codeDmaAlignChanged)
+    Q_PROPERTY(bool linearColorSpace READ linearColorSpace WRITE setLinearColorSpace NOTIFY linearColorSpaceChanged)
 
 public:
     explicit DisplayConverter(SessionSettings *session, AppSettings *appSettings = nullptr, QObject *parent = nullptr);
@@ -178,6 +180,9 @@ public:
     bool codeIncludeComments() const { return m_codeGenOptions.includeHeaderComments; }
     bool codeUseProgmem() const { return m_codeGenOptions.useProgmem; }
     bool codeStaticStorage() const { return m_codeGenOptions.staticStorage; }
+    bool rgb565BigEndian() const { return m_codeGenOptions.rgb565BigEndian; }
+    int codeDmaAlign() const { return m_codeGenOptions.dmaPaddingAlign; }
+    bool linearColorSpace() const { return m_linearColorSpace; }
 
     Q_INVOKABLE void setArrayName(const QString &name);
     Q_INVOKABLE void setDisplayWidth(int w);
@@ -214,6 +219,9 @@ public:
     Q_INVOKABLE void setCodeIncludeComments(bool on);
     Q_INVOKABLE void setCodeUseProgmem(bool on);
     Q_INVOKABLE void setCodeStaticStorage(bool on);
+    Q_INVOKABLE void setRgb565BigEndian(bool on);
+    Q_INVOKABLE void setCodeDmaAlign(int align);
+    Q_INVOKABLE void setLinearColorSpace(bool on);
     Q_INVOKABLE void setShowGrid(bool on);
     Q_INVOKABLE void setGridThresholdZoom(int value);
     Q_INVOKABLE void setRotation(int degrees);
@@ -303,6 +311,9 @@ signals:
     void contourModeChanged();
     void tonePresetChanged();
     void codeGenOptionsChanged();
+    void rgb565BigEndianChanged();
+    void codeDmaAlignChanged();
+    void linearColorSpaceChanged();
     void showGridChanged();
     void gridThresholdZoomChanged();
     void generatedCodeChanged();
@@ -352,7 +363,7 @@ private:
     QImage orientedSource() const;
     void markOrientedDirty();
     void refreshSourcePreview();
-    QUrl writeTempPreview(const QImage &img, QTemporaryFile **slot);
+    QUrl writeTempPreview(const QString &slotName, const QImage &img);
     ConvertPipelineParams pipelineParams() const;
     SessionSnapshot sessionSnapshot() const;
     void applySessionSnapshot(const SessionSnapshot &snapshot);
@@ -360,6 +371,7 @@ private:
     void updateCodePreview();
     void updateFlashReport();
     void applyProject(const StudioProject &project);
+    StudioProject projectSnapshot() const;
     void applyStoredUiState();
     void persistUiState();
     void updateWatchExportPrefix();
@@ -375,14 +387,12 @@ private:
     QUrl m_sourcePath;
     QUrl m_previewPath;
     QUrl m_processPreviewPath;
+    quint64 m_previewEpoch = 0;
     QString m_generatedCode;
     QString m_generatedCodePreview;
     bool m_generatedCodeTruncated = false;
     bool m_showFullGeneratedCode = false;
     DisplayRasterizer::Result m_lastResult;
-    QTemporaryFile *m_sourceTemp = nullptr;
-    QTemporaryFile *m_previewTemp = nullptr;
-    QTemporaryFile *m_processTemp = nullptr;
 
     QString m_profileId = QStringLiteral("128x64");
     int m_displayWidth = 128;
@@ -393,13 +403,14 @@ private:
     int m_monoThreshold = 128;
     QString m_arrayName = QStringLiteral("image_data");
     DisplayCodeGenerator::MonoLayout m_monoLayout = DisplayCodeGenerator::MonoLayout::RowPacked;
-    DisplayCodeGenerator::EncodingMode m_encodingMode = DisplayCodeGenerator::EncodingMode::Mono8HorizontalMsb;
+    DisplayCodeGenerator::EncodingMode m_encodingMode = DisplayCodeGenerator::EncodingMode::Mono1Bit;
     int m_rotation = 0;
     bool m_flipHorizontal = false;
     bool m_flipVertical = false;
     bool m_invertMono = false;
     ImageFiltersPipeline::Params m_filterParams;
     DisplayCodeGenerator::CodeGenOptions m_codeGenOptions;
+    bool m_linearColorSpace = true;
     mutable QImage m_orientedCache;
     mutable bool m_orientedDirty = true;
 
@@ -413,6 +424,7 @@ private:
     bool m_showGrid = false;
     int m_gridThresholdZoom = 8;
     StudioProject m_project;
+    QString m_sourceFilePath;
     QUrl m_projectFile;
     int m_offsetX = 0;
     int m_offsetY = 0;

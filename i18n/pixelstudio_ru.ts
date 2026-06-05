@@ -160,6 +160,70 @@
         <translation>RGB565</translation>
     </message>
     <message>
+        <source>RGB565 (16-bit)</source>
+        <translation>RGB565 (16-bit)</translation>
+    </message>
+    <message>
+        <source>RGB888 (24-bit)</source>
+        <translation>RGB888 (24-bit)</translation>
+    </message>
+    <message>
+        <source>ARGB8888 (32-bit)</source>
+        <translation>ARGB8888 (32-bit)</translation>
+    </message>
+    <message>
+        <source>Monochrome (1-bit)</source>
+        <translation>Монохром (1-bit)</translation>
+    </message>
+    <message>
+        <source>Grayscale (4-bit)</source>
+        <translation>Оттенки серого (4-bit)</translation>
+    </message>
+    <message>
+        <source>Grayscale (8-bit)</source>
+        <translation>Оттенки серого (8-bit)</translation>
+    </message>
+    <message>
+        <source>Indexed color (8-bit palette)</source>
+        <translation>Индексированный цвет (8-bit палитра)</translation>
+    </message>
+    <message>
+        <source>RGB666 (18-bit)</source>
+        <translation>RGB666 (18-bit)</translation>
+    </message>
+    <message>
+        <source>BGR565 (16-bit)</source>
+        <translation>BGR565 (16-bit)</translation>
+    </message>
+    <message>
+        <source>BGR888 (24-bit)</source>
+        <translation>BGR888 (24-bit)</translation>
+    </message>
+    <message>
+        <source>ABGR8888 (32-bit)</source>
+        <translation>ABGR8888 (32-bit)</translation>
+    </message>
+    <message>
+        <source>YUV NV12</source>
+        <translation>YUV NV12</translation>
+    </message>
+    <message>
+        <source>YUV YUYV</source>
+        <translation>YUV YUYV</translation>
+    </message>
+    <message>
+        <source>YUV YV12</source>
+        <translation>YUV YV12</translation>
+    </message>
+    <message>
+        <source>R16F (16-bit float)</source>
+        <translation>R16F (16-bit float)</translation>
+    </message>
+    <message>
+        <source>RGBA32F (32-bit float)</source>
+        <translation>RGBA32F (32-bit float)</translation>
+    </message>
+    <message>
         <location filename="../src/app/WinTaskbarRecent.cpp" line="140" />
         <source>Recent</source>
         <translation>Недавние</translation>
@@ -694,8 +758,8 @@
     </message>
     <message>
         <location filename="../src/qml/panels/InspectorPageDisplay.qml" line="99" />
-        <source>Monochrome, grayscale, RGB565 and other formats for OLED and TFT.</source>
-        <translation>Монохром, оттенки серого, RGB565 и другие форматы для OLED и TFT.</translation>
+        <source>RGB565, RGB888, ARGB8888, monochrome, grayscale, indexed, YUV and other pixel formats for TFT and OLED.</source>
+        <translation>RGB565, RGB888, ARGB8888, монохром, оттенки серого, индексированный цвет, YUV и другие форматы пикселей для TFT и OLED.</translation>
     </message>
     <message>
         <location filename="../src/qml/panels/InspectorPageDisplay.qml" line="121" />
@@ -1379,6 +1443,7 @@
     <message>
         <location filename="../src/qml/panels/InspectorPageImage.qml" line="255" />
         <location filename="../src/qml/panels/InspectorPageImage.qml" line="310" />
+        <location filename="../src/qml/panels/InspectorPageDisplay.qml" line="185"/>
         <source>None</source>
         <translation>Нет</translation>
     </message>
@@ -1542,6 +1607,7 @@
     <message>
         <location filename="../src/qml/Main.qml" line="557" />
         <location filename="../src/qml/Main.qml" line="567" />
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="50" />
         <source>PixelStudio project</source>
         <translation>Проект PixelStudio</translation>
     </message>
@@ -2120,9 +2186,132 @@
         <translation>исходник</translation>
     </message>
     <message>
-        <location filename="../src/qml/panels/InspectorPageDisplay.qml" line="247" />
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="160"/>
+        <source>Convert pixel art to OLED, TFT and retro displays with ease.</source>
+        <translation>Превращайте пиксель-арт в прошивку для OLED, TFT и ретро-дисплеев.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/welcome/WelcomeFooterNav.qml" line="0"/>
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="315"/>
+        <source>Customize PixelStudio</source>
+        <translation>Настройте PixelStudio</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/welcome/WelcomeFooterNav.qml" line="0"/>
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="314"/>
+        <source>Display Profiles</source>
+        <translation>Профили дисплеев</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/welcome/WelcomeFooterNav.qml" line="0"/>
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="312"/>
+        <source>Documentation</source>
+        <translation>Документация</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/welcome/WelcomeFooterNav.qml" line="0"/>
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="313"/>
+        <source>Examples</source>
+        <translation>Примеры</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/welcome/WelcomeFooterNav.qml" line="0"/>
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="313"/>
+        <source>Explore sample projects</source>
+        <translation>Изучите примеры проектов</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/welcome/WelcomeFooterNav.qml" line="0"/>
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="312"/>
+        <source>Learn the basics</source>
+        <translation>Основы работы</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/welcome/WelcomeFooterNav.qml" line="0"/>
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="314"/>
+        <source>Manage your displays</source>
+        <translation>Управляйте дисплеями</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/welcome/WelcomeRecentCard.qml" line="108"/>
+        <source>More</source>
+        <translation>Ещё</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="287"/>
+        <source>No recent projects yet</source>
+        <translation>Недавних проектов пока нет</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="120"/>
+        <source>Pixel</source>
+        <translation>Pixel</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="224"/>
+        <source>Recent projects</source>
+        <translation>Недавние проекты</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/welcome/WelcomeFooterNav.qml" line="0"/>
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="315"/>
+        <source>Settings</source>
+        <translation>Настройки</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="126"/>
+        <source>Studio</source>
+        <translation>Studio</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/welcome/WelcomeScreen.qml" line="240"/>
+        <source>View all projects</source>
+        <translation>Все проекты</translation>
+    </message>
+    <message>
+        <location filename="../src/persistence/ProjectFormat.cpp" line="0"/>
+        <source>16-bit Color</source>
+        <translation>16-битный цвет</translation>
+    </message>
+    <message>
+        <location filename="../src/persistence/ProjectFormat.cpp" line="0"/>
+        <source>Monochrome</source>
+        <translation>Монохром</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/panels/InspectorPageDisplay.qml" line="127"/>
+        <source>Vertical column</source>
+        <translation>Вертикальная колонка</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/panels/InspectorPageDisplay.qml" line="162"/>
         <source>static storage</source>
         <translation>static</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/panels/InspectorPageDisplay.qml" line="169"/>
+        <source>RGB565 big-endian (SPI)</source>
+        <translation>RGB565 big-endian (SPI)</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/panels/InspectorPageDisplay.qml" line="175"/>
+        <source>sRGB → linear quantization</source>
+        <translation>sRGB → линейное квантование</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/panels/InspectorPageDisplay.qml" line="179"/>
+        <source>DMA buffer alignment</source>
+        <translation>Выравнивание буфера DMA</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/panels/InspectorPageDisplay.qml" line="186"/>
+        <source>4 bytes</source>
+        <translation>4 байта</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/panels/InspectorPageDisplay.qml" line="187"/>
+        <source>8 bytes</source>
+        <translation>8 байт</translation>
     </message>
 </context>
 </TS>

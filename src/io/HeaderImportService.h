@@ -15,7 +15,7 @@ struct HeaderImportResult
     int width = 0;
     int height = 0;
     DisplayProfile::ColorMode colorMode = DisplayProfile::Mono1Bit;
-    DisplayCodeGenerator::EncodingMode encodingMode = DisplayCodeGenerator::EncodingMode::Mono8HorizontalMsb;
+    DisplayCodeGenerator::EncodingMode encodingMode = DisplayCodeGenerator::EncodingMode::Mono1Bit;
     QImage preview;
 };
 

@@ -1,124 +1,15 @@
 #include "processing/DisplayCodeGenerator.h"
+#include "processing/PixelFormatCatalog.h"
+#include "processing/PixelFormatPacking.h"
+
+#include <cmath>
 #include <QStringList>
 #include <QVariantMap>
 
 namespace {
 
-QByteArray packMono1PixPerByte(const QVector<bool> &bits)
-{
-    QByteArray out(bits.size(), 0);
-    for (int i = 0; i < bits.size(); ++i)
-        out[i] = bits[i] ? char(0x01) : char(0x00);
-    return out;
-}
-
-QByteArray packMonoHorizontal(const QVector<bool> &bits, int width, int height, bool msbLeft)
-{
-    const int bytesPerRow = (width + 7) / 8;
-    QByteArray out(bytesPerRow * height, 0);
-    for (int y = 0; y < height; ++y) {
-        for (int bx = 0; bx < bytesPerRow; ++bx) {
-            quint8 byte = 0;
-            for (int bit = 0; bit < 8; ++bit) {
-                const int x = bx * 8 + bit;
-                if (x >= width)
-                    break;
-                if (bits[y * width + x]) {
-                    const int pos = msbLeft ? (7 - bit) : bit;
-                    byte |= quint8(1u << pos);
-                }
-            }
-            out[y * bytesPerRow + bx] = char(byte);
-        }
-    }
-    return out;
-}
-
-QByteArray packMonoVerticalCol(const QVector<bool> &bits, int width, int height)
-{
-    const int pages = (height + 7) / 8;
-    QByteArray out(width * pages, 0);
-    for (int x = 0; x < width; ++x) {
-        for (int page = 0; page < pages; ++page) {
-            quint8 byte = 0;
-            for (int bit = 0; bit < 8; ++bit) {
-                const int y = page * 8 + bit;
-                if (y >= height)
-                    break;
-                if (bits[y * width + x])
-                    byte |= quint8(1u << bit);
-            }
-            out[x * pages + page] = char(byte);
-        }
-    }
-    return out;
-}
-
-QByteArray packMonoVerticalRow(const QVector<bool> &bits, int width, int height)
-{
-    const int pages = (height + 7) / 8;
-    QByteArray out(width * pages, 0);
-    for (int page = 0; page < pages; ++page) {
-        for (int x = 0; x < width; ++x) {
-            quint8 byte = 0;
-            for (int bit = 0; bit < 8; ++bit) {
-                const int y = page * 8 + bit;
-                if (y >= height)
-                    break;
-                if (bits[y * width + x])
-                    byte |= quint8(1u << bit);
-            }
-            out[page * width + x] = char(byte);
-        }
-    }
-    return out;
-}
-
-QByteArray packHeaderBitmap(const QVector<bool> &bits, int width, int height)
-{
-    QByteArray out;
-    out.reserve(4 + ((width * height + 7) / 8));
-    out.append(char(width & 0xFF));
-    out.append(char((width >> 8) & 0xFF));
-    out.append(char(height & 0xFF));
-    out.append(char((height >> 8) & 0xFF));
-    out.append(packMonoVerticalCol(bits, width, height));
-    return out;
-}
-
-QByteArray packHeaderRle(const QVector<bool> &bits, int width, int height)
-{
-    const QByteArray bitmap = packHeaderBitmap(bits, width, height);
-    QByteArray out;
-    out.reserve(bitmap.size());
-    out.append(bitmap.left(4));
-    int i = 4;
-    while (i < bitmap.size()) {
-        const char value = bitmap.at(i);
-        int run = 1;
-        while (i + run < bitmap.size() && bitmap.at(i + run) == value && run < 255)
-            ++run;
-        out.append(char(run));
-        out.append(value);
-        i += run;
-    }
-    return out;
-}
-
-QByteArray packAutoPackedImage(const QVector<bool> &bits, int width, int height)
-{
-    const QByteArray bitmap = packHeaderBitmap(bits, width, height);
-    const QByteArray bitpack = packHeaderRle(bits, width, height);
-    QByteArray out;
-    if (bitpack.size() < bitmap.size()) {
-        out.append(char(1));
-        out.append(bitpack);
-    } else {
-        out.append(char(0));
-        out.append(bitmap);
-    }
-    return out;
-}
+using Mode = DisplayCodeGenerator::EncodingMode;
+using MonoLayout = DisplayCodeGenerator::MonoLayout;
 
 QString toHexByte(quint8 value)
 {
@@ -130,54 +21,149 @@ bool monoBitsReady(const QVector<bool> &bits, int width, int height)
     return width > 0 && height > 0 && bits.size() == width * height;
 }
 
-int expectedBinarySize(DisplayCodeGenerator::EncodingMode mode,
-                       int width,
-                       int height,
-                       DisplayCodeGenerator::MonoLayout monoLayout)
+QByteArray packMonoHorizontal(const QVector<bool> &bits, int width, int height)
+{
+    const int bytesPerRow = (width + 7) / 8;
+    QByteArray out(bytesPerRow * height, 0);
+    for (int y = 0; y < height; ++y) {
+        for (int bx = 0; bx < bytesPerRow; ++bx) {
+            quint8 byte = 0;
+            for (int bit = 0; bit < 8; ++bit) {
+                const int x = bx * 8 + bit;
+                if (x >= width)
+                    break;
+                if (bits[y * width + x])
+                    byte |= quint8(1u << (7 - bit));
+            }
+            out[y * bytesPerRow + bx] = char(byte);
+        }
+    }
+    return out;
+}
+
+QByteArray packGrayscale4(const QByteArray &grayscale8, int pixels)
+{
+    if (grayscale8.size() != pixels)
+        return QByteArray((pixels + 1) / 2, 0);
+    QByteArray out((pixels + 1) / 2, 0);
+    for (int i = 0; i < pixels; i += 2) {
+        const quint8 hi = quint8((quint8(grayscale8.at(i)) >> 4) & 0x0F);
+        const quint8 lo = (i + 1 < pixels)
+            ? quint8((quint8(grayscale8.at(i + 1)) >> 4) & 0x0F)
+            : quint8(0);
+        out[i / 2] = char((hi << 4) | lo);
+    }
+    return out;
+}
+
+QByteArray packBgr888(const QByteArray &rgb888, int pixels)
+{
+    if (rgb888.size() != pixels * 3)
+        return QByteArray(pixels * 3, 0);
+    QByteArray out(pixels * 3, 0);
+    for (int i = 0; i < pixels; ++i) {
+        out[i * 3] = rgb888.at(i * 3 + 2);
+        out[i * 3 + 1] = rgb888.at(i * 3 + 1);
+        out[i * 3 + 2] = rgb888.at(i * 3);
+    }
+    return out;
+}
+
+quint16 floatToHalf(float value)
+{
+    const quint32 bits = *reinterpret_cast<const quint32 *>(&value);
+    const quint32 sign = (bits >> 16) & 0x8000;
+    qint32 exp = qint32((bits >> 23) & 0xFF) - 127 + 15;
+    quint32 mant = (bits >> 13) & 0x3FF;
+    if (exp <= 0) {
+        if (exp < -10)
+            return quint16(sign);
+        mant |= 0x400;
+        mant >>= quint32(1 - exp);
+        return quint16(sign | mant);
+    }
+    if (exp >= 31)
+        return quint16(sign | 0x7C00);
+    return quint16(sign | quint32(exp << 10) | mant);
+}
+
+QVector<quint16> buildR16f(const QByteArray &grayscale8, int pixels)
+{
+    QVector<quint16> out(pixels, 0);
+    if (grayscale8.size() != pixels)
+        return out;
+    for (int i = 0; i < pixels; ++i) {
+        const float lin = PixelFormatPacking::srgbChannelToLinear(float(quint8(grayscale8.at(i))) / 255.0f);
+        out[i] = floatToHalf(lin);
+    }
+    return out;
+}
+
+QVector<float> buildRgba32f(const QByteArray &rgb888, int pixels)
+{
+    QVector<float> out(pixels * 4, 0.0f);
+    if (rgb888.size() != pixels * 3)
+        return out;
+    for (int i = 0; i < pixels; ++i) {
+        out[i * 4] = PixelFormatPacking::srgbChannelToLinear(float(quint8(rgb888.at(i * 3))) / 255.0f);
+        out[i * 4 + 1] = PixelFormatPacking::srgbChannelToLinear(float(quint8(rgb888.at(i * 3 + 1))) / 255.0f);
+        out[i * 4 + 2] = PixelFormatPacking::srgbChannelToLinear(float(quint8(rgb888.at(i * 3 + 2))) / 255.0f);
+        out[i * 4 + 3] = 1.0f;
+    }
+    return out;
+}
+
+int expectedBinarySize(Mode mode, int width, int height, MonoLayout monoLayout)
 {
     const int pixels = width * height;
     const int pages = (height + 7) / 8;
     const int bytesPerRow = (width + 7) / 8;
+    const int uvStride = (width + 1) & ~1;
+    const int chromaRows = (height + 1) / 2;
+    const int chromaWidth = (width + 1) / 2;
     switch (mode) {
-    case DisplayCodeGenerator::EncodingMode::Mono1PixPerByte:
-        return pixels;
-    case DisplayCodeGenerator::EncodingMode::Mono8HorizontalLsb:
-    case DisplayCodeGenerator::EncodingMode::Mono8HorizontalMsb:
-        if (monoLayout == DisplayCodeGenerator::MonoLayout::Ssd1306Page)
+    case Mode::Mono1Bit:
+        if (monoLayout == MonoLayout::Ssd1306Page || monoLayout == MonoLayout::VerticalColumn)
             return width * pages;
         return bytesPerRow * height;
-    case DisplayCodeGenerator::EncodingMode::Mono8VerticalCol:
-    case DisplayCodeGenerator::EncodingMode::Mono8VerticalRow:
-        return width * pages;
-    case DisplayCodeGenerator::EncodingMode::PackedImageHeader:
-        return 4 + width * pages;
-    case DisplayCodeGenerator::EncodingMode::PackedImageRle:
-        return 4 + 2 * width * pages;
-    case DisplayCodeGenerator::EncodingMode::PackedImageAuto:
-        return 1 + 4 + width * pages;
-    case DisplayCodeGenerator::EncodingMode::Grayscale8:
+    case Mode::Grayscale4:
+        return (pixels + 1) / 2;
+    case Mode::Grayscale8:
+    case Mode::Indexed8:
         return pixels;
-    case DisplayCodeGenerator::EncodingMode::Rgb888:
-        return pixels * 3;
-    case DisplayCodeGenerator::EncodingMode::Rgb233:
-        return pixels;
-    case DisplayCodeGenerator::EncodingMode::Rgb565:
+    case Mode::Rgb565:
+    case Mode::Bgr565:
         return pixels * 2;
-    case DisplayCodeGenerator::EncodingMode::Rgb24:
+    case Mode::Rgb666:
+        return (pixels * 18 + 7) / 8;
+    case Mode::Rgb888:
+    case Mode::Bgr888:
+        return pixels * 3;
+    case Mode::Argb8888:
+    case Mode::Abgr8888:
         return pixels * 4;
-    case DisplayCodeGenerator::EncodingMode::Ascii:
-    case DisplayCodeGenerator::EncodingMode::Bricks:
-        return 0;
+    case Mode::YuvNv12:
+        return pixels + uvStride * chromaRows;
+    case Mode::YuvYuyv:
+        return pixels * 2;
+    case Mode::YuvYv12:
+        return pixels + chromaWidth * chromaRows * 2;
+    case Mode::R16f:
+        return pixels * 2;
+    case Mode::Rgba32f:
+        return pixels * 16;
+    case Mode::Count:
+        break;
     }
-    if (monoLayout == DisplayCodeGenerator::MonoLayout::Ssd1306Page)
-        return width * pages;
-    return bytesPerRow * height;
+    return 0;
 }
 
-QByteArray placeholderBinary(DisplayCodeGenerator::EncodingMode mode,
-                             int width,
-                             int height,
-                             DisplayCodeGenerator::MonoLayout monoLayout)
+QByteArray finalizeBinary(QByteArray data, const DisplayCodeGenerator::CodeGenOptions &options)
+{
+    return PixelFormatPacking::padForDma(data, options.dmaPaddingAlign);
+}
+
+QByteArray placeholderBinary(Mode mode, int width, int height, MonoLayout monoLayout)
 {
     return QByteArray(expectedBinarySize(mode, width, height, monoLayout), 0);
 }
@@ -213,61 +199,92 @@ QString byteArrayToC(const QByteArray &data,
     return out;
 }
 
-QString wordsToC(const QVector<quint16> &data,
-                 const QString &name,
-                 const DisplayCodeGenerator::CodeGenOptions &opt)
+QString paletteRgb888ToC(const QVector<quint32> &palette,
+                         const QString &name,
+                         const DisplayCodeGenerator::CodeGenOptions &opt)
 {
     QString out;
-    out += arrayDeclLine(QStringLiteral("uint16_t"), name, opt) + QStringLiteral(" = {\n");
-    for (int i = 0; i < data.size(); ++i) {
-        if (i % 12 == 0)
-            out += QStringLiteral("    ");
-        out += QStringLiteral("0x%1").arg(data[i], 4, 16, QChar('0'));
-        if (i < data.size() - 1)
-            out += QStringLiteral(", ");
-        if (i % 12 == 11 || i == data.size() - 1)
-            out += QLatin1Char('\n');
-    }
-    out += QStringLiteral("};\n");
-    return out;
-}
-
-QString dwordsToC(const QVector<quint32> &data,
-                  const QString &name,
-                  const DisplayCodeGenerator::CodeGenOptions &opt)
-{
-    QString out;
-    out += arrayDeclLine(QStringLiteral("uint32_t"), name, opt) + QStringLiteral(" = {\n");
-    for (int i = 0; i < data.size(); ++i) {
-        if (i % 8 == 0)
-            out += QStringLiteral("    ");
-        out += QStringLiteral("0x%1").arg(data[i], 6, 16, QChar('0'));
-        if (i < data.size() - 1)
-            out += QStringLiteral(", ");
-        if (i % 8 == 7 || i == data.size() - 1)
-            out += QLatin1Char('\n');
-    }
-    out += QStringLiteral("};\n");
-    return out;
-}
-
-QString asciiArt(const QVector<bool> &bits, int width, int height, bool bricks)
-{
-    QString out;
-    out += QStringLiteral("const char* image_ascii[] = {\n");
-    for (int y = 0; y < height; ++y) {
-        QString line;
-        for (int x = 0; x < width; ++x) {
-            const bool on = bits[y * width + x];
-            line += on ? (bricks ? QStringLiteral("█") : QStringLiteral("#"))
-                       : QStringLiteral(" ");
-        }
-        out += QStringLiteral("    \"%1\"").arg(line);
-        if (y < height - 1)
+    out += arrayDeclLine(QStringLiteral("uint8_t"), name, opt);
+    out += QStringLiteral("[") + QString::number(palette.size()) + QStringLiteral("][3] = {\n");
+    for (int i = 0; i < palette.size(); ++i) {
+        out += QStringLiteral("    { 0x%1, 0x%2, 0x%3 }")
+                   .arg((palette.at(i) >> 16) & 0xFF, 2, 16, QChar('0'))
+                   .arg((palette.at(i) >> 8) & 0xFF, 2, 16, QChar('0'))
+                   .arg(palette.at(i) & 0xFF, 2, 16, QChar('0'));
+        if (i < palette.size() - 1)
             out += QStringLiteral(",");
         out += QLatin1Char('\n');
     }
     out += QStringLiteral("};\n");
+    return out;
+}
+
+QString layoutComment(Mode mode, MonoLayout monoLayout)
+{
+    if (PixelFormatCatalog::isMono(mode)) {
+        if (monoLayout == MonoLayout::Ssd1306Page)
+            return QStringLiteral("// Layout: vertical page buffer (SSD1306)\n\n");
+        if (monoLayout == MonoLayout::VerticalColumn)
+            return QStringLiteral("// Layout: vertical column 1-bit (8 px/col byte)\n\n");
+        return QStringLiteral("// Layout: row-packed 1-bit (MSB first)\n\n");
+    }
+    switch (mode) {
+    case Mode::Grayscale4:
+        return QStringLiteral("// Layout: row-major 4-bit grayscale (2 pixels/byte)\n\n");
+    case Mode::Grayscale8:
+        return QStringLiteral("// Layout: row-major 8-bit grayscale\n\n");
+    case Mode::Indexed8:
+        return QStringLiteral("// Layout: row-major 8-bit index + uint8_t palette[][3] LUT (flash = palette + padded indices)\n\n");
+    case Mode::Rgb888:
+        return QStringLiteral("// Layout: row-major RGB888\n\n");
+    case Mode::Argb8888:
+        return QStringLiteral("// Layout: row-major ARGB8888 wire bytes B,G,R,A (little-endian)\n\n");
+    case Mode::Abgr8888:
+        return QStringLiteral("// Layout: row-major ABGR8888 wire bytes R,G,B,A (little-endian)\n\n");
+    case Mode::Bgr888:
+        return QStringLiteral("// Layout: row-major BGR888\n\n");
+    case Mode::Bgr565:
+        return QStringLiteral("// Layout: row-major BGR565 wire bytes (uint8_t[2*N], LE unless big-endian SPI)\n\n");
+    case Mode::Rgb666:
+        return QStringLiteral("// Layout: compact RGB666 (18-bit/pixel, 9 bytes/4 pixels)\n\n");
+    case Mode::YuvNv12:
+        return QStringLiteral("// Layout: Y plane + interleaved UV (NV12), BT.601 full-range integer\n\n");
+    case Mode::YuvYuyv:
+        return QStringLiteral("// Layout: packed YUYV 4:2:2, BT.601 full-range integer\n\n");
+    case Mode::YuvYv12:
+        return QStringLiteral("// Layout: Y + U + V planes (YV12), BT.601 full-range integer\n\n");
+    case Mode::R16f:
+        return QStringLiteral("// Layout: row-major R16F wire bytes (IEEE754 half LE as uint8_t[2*N])\n\n");
+    case Mode::Rgba32f:
+        return QStringLiteral("// Layout: row-major RGBA32F wire bytes (IEEE754 float LE as uint8_t[16*N])\n\n");
+    case Mode::Rgb565:
+        return QStringLiteral("// Layout: row-major RGB565 wire bytes (uint8_t[2*N], LE unless big-endian SPI)\n\n");
+    default:
+        return QStringLiteral("// Layout: row-major pixel buffer\n\n");
+    }
+}
+
+QByteArray packArgb8888Le(const QVector<quint32> &rgba, int pixels, bool abgr)
+{
+    QByteArray out(pixels * 4, 0);
+    for (int i = 0; i < pixels && i < rgba.size(); ++i) {
+        const quint32 v = rgba[i];
+        const quint8 a = quint8((v >> 24) & 0xFF);
+        const quint8 r = quint8((v >> 16) & 0xFF);
+        const quint8 g = quint8((v >> 8) & 0xFF);
+        const quint8 b = quint8(v & 0xFF);
+        if (abgr) {
+            out[i * 4] = char(r);
+            out[i * 4 + 1] = char(g);
+            out[i * 4 + 2] = char(b);
+            out[i * 4 + 3] = char(a);
+        } else {
+            out[i * 4] = char(b);
+            out[i * 4 + 1] = char(g);
+            out[i * 4 + 2] = char(r);
+            out[i * 4 + 3] = char(a);
+        }
+    }
     return out;
 }
 
@@ -299,37 +316,7 @@ QString DisplayCodeGenerator::sanitizeIdentifier(QString name)
 
 QVariantList DisplayCodeGenerator::availableEncodings()
 {
-    struct Entry {
-        EncodingMode mode;
-        const char *id;
-        const char *name;
-    };
-    static const Entry entries[] = {
-        {EncodingMode::Mono1PixPerByte, "mono_1pix", "1 pix/byte"},
-        {EncodingMode::Mono8HorizontalLsb, "mono_8h_lsb", "8x Horizontal"},
-        {EncodingMode::Mono8HorizontalMsb, "mono_8h_msb", "8x Horizontal MSB"},
-        {EncodingMode::Mono8VerticalCol, "mono_8v_col", "8x Vertical Col"},
-        {EncodingMode::Mono8VerticalRow, "mono_8v_row", "8x Vertical Row"},
-        {EncodingMode::PackedImageAuto, "packed_auto", "Packed Image Auto"},
-        {EncodingMode::PackedImageHeader, "packed_header", "Packed Image Header"},
-        {EncodingMode::PackedImageRle, "packed_rle", "Packed Image RLE"},
-        {EncodingMode::Grayscale8, "grayscale8", "Grayscale"},
-        {EncodingMode::Rgb24, "rgb24", "RGB24"},
-        {EncodingMode::Rgb888, "rgb888", "RGB888"},
-        {EncodingMode::Rgb565, "rgb565", "RGB565"},
-        {EncodingMode::Rgb233, "rgb233", "RGB233"},
-        {EncodingMode::Ascii, "ascii", "ASCII"},
-        {EncodingMode::Bricks, "bricks", "Bricks"}
-    };
-    QVariantList list;
-    for (const Entry &e : entries) {
-        QVariantMap m;
-        m[QStringLiteral("mode")] = static_cast<int>(e.mode);
-        m[QStringLiteral("id")] = QString::fromLatin1(e.id);
-        m[QStringLiteral("name")] = QString::fromLatin1(e.name);
-        list.append(m);
-    }
-    return list;
+    return PixelFormatCatalog::catalogEntries();
 }
 
 QByteArray DisplayCodeGenerator::binaryData(EncodingMode mode,
@@ -342,100 +329,121 @@ QByteArray DisplayCodeGenerator::binaryData(EncodingMode mode,
                                             const QByteArray &rgb888,
                                             const QByteArray &rgb233,
                                             const QVector<quint32> &rgb24,
-                                            MonoLayout monoLayout)
+                                            MonoLayout monoLayout,
+                                            const CodeGenOptions &options)
 {
     const int pixels = width * height;
     const bool haveMono = monoBitsReady(monoBits, width, height);
+    QByteArray data;
 
     switch (mode) {
-    case EncodingMode::Mono1PixPerByte:
-        if (!haveMono)
-            return placeholderBinary(mode, width, height, monoLayout);
-        return packMono1PixPerByte(monoBits);
-    case EncodingMode::Mono8HorizontalLsb:
-        if (!haveMono)
-            return placeholderBinary(mode, width, height, monoLayout);
-        return packMonoHorizontal(monoBits, width, height, false);
-    case EncodingMode::Mono8HorizontalMsb:
+    case Mode::Mono1Bit:
         if (monoLayout == MonoLayout::Ssd1306Page) {
             const int expected = width * ((height + 7) / 8);
-            if (monoBuffer.size() == expected)
-                return monoBuffer;
+            data = monoBuffer.size() == expected ? monoBuffer : QByteArray(expected, 0);
+        } else if (monoLayout == MonoLayout::VerticalColumn) {
             if (!haveMono)
-                return QByteArray(expected, 0);
+                data = placeholderBinary(mode, width, height, monoLayout);
+            else
+                data = PixelFormatPacking::packMonoVerticalCol(monoBits, width, height);
         } else if (!haveMono) {
-            return placeholderBinary(mode, width, height, monoLayout);
+            data = placeholderBinary(mode, width, height, monoLayout);
+        } else {
+            data = packMonoHorizontal(monoBits, width, height);
         }
-        return packMonoHorizontal(monoBits, width, height, true);
-    case EncodingMode::Mono8VerticalCol:
-        if (!haveMono)
-            return placeholderBinary(mode, width, height, monoLayout);
-        return packMonoVerticalCol(monoBits, width, height);
-    case EncodingMode::Mono8VerticalRow:
-        if (!haveMono)
-            return placeholderBinary(mode, width, height, monoLayout);
-        return packMonoVerticalRow(monoBits, width, height);
-    case EncodingMode::PackedImageHeader:
-        if (!haveMono)
-            return placeholderBinary(mode, width, height, monoLayout);
-        return packHeaderBitmap(monoBits, width, height);
-    case EncodingMode::PackedImageRle:
-        if (!haveMono)
-            return placeholderBinary(mode, width, height, monoLayout);
-        return packHeaderRle(monoBits, width, height);
-    case EncodingMode::PackedImageAuto:
-        if (!haveMono)
-            return placeholderBinary(mode, width, height, monoLayout);
-        return packAutoPackedImage(monoBits, width, height);
-    case EncodingMode::Grayscale8:
-        if (grayscale8.size() == pixels)
-            return grayscale8;
-        return QByteArray(pixels, 0);
-    case EncodingMode::Rgb888:
-        if (rgb888.size() == pixels * 3)
-            return rgb888;
-        return QByteArray(pixels * 3, 0);
-    case EncodingMode::Rgb233:
-        if (rgb233.size() == pixels)
-            return rgb233;
-        return QByteArray(pixels, 0);
-    case EncodingMode::Rgb565: {
+        break;
+    case Mode::Grayscale4:
+        data = packGrayscale4(grayscale8, pixels);
+        break;
+    case Mode::Grayscale8:
+        data = grayscale8.size() == pixels ? grayscale8 : QByteArray(pixels, 0);
+        break;
+    case Mode::Indexed8:
+        data = rgb233.size() == pixels ? rgb233 : QByteArray(pixels, 0);
+        break;
+    case Mode::Rgb565:
         if (rgb565.size() != pixels)
-            return QByteArray(pixels * 2, 0);
-        QByteArray out;
-        out.reserve(rgb565.size() * 2);
-        for (quint16 v : rgb565) {
-            out.append(char(v & 0xFF));
-            out.append(char((v >> 8) & 0xFF));
+            data = QByteArray(pixels * 2, 0);
+        else
+            data = PixelFormatPacking::packRgb565Stream(rgb565, pixels, options.rgb565BigEndian);
+        break;
+    case Mode::Bgr565: {
+        if (rgb565.size() != pixels) {
+            data = QByteArray(pixels * 2, 0);
+            break;
         }
-        return out;
-    }
-    case EncodingMode::Rgb24: {
-        if (rgb24.size() != pixels)
-            return QByteArray(pixels * 4, 0);
-        QByteArray out;
-        out.reserve(rgb24.size() * 4);
-        for (quint32 v : rgb24) {
-            out.append(char(v & 0xFF));
-            out.append(char((v >> 8) & 0xFF));
-            out.append(char((v >> 16) & 0xFF));
-            out.append(char((v >> 24) & 0xFF));
-        }
-        return out;
-    }
-    case EncodingMode::Ascii:
-    case EncodingMode::Bricks:
+        QVector<quint16> swapped(rgb565.size());
+        for (int i = 0; i < rgb565.size(); ++i)
+            swapped[i] = PixelFormatPacking::swapRgb565ToBgr565(rgb565.at(i));
+        data = PixelFormatPacking::packRgb565Stream(swapped, pixels, options.rgb565BigEndian);
         break;
     }
-    if (monoLayout == MonoLayout::Ssd1306Page) {
-        const int expected = width * ((height + 7) / 8);
-        if (monoBuffer.size() == expected)
-            return monoBuffer;
-        return QByteArray(expected, 0);
+    case Mode::Rgb666:
+        data = PixelFormatPacking::packRgb666Compact(rgb888, pixels);
+        break;
+    case Mode::Rgb888:
+        data = rgb888.size() == pixels * 3 ? rgb888 : QByteArray(pixels * 3, 0);
+        break;
+    case Mode::Bgr888:
+        data = packBgr888(rgb888, pixels);
+        break;
+    case Mode::Argb8888:
+        data = rgb24.size() != pixels ? QByteArray(pixels * 4, 0) : packArgb8888Le(rgb24, pixels, false);
+        break;
+    case Mode::Abgr8888:
+        data = rgb24.size() != pixels ? QByteArray(pixels * 4, 0) : packArgb8888Le(rgb24, pixels, true);
+        break;
+    case Mode::YuvYuyv:
+        data = PixelFormatPacking::packYuvYuyv(rgb888, width, height);
+        break;
+    case Mode::YuvNv12:
+        data = PixelFormatPacking::packYuvNv12(rgb888, width, height);
+        break;
+    case Mode::YuvYv12:
+        data = PixelFormatPacking::packYuvYv12(rgb888, width, height);
+        break;
+    case Mode::R16f:
+        data = PixelFormatPacking::packHalfLe(buildR16f(grayscale8, pixels));
+        break;
+    case Mode::Rgba32f:
+        data = PixelFormatPacking::packFloatLe(buildRgba32f(rgb888, pixels));
+        break;
+    case Mode::Count:
+        break;
     }
-    if (!haveMono)
-        return placeholderBinary(EncodingMode::Mono8HorizontalMsb, width, height, monoLayout);
-    return packMonoHorizontal(monoBits, width, height, true);
+    return finalizeBinary(data, options);
+}
+
+int DisplayCodeGenerator::flashFootprintBytes(EncodingMode mode,
+                                              int width,
+                                              int height,
+                                              const QVector<bool> &monoBits,
+                                              const QByteArray &monoBuffer,
+                                              const QByteArray &grayscale8,
+                                              const QVector<quint16> &rgb565,
+                                              const QByteArray &rgb888,
+                                              const QByteArray &rgb233,
+                                              const QVector<quint32> &rgb24,
+                                              MonoLayout monoLayout,
+                                              const CodeGenOptions &options,
+                                              const QVector<quint32> &indexedPalette)
+{
+    int bytes = binaryData(mode,
+                           width,
+                           height,
+                           monoBits,
+                           monoBuffer,
+                           grayscale8,
+                           rgb565,
+                           rgb888,
+                           rgb233,
+                           rgb24,
+                           monoLayout,
+                           options)
+                .size();
+    if (mode == Mode::Indexed8 && !indexedPalette.isEmpty())
+        bytes += indexedPalette.size() * 3;
+    return bytes;
 }
 
 QString DisplayCodeGenerator::extractArrayBody(const QString &fullCode)
@@ -458,7 +466,8 @@ QString DisplayCodeGenerator::generate(const DisplayProfile &profile,
                                        const QByteArray &rgb233,
                                        const QVector<quint32> &rgb24,
                                        const QString &arrayName,
-                                       MonoLayout monoLayout)
+                                       MonoLayout monoLayout,
+                                       const QVector<quint32> &indexedPalette)
 {
     return generate(profile,
                     width,
@@ -473,7 +482,8 @@ QString DisplayCodeGenerator::generate(const DisplayProfile &profile,
                     rgb24,
                     arrayName,
                     monoLayout,
-                    CodeGenOptions{});
+                    CodeGenOptions{},
+                    indexedPalette);
 }
 
 QString DisplayCodeGenerator::generate(const DisplayProfile &profile,
@@ -489,60 +499,110 @@ QString DisplayCodeGenerator::generate(const DisplayProfile &profile,
                                        const QVector<quint32> &rgb24,
                                        const QString &arrayName,
                                        MonoLayout monoLayout,
-                                       CodeGenOptions options)
+                                       CodeGenOptions options,
+                                       const QVector<quint32> &indexedPalette)
 {
     const QString safeName = DisplayCodeGenerator::sanitizeIdentifier(arrayName);
     QString out;
     if (options.includeHeaderComments) {
         out += QStringLiteral("// %1 — %2×%3\n").arg(profile.name).arg(width).arg(height);
-        const bool monoMode = encodingMode <= EncodingMode::PackedImageRle
-            || encodingMode == EncodingMode::Ascii
-            || encodingMode == EncodingMode::Bricks;
-        if (monoMode) {
-            if (monoLayout == MonoLayout::Ssd1306Page) {
-                out += QStringLiteral("// Layout: vertical page buffer (page-major)\n\n");
-            } else {
-                out += QStringLiteral("// Layout: row-packed (каждая строка массива = строка пикселей)\n\n");
-            }
-        } else {
-            switch (encodingMode) {
-            case EncodingMode::Grayscale8:
-                out += QStringLiteral("// Layout: row-major grayscale 8-bit\n\n");
-                break;
-            case EncodingMode::Rgb233:
-                out += QStringLiteral("// Layout: row-major RGB233 palette\n\n");
-                break;
-            case EncodingMode::Rgb888:
-                out += QStringLiteral("// Layout: row-major RGB888\n\n");
-                break;
-            case EncodingMode::Rgb24:
-                out += QStringLiteral("// Layout: row-major RGB24\n\n");
-                break;
-            case EncodingMode::Rgb565:
-            default:
-                out += QStringLiteral("// Layout: row-major RGB565\n\n");
-                break;
-            }
-        }
+        out += layoutComment(encodingMode, monoLayout);
     }
 
     out += QStringLiteral("#define %1_WIDTH  %2\n").arg(safeName.toUpper()).arg(width);
     out += QStringLiteral("#define %1_HEIGHT %2\n").arg(safeName.toUpper()).arg(height);
 
-    if (encodingMode == EncodingMode::Ascii) {
-        if (!monoBitsReady(monoBits, width, height))
+    if (encodingMode == Mode::Rgb565 || encodingMode == Mode::Bgr565) {
+        if (rgb565.isEmpty())
             return out;
-        return out + asciiArt(monoBits, width, height, false);
+        const QByteArray data = binaryData(encodingMode,
+                                           width,
+                                           height,
+                                           monoBits,
+                                           monoBuffer,
+                                           grayscale8,
+                                           rgb565,
+                                           rgb888,
+                                           rgb233,
+                                           rgb24,
+                                           monoLayout,
+                                           options);
+        return out + byteArrayToC(data, safeName, QStringLiteral("uint8_t"), options);
     }
-    if (encodingMode == EncodingMode::Bricks) {
-        if (!monoBitsReady(monoBits, width, height))
+    if (encodingMode == Mode::Indexed8) {
+        const int pixels = width * height;
+        if (rgb233.size() != pixels || indexedPalette.isEmpty())
             return out;
-        return out + asciiArt(monoBits, width, height, true);
+        const QString paletteName = safeName + QStringLiteral("_palette");
+        out += QStringLiteral("#define %1_PALETTE_SIZE %2\n")
+                   .arg(safeName.toUpper())
+                   .arg(indexedPalette.size());
+        out += paletteRgb888ToC(indexedPalette, paletteName, options);
+        const QByteArray indices = binaryData(encodingMode,
+                                              width,
+                                              height,
+                                              monoBits,
+                                              monoBuffer,
+                                              grayscale8,
+                                              rgb565,
+                                              rgb888,
+                                              rgb233,
+                                              rgb24,
+                                              monoLayout,
+                                              options);
+        return out + byteArrayToC(indices, safeName, QStringLiteral("uint8_t"), options);
     }
-    if (encodingMode == EncodingMode::Rgb565)
-        return out + wordsToC(rgb565, safeName, options);
-    if (encodingMode == EncodingMode::Rgb24)
-        return out + dwordsToC(rgb24, safeName, options);
+    if (encodingMode == Mode::Argb8888 || encodingMode == Mode::Abgr8888) {
+        if (rgb24.isEmpty())
+            return out;
+        const QByteArray data = binaryData(encodingMode,
+                                           width,
+                                           height,
+                                           monoBits,
+                                           monoBuffer,
+                                           grayscale8,
+                                           rgb565,
+                                           rgb888,
+                                           rgb233,
+                                           rgb24,
+                                           monoLayout,
+                                           options);
+        return out + byteArrayToC(data, safeName, QStringLiteral("uint8_t"), options);
+    }
+    if (encodingMode == Mode::R16f) {
+        const QByteArray data = binaryData(encodingMode,
+                                           width,
+                                           height,
+                                           monoBits,
+                                           monoBuffer,
+                                           grayscale8,
+                                           rgb565,
+                                           rgb888,
+                                           rgb233,
+                                           rgb24,
+                                           monoLayout,
+                                           options);
+        if (data.isEmpty())
+            return out;
+        return out + byteArrayToC(data, safeName, QStringLiteral("uint8_t"), options);
+    }
+    if (encodingMode == Mode::Rgba32f) {
+        const QByteArray data = binaryData(encodingMode,
+                                           width,
+                                           height,
+                                           monoBits,
+                                           monoBuffer,
+                                           grayscale8,
+                                           rgb565,
+                                           rgb888,
+                                           rgb233,
+                                           rgb24,
+                                           monoLayout,
+                                           options);
+        if (data.isEmpty())
+            return out;
+        return out + byteArrayToC(data, safeName, QStringLiteral("uint8_t"), options);
+    }
 
     const QByteArray data = binaryData(encodingMode,
                                        width,
@@ -554,10 +614,7 @@ QString DisplayCodeGenerator::generate(const DisplayProfile &profile,
                                        rgb888,
                                        rgb233,
                                        rgb24,
-                                       monoLayout);
-    if (encodingMode == EncodingMode::Rgb888)
-        out += byteArrayToC(data, safeName, QStringLiteral("uint8_t"), options);
-    else
-        out += byteArrayToC(data, safeName, QStringLiteral("uint8_t"), options);
-    return out;
+                                       monoLayout,
+                                       options);
+    return out + byteArrayToC(data, safeName, QStringLiteral("uint8_t"), options);
 }

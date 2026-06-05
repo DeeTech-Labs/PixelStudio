@@ -20,6 +20,7 @@ public:
         QByteArray rgb888;
         QByteArray rgb233;
         QVector<quint32> rgb24;
+        QVector<quint32> indexedPalette;
         int width = 0;
         int height = 0;
     };
@@ -32,9 +33,12 @@ public:
                           const ImageFiltersPipeline::Params &filters,
                           DisplayCodeGenerator::EncodingMode encodingMode,
                           int monoThreshold = 128,
-                          bool invertMono = false);
+                          bool invertMono = false,
+                          bool linearColorSpace = true);
 
     static void invertMonoResult(Result &result);
+
+    static void buildIndexedPalette(Result &result);
 
     static void applyPreviewEncoding(Result &result, DisplayCodeGenerator::EncodingMode encodingMode);
 };

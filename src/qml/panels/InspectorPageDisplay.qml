@@ -93,7 +93,7 @@ Item {
         StudioSection {
             studio: root.studio
             title: qsTr("Color encoding")
-            hint: qsTr("Monochrome, grayscale, RGB565 and other formats for OLED and TFT.")
+            hint: qsTr("RGB565, RGB888, ARGB8888, monochrome, grayscale, indexed, YUV and other pixel formats for TFT and OLED.")
 
             StudioCombo {
                 id: encCombo
@@ -123,7 +123,8 @@ Item {
                 studio: root.studio
                 model: [
                     qsTr("Row-packed"),
-                    qsTr("Vertical page buffer")
+                    qsTr("Vertical page buffer"),
+                    qsTr("Vertical column")
                 ]
                 Component.onCompleted: currentIndex = converter.monoLayout
                 onActivated: converter.setMonoLayout(currentIndex)
@@ -161,6 +162,33 @@ Item {
                 text: qsTr("static storage")
                 checked: converter.codeStaticStorage
                 onToggled: converter.setCodeStaticStorage(checked)
+            }
+            StudioCheck {
+                visible: converter.encodingMode === 4 || converter.encodingMode === 8
+                studio: root.studio
+                text: qsTr("RGB565 big-endian (SPI)")
+                checked: converter.rgb565BigEndian
+                onToggled: converter.setRgb565BigEndian(checked)
+            }
+            StudioCheck {
+                studio: root.studio
+                text: qsTr("sRGB → linear quantization")
+                checked: converter.linearColorSpace
+                onToggled: converter.setLinearColorSpace(checked)
+            }
+            StudioField { studio: root.studio; labelText: qsTr("DMA buffer alignment") }
+            StudioCombo {
+                id: dmaAlignCombo
+                Layout.fillWidth: true
+                studio: root.studio
+                model: [
+                    { label: qsTr("None"), value: 0 },
+                    { label: qsTr("4 bytes"), value: 4 },
+                    { label: qsTr("8 bytes"), value: 8 }
+                ]
+                textRole: "label"
+                Component.onCompleted: syncDmaAlign()
+                onActivated: converter.setCodeDmaAlign(model[currentIndex].value)
             }
         }
 
@@ -212,6 +240,15 @@ Item {
         }
     }
 
+    function syncDmaAlign() {
+        for (let i = 0; i < dmaAlignCombo.model.length; ++i) {
+            if (dmaAlignCombo.model[i].value === converter.codeDmaAlign) {
+                dmaAlignCombo.currentIndex = i
+                return
+            }
+        }
+    }
+
     function syncEnc() {
         for (let i = 0; i < encCombo.model.length; ++i) {
             if (encCombo.model[i].mode === converter.encodingMode) {
@@ -238,6 +275,7 @@ Item {
         function onDisplayHeightChanged() { syncPreset() }
         function onColorModeChanged() { syncEnc() }
         function onEncodingModeChanged() { syncEnc() }
+        function onCodeDmaAlignChanged() { syncDmaAlign() }
         function onMonoLayoutChanged() {
             monoLayoutCombo.currentIndex = converter.monoLayout
         }

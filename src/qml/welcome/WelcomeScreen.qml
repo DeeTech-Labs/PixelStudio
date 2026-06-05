@@ -16,343 +16,396 @@ DropArea {
     signal continueLastProjectRequested()
     signal recentFileRequested(string path)
     signal fileDropped(var urls)
+    signal settingsRequested()
 
     onDropped: (drop) => {
         if (drop.hasUrls && drop.urls.length > 0)
             root.fileDropped(drop.urls)
     }
 
+    FontLoader {
+        id: pixelFontLoader
+        source: "qrc:/fonts/PressStart2P-Regular.ttf"
+    }
+
+    readonly property string fontPixel: pixelFontLoader.status === FontLoader.Ready
+        ? pixelFontLoader.name
+        : studio.fontFamilyMono
+    readonly property string fontUi: studio.fontFamily
+
+    readonly property color wBg: "#0d1117"
+    readonly property color wCard: "#161b22"
+    readonly property color wBorder: "#30363d"
+    readonly property color wText: "#ffffff"
+    readonly property color wText2: "#8b949e"
+    readonly property color wAccent: "#40e0d0"
+    readonly property color wAccentDark: "#1f9a88"
+    readonly property color wAccentTop: "#52edd9"
+    readonly property color wAccentBottom: "#36d4c4"
+
+    readonly property int designWidth: 1100
+    readonly property int designHeight: 960
+    readonly property real titleStretchY: 1.28
+    readonly property int recentMax: 6
+    readonly property int recentColumns: 2
+    readonly property int recentCardThumb: 80
+    readonly property int recentCardHeight: recentCardThumb + 24
+    readonly property int recentGridGap: 16
+    readonly property var recentProjectFiles: {
+        const out = []
+        const files = converter.recentFiles
+        for (let i = 0; i < files.length; ++i) {
+            const path = files[i].path ?? ""
+            if (path.endsWith(".pspx", Qt.CaseInsensitive))
+                out.push(files[i])
+        }
+        return out
+    }
+    readonly property int recentCount: Math.min(recentMax, recentProjectFiles.length)
+    readonly property int recentRowCount: recentCount > 0 ? Math.ceil(recentCount / recentColumns) : 0
+    readonly property int recentGridHeight: recentCount > 0
+        ? recentRowCount * recentCardHeight + Math.max(0, recentRowCount - 1) * recentGridGap
+        : 120
+
+    readonly property real pageScale: Math.min(
+        1,
+        width / designWidth,
+        height / designHeight
+    )
+
     WelcomeBackdrop {
         anchors.fill: parent
-        studio: root.studio
     }
 
     Rectangle {
         anchors.fill: parent
         visible: root.containsDrag
-        color: Qt.rgba(59/255, 158/255, 1, 0.08)
+        color: Qt.rgba(45/255, 212/255, 191/255, 0.08)
         border.width: 2
-        border.color: studio.accent
-        opacity: 0.5
-        radius: 0
+        border.color: root.wAccent
+        opacity: 0.55
     }
 
     Item {
-        id: content
+        id: viewport
         anchors.fill: parent
-        opacity: 0
-
-        Component.onCompleted: contentEnter.start()
-        NumberAnimation {
-            id: contentEnter
-            target: content
-            property: "opacity"
-            to: 1
-            duration: 520
-            easing.type: Easing.OutCubic
-        }
 
         Item {
-            width: Math.min(parent.width - 96, 1080)
-            height: parent.height - 96
-            anchors.centerIn: parent
+            id: pageHost
+            width: designWidth * pageScale
+            height: pageColumn.height * pageScale
+            x: (viewport.width - width) / 2
+            y: Math.max(12, (viewport.height - height) / 2)
 
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: 36
+            Column {
+                id: pageColumn
+                width: designWidth
+                spacing: 0
+                transformOrigin: Item.TopLeft
+                scale: pageScale
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 48
+                Column {
+                    width: parent.width
+                    spacing: 20
 
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.maximumWidth: 520
-                    spacing: studio.spacingLg
-
-                    Label {
-                        text: qsTr("PixelStudio")
-                        font.pixelSize: 56
-                        font.weight: Font.DemiBold
-                        color: studio.text
+                    WelcomeBrandMark {
+                        anchors.horizontalCenter: parent.horizontalCenter
                     }
 
-                    Label {
-                        Layout.fillWidth: true
+                    Item {
+                        width: titleRow.implicitWidth + 80
+                        height: titleRow.implicitHeight * root.titleStretchY + 24
+                        anchors.horizontalCenter: parent.horizontalCenter
+
+                        Row {
+                            id: titleRow
+                            spacing: 0
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.verticalCenter: parent.verticalCenter
+                            transformOrigin: Item.Center
+
+                            transform: Scale {
+                                xScale: 1
+                                yScale: root.titleStretchY
+                                origin.x: titleRow.width / 2
+                                origin.y: titleRow.height / 2
+                            }
+
+                            Text {
+                                text: qsTr("Pixel")
+                                font.family: root.fontPixel
+                                font.pixelSize: 36
+                                color: root.wText
+                            }
+                            Text {
+                                text: qsTr("Studio")
+                                font.family: root.fontPixel
+                                font.pixelSize: 36
+                                color: root.wAccent
+                            }
+                        }
+
+                        WelcomeSparkle {
+                            x: titleRow.x - 40
+                            y: titleRow.y + titleRow.height * root.titleStretchY * 0.55
+                            tint: root.wAccent
+                            armLength: 5
+                        }
+                        WelcomeSparkle {
+                            x: titleRow.x + titleRow.width + 12
+                            y: titleRow.y + 4
+                            tint: root.wAccent
+                            armLength: 6
+                            sparkleOpacity: 0.8
+                        }
+                        WelcomeSparkle {
+                            x: titleRow.x + titleRow.width + 28
+                            y: titleRow.y + titleRow.height * root.titleStretchY * 0.75
+                            tint: Qt.rgba(1, 1, 1, 0.4)
+                            armLength: 4
+                            sparkleOpacity: 0.45
+                        }
+                        WelcomeSparkle {
+                            x: titleRow.x + 28
+                            y: titleRow.y - 16
+                            tint: Qt.rgba(1, 1, 1, 0.35)
+                            armLength: 4
+                            sparkleOpacity: 0.35
+                        }
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: Math.min(parent.width - 48, 720)
+                        horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
-                        text: qsTr("Images to firmware-ready display assets")
-                        font.pixelSize: 17
-                        lineHeight: 1.35
-                        color: studio.textSecondary
+                        text: qsTr("Convert pixel art to OLED, TFT and retro displays with ease.")
+                        font.family: root.fontUi
+                        font.pixelSize: 18
+                        lineHeight: 1.5
+                        color: root.wText2
                     }
 
-                    Rectangle {
-                        Layout.preferredWidth: 64
-                        Layout.preferredHeight: 3
-                        radius: 2
-                        color: studio.accent
-                        opacity: 0.9
-                    }
+                    Item {
+                        id: newProjectWrap
+                        width: parent.width
+                        height: 66
+                        anchors.horizontalCenter: parent.horizontalCenter
 
-                    RowLayout {
-                        spacing: studio.spacingMd
+                        readonly property int btnWidth: Math.min(480, parent.width - 48)
+
                         Rectangle {
-                            implicitWidth: verChip.implicitWidth + studio.spacingLg * 2
-                            implicitHeight: 30
-                            radius: studio.radiusPill
-                            color: Qt.rgba(59/255, 158/255, 1, 0.12)
-                            border.width: 1
-                            border.color: Qt.rgba(59/255, 158/255, 1, 0.35)
-                            Label {
-                                id: verChip
-                                anchors.centerIn: parent
-                                text: "v" + applicationVersion
-                                font.family: studio.fontFamilyMono
-                                font.pixelSize: studio.fontSizeSm
-                                font.weight: Font.Medium
-                                color: studio.accent
-                            }
+                            width: newProjectWrap.btnWidth
+                            height: 60
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.top: parent.top
+                            anchors.topMargin: 6
+                            radius: 12
+                            color: root.wAccentDark
                         }
-                        Label {
-                            visible: root.containsDrag
-                            text: qsTr("Release to open")
-                            font.pixelSize: studio.fontSizeSm
-                            color: studio.accent
+
+                        Rectangle {
+                            id: newProjectBtn
+                            width: newProjectWrap.btnWidth
+                            height: 60
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.top: parent.top
+                            radius: 12
+                            color: "transparent"
+
+                            gradient: Gradient {
+                                orientation: Gradient.Vertical
+                                GradientStop { position: 0.0; color: root.wAccentTop }
+                                GradientStop { position: 1.0; color: root.wAccentBottom }
+                            }
+
+                            Row {
+                                id: newProjectRow
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.verticalCenterOffset: 5
+                                spacing: 12
+
+                                Item {
+                                    width: plusText.width
+                                    height: projectLabel.height
+
+                                    Text {
+                                        id: plusText
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        anchors.verticalCenterOffset: 2
+                                        text: "+"
+                                        font.family: root.fontPixel
+                                        font.pixelSize: 20
+                                        color: root.wText
+                                    }
+                                }
+
+                                Text {
+                                    id: projectLabel
+                                    text: qsTr("New project")
+                                    font.family: root.fontPixel
+                                    font.pixelSize: 20
+                                    color: root.wText
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.newProjectRequested()
+                            }
                         }
                     }
                 }
 
                 Item {
-                    Layout.preferredWidth: 300
-                    Layout.preferredHeight: 140
-                    Layout.alignment: Qt.AlignTop | Qt.AlignRight
+                    width: parent.width
+                    height: recentBlock.height + 56
 
-                    WelcomeDisplayViz {
-                        anchors.right: parent.right
+                    Column {
+                        id: recentBlock
+                        width: parent.width
                         anchors.top: parent.top
-                        studio: root.studio
-                    }
-                }
-            }
+                        anchors.topMargin: 56
+                        spacing: 24
 
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: studio.spacingMd
+                        RowLayout {
+                            width: parent.width
+                            spacing: 8
 
-                Label {
-                    text: qsTr("Quick actions").toUpperCase()
-                    font.pixelSize: 10
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1.2
-                    color: studio.textMuted
-                }
+                            Text {
+                                text: qsTr("Recent projects")
+                                font.family: root.fontPixel
+                                font.pixelSize: 10
+                                color: root.wAccent
+                            }
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: studio.spacingMd
+                            Item { Layout.fillWidth: true }
 
-                    StudioButton {
-                        Layout.preferredWidth: 192
-                        studio: root.studio
-                        primary: true
-                        iconName: "upload"
-                        text: qsTr("Open image…")
-                        onClicked: root.openImageRequested()
-                    }
-                    StudioButton {
-                        Layout.preferredWidth: 192
-                        studio: root.studio
-                        iconName: "folder-open"
-                        text: qsTr("Open project…")
-                        onClicked: root.openProjectRequested()
-                    }
-                    StudioButton {
-                        Layout.preferredWidth: 156
-                        studio: root.studio
-                        iconName: "clipboard"
-                        text: qsTr("Paste")
-                        onClicked: root.pasteRequested()
-                    }
-                    StudioButton {
-                        Layout.preferredWidth: 156
-                        studio: root.studio
-                        iconName: "plus"
-                        text: qsTr("New project")
-                        onClicked: root.newProjectRequested()
-                    }
-                    StudioButton {
-                        Layout.preferredWidth: 172
-                        studio: root.studio
-                        visible: appSettings.restoreLastProject && converter.hasRestorableProject
-                        text: qsTr("Continue last")
-                        onClicked: root.continueLastProjectRequested()
-                    }
-                    Item { Layout.fillWidth: true }
-                }
-            }
+                            Item {
+                                Layout.preferredWidth: viewAllRow.implicitWidth
+                                Layout.preferredHeight: viewAllRow.implicitHeight
 
-            ColumnLayout {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                spacing: studio.spacingMd
+                                Row {
+                                    id: viewAllRow
+                                    spacing: 8
 
-                Label {
-                    text: qsTr("Recent files").toUpperCase()
-                    font.pixelSize: 10
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1.2
-                    color: studio.textMuted
+                                    Text {
+                                        text: qsTr("View all projects")
+                                        font.family: root.fontUi
+                                        font.pixelSize: 14
+                                        color: viewAllHit.containsMouse ? root.wAccent : root.wText2
+                                    }
+
+                                    StudioIcon {
+                                        name: "chevron-right"
+                                        iconSize: 16
+                                        tint: viewAllHit.containsMouse ? root.wAccent : root.wText2
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: viewAllHit
+                                    anchors.fill: parent
+                                    anchors.margins: -6
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.openProjectRequested()
+                                }
+                            }
+                        }
+
+                        Item {
+                            width: parent.width
+                            height: root.recentGridHeight
+
+                            GridLayout {
+                                id: recentGrid
+                                anchors.fill: parent
+                                columns: root.recentColumns
+                                columnSpacing: root.recentGridGap
+                                rowSpacing: root.recentGridGap
+                                visible: root.recentCount > 0
+
+                                Repeater {
+                                    model: root.recentCount
+                                    delegate: WelcomeRecentCard {
+                                        required property int index
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
+                                        Layout.preferredHeight: root.recentCardHeight
+                                        thumbSize: root.recentCardThumb
+                                        studio: root.studio
+                                        fontPixel: root.fontPixel
+                                        fontUi: root.fontUi
+                                    fileName: root.recentProjectFiles[index].name ?? ""
+                                    filePath: root.recentProjectFiles[index].path ?? ""
+                                    thumbnailUrl: root.recentProjectFiles[index].thumbnailUrl ?? ""
+                                    projectMeta: root.recentProjectFiles[index].projectMeta ?? ""
+                                    dateTimeText: root.recentProjectFiles[index].modifiedText ?? ""
+                                    onOpenRequested: root.recentFileRequested(root.recentProjectFiles[index].path)
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                visible: root.recentCount === 0
+                                radius: 12
+                                color: root.wCard
+                                border.width: 1
+                                border.color: root.wBorder
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: qsTr("No recent projects yet")
+                                    font.family: root.fontUi
+                                    font.pixelSize: 14
+                                    color: root.wText2
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Item {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 88
-                    Layout.fillHeight: true
-
-                    RowLayout {
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: studio.spacingLg
-                        visible: converter.recentFiles.length === 0
-                        opacity: visible ? 1 : 0
-
-                        Rectangle {
-                            width: 56
-                            height: 56
-                            radius: 28
-                            color: studio.surface
-                            border.width: 1
-                            border.color: studio.border
-                            StudioIcon {
-                                anchors.centerIn: parent
-                                name: "file-image"
-                                iconSize: 24
-                                tint: studio.textMuted
-                            }
-                        }
-                        ColumnLayout {
-                            spacing: studio.spacingSm
-                            Label {
-                                text: qsTr("No recent files yet")
-                                font.pixelSize: studio.fontSizeLg
-                                font.weight: Font.Medium
-                                color: studio.textSecondary
-                            }
-                            Label {
-                                text: qsTr("Open an image or project — it will appear here.")
-                                font.pixelSize: studio.fontSizeSm
-                                color: studio.textMuted
-                            }
-                            StudioButton {
-                                studio: root.studio
-                                compact: true
-                                primary: true
-                                iconName: "upload"
-                                text: qsTr("Open image…")
-                                onClicked: root.openImageRequested()
-                            }
-                        }
-                    }
-
-                    ListView {
-                        anchors.fill: parent
-                        visible: converter.recentFiles.length > 0
-                        orientation: ListView.Horizontal
-                        spacing: studio.spacingMd
-                        clip: true
-                        model: converter.recentFiles
-                        delegate: WelcomeRecentCard {
-                            required property var modelData
-                            studio: root.studio
-                            fileName: modelData.name
-                            filePath: modelData.path
-                            thumbnailUrl: modelData.thumbnailUrl ?? ""
-                            onOpenRequested: root.recentFileRequested(modelData.path)
-                        }
-                    }
-                }
-            }
-
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: studio.spacingMd
-
-                Label {
-                    text: qsTr("News & updates").toUpperCase()
-                    font.pixelSize: 10
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1.2
-                    color: studio.textMuted
+                    width: parent.width
+                    height: 56
                 }
 
                 Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: newsRow.implicitHeight + studio.spacingLg * 2
-                    radius: studio.radiusLg
-                    color: Qt.rgba(32/255, 32/255, 32/255, 0.65)
-                    border.width: 1
-                    border.color: Qt.rgba(255, 255, 255, 0.06)
+                    width: parent.width
+                    height: 1
+                    color: root.wBorder
+                }
 
-                    RowLayout {
-                        id: newsRow
-                        anchors.fill: parent
-                        anchors.margins: studio.spacingLg
-                        spacing: studio.spacingXl
+                Item {
+                    width: parent.width
+                    height: 40
+                }
 
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: studio.spacingSm
-                            Label {
-                                Layout.fillWidth: true
-                                wrapMode: Text.WordWrap
-                                text: qsTr("Release notes and tips will land here.")
-                                font.pixelSize: studio.fontSizeSm
-                                color: studio.textSecondary
-                                lineHeight: 1.4
-                            }
-                            Label {
-                                Layout.fillWidth: true
-                                wrapMode: Text.WordWrap
-                                text: qsTr("Pin tabs to keep projects after restart.")
-                                font.pixelSize: studio.fontSizeXs
-                                color: studio.textMuted
-                            }
-                        }
-
-                        Rectangle {
-                            implicitWidth: soonLbl.implicitWidth + studio.spacingMd * 2
-                            implicitHeight: 26
-                            radius: studio.radiusPill
-                            color: studio.accentSoft
-                            Label {
-                                id: soonLbl
-                                anchors.centerIn: parent
-                                text: qsTr("Soon")
-                                font.pixelSize: studio.fontSizeXs
-                                font.weight: Font.Medium
-                                color: studio.accent
-                            }
-                        }
+                WelcomeFooterNav {
+                    width: parent.width
+                    height: 52
+                    studio: root.studio
+                    fontUi: root.fontUi
+                    iconSize: 40
+                    accentColor: root.wAccent
+                    titleColor: root.wText
+                    subtitleColor: root.wText2
+                    onItemActivated: (key) => {
+                        if (key === "settings")
+                            root.settingsRequested()
                     }
                 }
-            }
 
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.topMargin: studio.spacingSm
-                StudioCheck {
-                    studio: root.studio
-                    text: qsTr("Show welcome screen on startup")
-                    checked: appSettings.showWelcomeOnStartup
-                    onToggled: appSettings.setShowWelcomeOnStartup(checked)
-                }
-                Item { Layout.fillWidth: true }
-                Label {
-                    text: qsTr("Drop image or .pspx project anywhere on this page")
-                    font.pixelSize: studio.fontSizeXs
-                    color: studio.textMuted
+                Item {
+                    width: parent.width
+                    height: 12
                 }
             }
-        }
         }
     }
 }

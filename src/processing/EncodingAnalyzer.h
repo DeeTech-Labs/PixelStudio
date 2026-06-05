@@ -13,7 +13,8 @@ public:
     static QVariantList analyze(const DisplayRasterizer::Result &result,
                                 DisplayProfile::ColorMode colorMode,
                                 DisplayCodeGenerator::MonoLayout monoLayout,
-                                DisplayCodeGenerator::EncodingMode currentMode);
+                                DisplayCodeGenerator::EncodingMode currentMode,
+                                const DisplayCodeGenerator::CodeGenOptions &options = DisplayCodeGenerator::CodeGenOptions{});
 };
 
 #endif // PIXELSTUDIO_PROCESSING_ENCODINGANALYZER_H

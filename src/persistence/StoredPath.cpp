@@ -9,12 +9,22 @@ namespace StoredPath {
 
 namespace {
 
+constexpr QLatin1StringView kDataPrefix("@data/");
+
 bool isAbsoluteOnDisk(const QString &path)
 {
     if (path.isEmpty())
         return false;
     const QString native = QDir::fromNativeSeparators(path);
     return QFileInfo(native).isAbsolute();
+}
+
+QString relativeToRoot(const QString &root, const QString &native)
+{
+    QString rel = native.mid(root.size());
+    if (rel.startsWith(QLatin1Char('/')) || rel.startsWith(QLatin1Char('\\')))
+        rel = rel.mid(1);
+    return rel.isEmpty() ? QStringLiteral(".") : rel;
 }
 
 } // namespace
@@ -27,26 +37,31 @@ QString encode(const QString &absolutePath)
     if (!isAbsoluteOnDisk(native))
         return native;
 
-    const QString root = QDir::cleanPath(AppPaths::userDocumentsRoot());
-    if (!native.startsWith(root, Qt::CaseInsensitive))
-        return native;
+    const QString docsRoot = QDir::cleanPath(AppPaths::userDocumentsRoot());
+    if (native.startsWith(docsRoot, Qt::CaseInsensitive))
+        return relativeToRoot(docsRoot, native);
 
-    QString rel = native.mid(root.size());
-    if (rel.startsWith(QLatin1Char('/')) || rel.startsWith(QLatin1Char('\\')))
-        rel = rel.mid(1);
-    return rel.isEmpty() ? QStringLiteral(".") : rel;
+    const QString dataRoot = QDir::cleanPath(AppPaths::dataRoot());
+    if (native.startsWith(dataRoot, Qt::CaseInsensitive))
+        return QString(kDataPrefix) + relativeToRoot(dataRoot, native);
+
+    return native;
 }
 
 QString decode(const QString &storedPath)
 {
     if (storedPath.isEmpty())
         return QString();
+    if (storedPath.startsWith(kDataPrefix))
+        return QDir::cleanPath(AppPaths::dataRoot() + QLatin1Char('/')
+                               + storedPath.mid(kDataPrefix.size()));
+
     const QString native = QDir::fromNativeSeparators(storedPath);
     if (isAbsoluteOnDisk(native))
         return QDir::cleanPath(native);
 
-    const QString root = QDir::cleanPath(AppPaths::userDocumentsRoot());
-    return QDir::cleanPath(root + QLatin1Char('/') + native);
+    const QString docsRoot = QDir::cleanPath(AppPaths::userDocumentsRoot());
+    return QDir::cleanPath(docsRoot + QLatin1Char('/') + native);
 }
 
 QStringList encodeList(const QStringList &absolutePaths)

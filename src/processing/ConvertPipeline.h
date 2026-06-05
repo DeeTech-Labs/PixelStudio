@@ -21,7 +21,8 @@ struct ConvertPipelineParams
     bool flipHorizontal = false;
     bool flipVertical = false;
     ImageFiltersPipeline::Params filterParams;
-    DisplayCodeGenerator::EncodingMode encodingMode = DisplayCodeGenerator::EncodingMode::Mono8HorizontalMsb;
+    DisplayCodeGenerator::EncodingMode encodingMode = DisplayCodeGenerator::EncodingMode::Mono1Bit;
+    bool linearColorSpace = true;
 };
 
 class ConvertPipeline

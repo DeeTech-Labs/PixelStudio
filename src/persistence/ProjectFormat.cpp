@@ -1,9 +1,17 @@
 #include "persistence/ProjectFormat.h"
 
 #include "persistence/ProjectService.h"
+#include "persistence/RecentPreview.h"
 #include "persistence/StoredPath.h"
+#include "processing/DisplayCodeGenerator.h"
+#include "processing/DisplayRasterizer.h"
+#include "processing/PixelFormatCatalog.h"
 
+#include <QBuffer>
+#include <QCoreApplication>
+#include <QFile>
 #include <QFileInfo>
+#include <QImageReader>
 
 namespace {
 
@@ -32,6 +40,49 @@ void appendString(QByteArray &out, const QString &s)
     const quint16 len = quint16(qMin(utf8.size(), 0xffff));
     appendU16(out, len);
     out.append(utf8.constData(), len);
+}
+
+void appendU32(QByteArray &out, quint32 v)
+{
+    out.append(char(v & 0xff));
+    out.append(char((v >> 8) & 0xff));
+    out.append(char((v >> 16) & 0xff));
+    out.append(char((v >> 24) & 0xff));
+}
+
+bool readU32(const QByteArray &in, int &pos, quint32 *v)
+{
+    if (pos + 4 > in.size())
+        return false;
+    const auto b = reinterpret_cast<const uchar *>(in.constData() + pos);
+    *v = quint32(b[0]) | (quint32(b[1]) << 8) | (quint32(b[2]) << 16) | (quint32(b[3]) << 24);
+    pos += 4;
+    return true;
+}
+
+void appendBlob(QByteArray &out, const QByteArray &blob)
+{
+    const quint32 len = quint32(qMin(blob.size(), 0x7fffffff));
+    appendU32(out, len);
+    if (len > 0)
+        out.append(blob.constData(), len);
+}
+
+bool readBlob(const QByteArray &in, int &pos, QByteArray *blob)
+{
+    if (!blob)
+        return false;
+    blob->clear();
+    quint32 len = 0;
+    if (!readU32(in, pos, &len))
+        return false;
+    if (len == 0)
+        return true;
+    if (pos + int(len) > in.size())
+        return false;
+    *blob = in.mid(pos, int(len));
+    pos += int(len);
+    return true;
 }
 
 bool readU8(const QByteArray &in, int &pos, quint8 *v)
@@ -92,6 +143,12 @@ quint32 sessionFlags(const SessionSnapshot &session)
         f |= 1u << 6;
     if (session.codeStaticStorage)
         f |= 1u << 7;
+    if (session.rgb565BigEndian)
+        f |= 1u << 8;
+    if (session.linearColorSpace)
+        f |= 1u << 9;
+    const int dma = session.codeDmaAlign == 8 ? 2 : (session.codeDmaAlign == 4 ? 1 : 0);
+    f |= quint32(dma & 0x3) << 10;
     return f;
 }
 
@@ -105,6 +162,10 @@ void applySessionFlags(quint32 f, SessionSnapshot *session)
     session->codeIncludeComments = (f >> 5) & 1;
     session->codeUseProgmem = (f >> 6) & 1;
     session->codeStaticStorage = (f >> 7) & 1;
+    session->rgb565BigEndian = (f >> 8) & 1;
+    session->linearColorSpace = (f >> 9) & 1;
+    const int dma = (f >> 10) & 0x3;
+    session->codeDmaAlign = dma == 2 ? 8 : (dma == 1 ? 4 : 0);
 }
 
 quint32 filterFlags(const ImageFiltersPipeline::Params &p)
@@ -188,10 +249,24 @@ QByteArray buildPayload(const StudioProject &project)
         appendS16(out, qint16(asset.offsetX));
         appendS16(out, qint16(asset.offsetY));
     }
+    appendBlob(out, project.resultPreviewPng);
+    appendBlob(out, project.sourceImagePng);
     return out;
 }
 
-bool readSessionBlock(const QByteArray &payload, int &pos, SessionSnapshot *session)
+int decodeProjectEncoding(quint8 stored, quint8 formatVersion)
+{
+    using Mode = DisplayCodeGenerator::EncodingMode;
+    const int nativeMax = static_cast<int>(Mode::Count);
+    if (formatVersion >= 2) {
+        if (stored < static_cast<quint8>(nativeMax))
+            return static_cast<int>(stored);
+        return static_cast<int>(Mode::Mono1Bit);
+    }
+    return static_cast<int>(PixelFormatCatalog::migrateLegacy(stored));
+}
+
+bool readSessionBlock(const QByteArray &payload, int &pos, quint8 formatVersion, SessionSnapshot *session)
 {
     quint16 sessionBits = 0;
     quint8 u8 = 0;
@@ -211,7 +286,7 @@ bool readSessionBlock(const QByteArray &payload, int &pos, SessionSnapshot *sess
     session->rotation = u8;
     if (!readU8(payload, pos, &u8))
         return false;
-    session->encodingMode = u8;
+    session->encodingMode = decodeProjectEncoding(u8, formatVersion);
     if (!readU8(payload, pos, &u8))
         return false;
     session->gridThresholdZoom = u8;
@@ -307,6 +382,19 @@ bool readAssets(const QByteArray &payload, int &pos, StudioProject *project)
     return true;
 }
 
+bool readEmbeddedImages(const QByteArray &payload, int &pos, StudioProject *project)
+{
+    project->resultPreviewPng.clear();
+    project->sourceImagePng.clear();
+    if (pos >= payload.size())
+        return true;
+    if (!readBlob(payload, pos, &project->resultPreviewPng))
+        return false;
+    if (pos >= payload.size())
+        return true;
+    return readBlob(payload, pos, &project->sourceImagePng);
+}
+
 bool parsePayloadV1(const QByteArray &payload, StudioProject *project)
 {
     int pos = 0;
@@ -328,14 +416,16 @@ bool parsePayloadV1(const QByteArray &payload, StudioProject *project)
     Q_UNUSED(legacyExportTarget);
 
     SessionSnapshot session;
-    if (!readSessionBlock(payload, pos, &session))
+    if (!readSessionBlock(payload, pos, 1, &session))
         return false;
     if (!readString(payload, pos, &legacyDriver))
         return false;
     Q_UNUSED(legacyDriver);
 
     project->session = session;
-    return readAssets(payload, pos, project);
+    if (!readAssets(payload, pos, project))
+        return false;
+    return readEmbeddedImages(payload, pos, project);
 }
 
 bool parsePayloadV2(const QByteArray &payload, StudioProject *project)
@@ -352,11 +442,13 @@ bool parsePayloadV2(const QByteArray &payload, StudioProject *project)
     project->offsetY = offsetY;
 
     SessionSnapshot session;
-    if (!readSessionBlock(payload, pos, &session))
+    if (!readSessionBlock(payload, pos, 2, &session))
         return false;
 
     project->session = session;
-    return readAssets(payload, pos, project);
+    if (!readAssets(payload, pos, project))
+        return false;
+    return readEmbeddedImages(payload, pos, project);
 }
 
 bool parsePayload(const QByteArray &payload, quint8 version, StudioProject *project)
@@ -451,5 +543,141 @@ bool ProjectFormat::decode(const QByteArray &fileData, StudioProject *project, Q
     }
     if (project->name.isEmpty())
         project->name = QStringLiteral("Untitled");
+    return true;
+}
+
+namespace {
+
+bool isRasterImagePath(const QString &path)
+{
+    static const QStringList exts = {
+        QStringLiteral("png"),
+        QStringLiteral("jpg"),
+        QStringLiteral("jpeg"),
+        QStringLiteral("bmp"),
+        QStringLiteral("gif"),
+        QStringLiteral("webp"),
+    };
+    return exts.contains(QFileInfo(path).suffix(), Qt::CaseInsensitive);
+}
+
+QString encodingLabelForMode(int encodingMode)
+{
+    using Mode = DisplayCodeGenerator::EncodingMode;
+    const auto mode = PixelFormatCatalog::migrateLegacy(encodingMode);
+    int count = 0;
+    const PixelFormatCatalog::Entry *order = PixelFormatCatalog::uiOrder(&count);
+    for (int i = 0; i < count; ++i) {
+        if (order[i].mode == mode)
+            return QCoreApplication::translate("PixelStudio", order[i].name);
+    }
+    if (PixelFormatCatalog::isMono(mode))
+        return QCoreApplication::translate("PixelStudio", "Monochrome (1-bit)");
+    if (PixelFormatCatalog::isGrayscale(mode))
+        return QCoreApplication::translate("PixelStudio", "Grayscale (8-bit)");
+    return QCoreApplication::translate("PixelStudio", "Color");
+}
+
+QString specsMeta(int width, int height, int encodingMode)
+{
+    return QStringLiteral("%1x%2px • %3")
+        .arg(width)
+        .arg(height)
+        .arg(encodingLabelForMode(encodingMode));
+}
+
+DisplayProfile::ColorMode colorModeFromEncoding(int encodingMode)
+{
+    const auto mode = PixelFormatCatalog::migrateLegacy(encodingMode);
+    return PixelFormatCatalog::isMono(mode) ? DisplayProfile::Mono1Bit : DisplayProfile::Rgb565;
+}
+
+bool loadSourceImage(const StudioProject &project, QImage *image)
+{
+    if (!image)
+        return false;
+    if (!project.sourceImagePng.isEmpty()) {
+        if (image->loadFromData(project.sourceImagePng, "PNG"))
+            return true;
+    }
+    for (const ProjectAsset &asset : project.assets) {
+        if (!isRasterImagePath(asset.path) || !QFileInfo::exists(asset.path))
+            continue;
+        QImageReader reader(asset.path);
+        if (reader.read(image))
+            return true;
+    }
+    return false;
+}
+
+QImage resultPreviewForProject(const StudioProject &project)
+{
+    if (!project.resultPreviewPng.isEmpty()) {
+        QImage image;
+        if (image.loadFromData(project.resultPreviewPng, "PNG"))
+            return image;
+    }
+
+    QImage source;
+    if (!loadSourceImage(project, &source))
+        return {};
+
+    const SessionSnapshot &s = project.session;
+    const auto encodingMode = static_cast<DisplayCodeGenerator::EncodingMode>(
+        PixelFormatCatalog::migrateLegacy(s.encodingMode));
+    const auto scaleMode = static_cast<DisplayProfile::ScaleMode>(qBound(0, s.scaleMode, 2));
+    const DisplayRasterizer::Result result = DisplayRasterizer::convert(
+        source,
+        s.displayWidth,
+        s.displayHeight,
+        colorModeFromEncoding(s.encodingMode),
+        scaleMode,
+        s.filterParams,
+        encodingMode,
+        s.monoThreshold,
+        s.invertMono,
+        s.linearColorSpace);
+    return result.preview;
+}
+
+} // namespace
+
+bool ProjectFormat::loadRecentSummary(const QString &path, RecentSummary *summary, QString *errorText)
+{
+    if (!summary)
+        return false;
+    *summary = {};
+
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (errorText)
+            *errorText = QStringLiteral("Cannot open project");
+        return false;
+    }
+
+    StudioProject project;
+    if (!decode(file.readAll(), &project, errorText))
+        return false;
+
+    summary->title = project.name;
+    summary->resultWidth = project.session.displayWidth;
+    summary->resultHeight = project.session.displayHeight;
+    summary->encodingLabel = encodingLabelForMode(project.session.encodingMode);
+    summary->specsMeta = specsMeta(summary->resultWidth,
+                                   summary->resultHeight,
+                                   project.session.encodingMode);
+
+    QByteArray previewPng = project.resultPreviewPng;
+    if (previewPng.isEmpty()) {
+        const QImage preview = resultPreviewForProject(project);
+        if (!preview.isNull()) {
+            QBuffer buffer(&previewPng);
+            buffer.open(QIODevice::WriteOnly);
+            preview.save(&buffer, "PNG");
+        }
+    }
+    if (!previewPng.isEmpty())
+        summary->thumbnailPath = RecentPreview::resolveThumbnail(path, previewPng);
+
     return true;
 }

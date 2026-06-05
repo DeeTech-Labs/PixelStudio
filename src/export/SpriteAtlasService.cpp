@@ -99,7 +99,9 @@ SpriteAtlasResult SpriteAtlasService::build(const SpriteAtlasRequest &request)
                                                  raster.rgb233,
                                                  raster.rgb24,
                                                  name,
-                                                 request.monoLayout);
+                                                 request.monoLayout,
+                                                 request.codeGenOptions,
+                                                 raster.indexedPalette);
         header += QLatin1String("\n\n");
 
         QVariantMap meta;

@@ -3,6 +3,7 @@
 #include "persistence/AppPaths.h"
 #include "persistence/AppSettings.h"
 #include "processing/DisplayCodeGenerator.h"
+#include "processing/PixelFormatCatalog.h"
 #include "processing/ControllerCatalog.h"
 #include "processing/EncodingAnalyzer.h"
 #include "io/ImageLoader.h"
@@ -24,8 +25,10 @@
 #include <QSize>
 #include <QtConcurrent>
 #include <QGuiApplication>
-#include <QStandardPaths>
 #include <QTextStream>
+#include <QBuffer>
+#include <QFileInfo>
+#include <QSaveFile>
 #include <QTransform>
 #include <QVariantMap>
 
@@ -33,16 +36,12 @@ namespace {
 
 bool encodingIsColorMode(int mode)
 {
-    using EM = DisplayCodeGenerator::EncodingMode;
-    const auto m = static_cast<EM>(mode);
-    return m >= EM::Grayscale8 && m <= EM::Rgb233;
+    return !PixelFormatCatalog::isMono(static_cast<DisplayCodeGenerator::EncodingMode>(mode));
 }
 
 bool encodingIsMonoMode(int mode)
 {
-    using EM = DisplayCodeGenerator::EncodingMode;
-    const auto m = static_cast<EM>(mode);
-    return m <= EM::PackedImageRle || m == EM::Ascii || m == EM::Bricks;
+    return PixelFormatCatalog::isMono(static_cast<DisplayCodeGenerator::EncodingMode>(mode));
 }
 
 } // namespace
@@ -81,9 +80,7 @@ DisplayConverter::DisplayConverter(SessionSettings *session, AppSettings *appSet
     if (m_session) {
         connect(m_session, &SessionSettings::recentFilesChanged, this, &DisplayConverter::recentFilesChanged);
         connect(m_session, &SessionSettings::recentExportsChanged, this, &DisplayConverter::recentExportsChanged);
-        SessionSnapshot snap;
-        m_session->load(&snap);
-        applySessionSnapshot(snap);
+        applySessionSnapshot(SessionSettings::defaultSnapshot());
         m_session->loadUiState(&m_uiState);
         m_session->pruneMissingRecentFiles();
         m_session->pruneMissingRecentExports();
@@ -145,11 +142,11 @@ void DisplayConverter::setColorMode(int mode)
             m_encodingMode = DisplayCodeGenerator::EncodingMode::Rgb565;
     } else {
         if (!encodingIsMonoMode(enc))
-            m_encodingMode = DisplayCodeGenerator::EncodingMode::Mono8HorizontalMsb;
+            m_encodingMode = DisplayCodeGenerator::EncodingMode::Mono1Bit;
     }
 
     if (m_colorMode != DisplayProfile::Mono1Bit
-        && m_monoLayout == DisplayCodeGenerator::MonoLayout::Ssd1306Page) {
+        && m_monoLayout != DisplayCodeGenerator::MonoLayout::RowPacked) {
         m_monoLayout = DisplayCodeGenerator::MonoLayout::RowPacked;
         emit monoLayoutChanged();
     }
@@ -198,19 +195,19 @@ void DisplayConverter::setArrayName(const QString &name)
 
 int DisplayConverter::dataByteCount() const
 {
-    const QByteArray data = DisplayCodeGenerator::binaryData(
-        m_encodingMode,
-        m_displayWidth,
-        m_displayHeight,
-        m_lastResult.monoBits,
-        m_lastResult.monoBuffer,
-        m_lastResult.grayscale8,
-        m_lastResult.rgb565,
-        m_lastResult.rgb888,
-        m_lastResult.rgb233,
-        m_lastResult.rgb24,
-        m_monoLayout);
-    return data.size();
+    return DisplayCodeGenerator::flashFootprintBytes(m_encodingMode,
+                                                     m_displayWidth,
+                                                     m_displayHeight,
+                                                     m_lastResult.monoBits,
+                                                     m_lastResult.monoBuffer,
+                                                     m_lastResult.grayscale8,
+                                                     m_lastResult.rgb565,
+                                                     m_lastResult.rgb888,
+                                                     m_lastResult.rgb233,
+                                                     m_lastResult.rgb24,
+                                                     m_monoLayout,
+                                                     m_codeGenOptions,
+                                                     m_lastResult.indexedPalette);
 }
 
 QString DisplayConverter::colorModeName() const
@@ -238,20 +235,22 @@ bool DisplayConverter::encodingIsMono1Bit() const
 
 bool DisplayConverter::encodingIsGrayscale() const
 {
-    return m_encodingMode == DisplayCodeGenerator::EncodingMode::Grayscale8;
+    return PixelFormatCatalog::isGrayscale(m_encodingMode);
 }
 
 bool DisplayConverter::encodingIsColor() const
 {
-    return encodingIsColorMode(static_cast<int>(m_encodingMode))
-        && m_encodingMode != DisplayCodeGenerator::EncodingMode::Grayscale8;
+    return encodingIsColorMode(static_cast<int>(m_encodingMode));
 }
 
 QString DisplayConverter::monoLayoutName() const
 {
-    return m_monoLayout == DisplayCodeGenerator::MonoLayout::Ssd1306Page
-        ? QCoreApplication::translate("PixelStudio", "Vertical page buffer")
-        : QCoreApplication::translate("PixelStudio", "Row-packed");
+    using Layout = DisplayCodeGenerator::MonoLayout;
+    if (m_monoLayout == Layout::Ssd1306Page)
+        return QCoreApplication::translate("PixelStudio", "Vertical page buffer");
+    if (m_monoLayout == Layout::VerticalColumn)
+        return QCoreApplication::translate("PixelStudio", "Vertical column");
+    return QCoreApplication::translate("PixelStudio", "Row-packed");
 }
 
 int DisplayConverter::sourceWidth() const
@@ -353,9 +352,7 @@ void DisplayConverter::setFilterInvert(bool on)
 
 void DisplayConverter::setMonoLayout(int mode)
 {
-    const auto next = mode == static_cast<int>(DisplayCodeGenerator::MonoLayout::Ssd1306Page)
-        ? DisplayCodeGenerator::MonoLayout::Ssd1306Page
-        : DisplayCodeGenerator::MonoLayout::RowPacked;
+    const auto next = static_cast<DisplayCodeGenerator::MonoLayout>(qBound(0, mode, 2));
     if (m_monoLayout == next)
         return;
     m_monoLayout = next;
@@ -367,7 +364,7 @@ void DisplayConverter::setMonoLayout(int mode)
 void DisplayConverter::setEncodingMode(int mode)
 {
     const auto next = static_cast<DisplayCodeGenerator::EncodingMode>(
-        qBound(0, mode, static_cast<int>(DisplayCodeGenerator::EncodingMode::Bricks)));
+        qBound(0, mode, static_cast<int>(DisplayCodeGenerator::EncodingMode::Count) - 1));
     if (m_encodingMode == next)
         return;
     m_encodingMode = next;
@@ -380,7 +377,7 @@ void DisplayConverter::setEncodingMode(int mode)
         emit colorModeChanged();
     }
     if (m_colorMode != DisplayProfile::Mono1Bit
-        && m_monoLayout == DisplayCodeGenerator::MonoLayout::Ssd1306Page) {
+        && m_monoLayout != DisplayCodeGenerator::MonoLayout::RowPacked) {
         m_monoLayout = DisplayCodeGenerator::MonoLayout::RowPacked;
         emit monoLayoutChanged();
     }
@@ -408,7 +405,7 @@ void DisplayConverter::refreshSourcePreview()
 {
     if (m_sourceImage.isNull())
         return;
-    m_sourcePath = writeTempPreview(orientedSource(), &m_sourceTemp);
+    m_sourcePath = writeTempPreview(QStringLiteral("source"), orientedSource());
     emit sourcePathChanged();
 }
 
@@ -766,6 +763,37 @@ void DisplayConverter::setCodeStaticStorage(bool on)
     scheduleRebuild(true);
 }
 
+void DisplayConverter::setRgb565BigEndian(bool on)
+{
+    if (m_codeGenOptions.rgb565BigEndian == on)
+        return;
+    m_codeGenOptions.rgb565BigEndian = on;
+    emit rgb565BigEndianChanged();
+    emit codeGenOptionsChanged();
+    scheduleRebuild(true);
+}
+
+void DisplayConverter::setCodeDmaAlign(int align)
+{
+    align = align == 8 ? 8 : (align == 4 ? 4 : 0);
+    if (m_codeGenOptions.dmaPaddingAlign == align)
+        return;
+    m_codeGenOptions.dmaPaddingAlign = align;
+    emit codeDmaAlignChanged();
+    emit codeGenOptionsChanged();
+    scheduleRebuild(true);
+}
+
+void DisplayConverter::setLinearColorSpace(bool on)
+{
+    if (m_linearColorSpace == on)
+        return;
+    m_linearColorSpace = on;
+    emit linearColorSpaceChanged();
+    if (hasImage())
+        scheduleRebuild();
+}
+
 void DisplayConverter::setShowGrid(bool on)
 {
     if (m_showGrid == on)
@@ -860,6 +888,7 @@ void DisplayConverter::clear()
     m_lastAppliedGeneration = ++m_nextGeneration;
     m_batchService.reset();
     m_sourceImage = QImage();
+    m_sourceFilePath.clear();
     m_sourcePath.clear();
     m_previewPath.clear();
     m_processPreviewPath.clear();
@@ -876,18 +905,6 @@ void DisplayConverter::clear()
         ? ImageFiltersPipeline::DitherMode::FloydSteinberg
         : ImageFiltersPipeline::DitherMode::None;
     markOrientedDirty();
-    if (m_sourceTemp) {
-        m_sourceTemp->deleteLater();
-        m_sourceTemp = nullptr;
-    }
-    if (m_previewTemp) {
-        m_previewTemp->deleteLater();
-        m_previewTemp = nullptr;
-    }
-    if (m_processTemp) {
-        m_processTemp->deleteLater();
-        m_processTemp = nullptr;
-    }
     emit sourcePathChanged();
     emit previewPathChanged();
     emit processPreviewPathChanged();
@@ -958,38 +975,7 @@ QVariantList DisplayConverter::availableEncodingModes() const
 
 QVariantList DisplayConverter::availableEncodingModesForUi() const
 {
-    static const DisplayCodeGenerator::EncodingMode kOrder[] = {
-        DisplayCodeGenerator::EncodingMode::Mono8HorizontalMsb,
-        DisplayCodeGenerator::EncodingMode::Mono8HorizontalLsb,
-        DisplayCodeGenerator::EncodingMode::Mono8VerticalCol,
-        DisplayCodeGenerator::EncodingMode::Mono8VerticalRow,
-        DisplayCodeGenerator::EncodingMode::Mono1PixPerByte,
-        DisplayCodeGenerator::EncodingMode::PackedImageRle,
-        DisplayCodeGenerator::EncodingMode::PackedImageAuto,
-        DisplayCodeGenerator::EncodingMode::PackedImageHeader,
-        DisplayCodeGenerator::EncodingMode::Grayscale8,
-        DisplayCodeGenerator::EncodingMode::Rgb565,
-        DisplayCodeGenerator::EncodingMode::Rgb233,
-        DisplayCodeGenerator::EncodingMode::Rgb888,
-        DisplayCodeGenerator::EncodingMode::Rgb24,
-        DisplayCodeGenerator::EncodingMode::Ascii,
-        DisplayCodeGenerator::EncodingMode::Bricks,
-    };
-
-    const QVariantList all = availableEncodingModes();
-    QHash<int, QVariant> byMode;
-    byMode.reserve(all.size());
-    for (const QVariant &item : all)
-        byMode.insert(item.toMap().value(QStringLiteral("mode")).toInt(), item);
-
-    QVariantList out;
-    out.reserve(int(sizeof(kOrder) / sizeof(kOrder[0])));
-    for (DisplayCodeGenerator::EncodingMode mode : kOrder) {
-        const QVariant item = byMode.value(static_cast<int>(mode));
-        if (!item.isNull())
-            out.append(item);
-    }
-    return out;
+    return availableEncodingModes();
 }
 
 QVariantList DisplayConverter::availableBasicEncodingModes() const
@@ -1004,25 +990,30 @@ QVariantList DisplayConverter::availableBasicEncodingModes() const
             {QStringLiteral("monoLayout"), static_cast<int>(Layout::RowPacked)},
         });
         list.append(QVariantMap{
-            {QStringLiteral("name"), AppLocale::tr("RGB233 palette")},
-            {QStringLiteral("mode"), static_cast<int>(Mode::Rgb233)},
+            {QStringLiteral("name"), AppLocale::tr("Indexed color (8-bit palette)")},
+            {QStringLiteral("mode"), static_cast<int>(Mode::Indexed8)},
             {QStringLiteral("monoLayout"), static_cast<int>(Layout::RowPacked)},
         });
         return list;
     }
     list.append(QVariantMap{
         {QStringLiteral("name"), AppLocale::tr("Standard row")},
-        {QStringLiteral("mode"), static_cast<int>(Mode::Mono8HorizontalMsb)},
+        {QStringLiteral("mode"), static_cast<int>(Mode::Mono1Bit)},
         {QStringLiteral("monoLayout"), static_cast<int>(Layout::RowPacked)},
     });
     list.append(QVariantMap{
         {QStringLiteral("name"), AppLocale::tr("Vertical page buffer")},
-        {QStringLiteral("mode"), static_cast<int>(Mode::Mono8HorizontalMsb)},
+        {QStringLiteral("mode"), static_cast<int>(Mode::Mono1Bit)},
         {QStringLiteral("monoLayout"), static_cast<int>(Layout::Ssd1306Page)},
     });
     list.append(QVariantMap{
-        {QStringLiteral("name"), AppLocale::tr("Compact RLE")},
-        {QStringLiteral("mode"), static_cast<int>(Mode::PackedImageRle)},
+        {QStringLiteral("name"), AppLocale::tr("Vertical column")},
+        {QStringLiteral("mode"), static_cast<int>(Mode::Mono1Bit)},
+        {QStringLiteral("monoLayout"), static_cast<int>(Layout::VerticalColumn)},
+    });
+    list.append(QVariantMap{
+        {QStringLiteral("name"), AppLocale::tr("Grayscale (4-bit)")},
+        {QStringLiteral("mode"), static_cast<int>(Mode::Grayscale4)},
         {QStringLiteral("monoLayout"), static_cast<int>(Layout::RowPacked)},
     });
     return list;
@@ -1056,7 +1047,7 @@ void DisplayConverter::applyWorkflowPreset(const QString &id)
         setProfileId(QStringLiteral("128x64"));
         setColorMode(static_cast<int>(DisplayProfile::Mono1Bit));
         m_scaleMode = DisplayProfile::Crop;
-        m_encodingMode = DisplayCodeGenerator::EncodingMode::PackedImageRle;
+        m_encodingMode = DisplayCodeGenerator::EncodingMode::Mono1Bit;
     } else if (id == QStringLiteral("splash")) {
         setProfileId(QStringLiteral("240x240"));
         setColorMode(static_cast<int>(DisplayProfile::Rgb565));
@@ -1069,7 +1060,7 @@ void DisplayConverter::applyWorkflowPreset(const QString &id)
     } else if (id == QStringLiteral("indexed")) {
         setProfileId(QStringLiteral("240x240"));
         setColorMode(static_cast<int>(DisplayProfile::Rgb565));
-        m_encodingMode = DisplayCodeGenerator::EncodingMode::Rgb233;
+        m_encodingMode = DisplayCodeGenerator::EncodingMode::Indexed8;
         m_filterParams.posterizeRgb = 6;
     } else {
         return;
@@ -1084,7 +1075,12 @@ void DisplayConverter::applyWorkflowPreset(const QString &id)
 
 void DisplayConverter::newProject(const QString &name)
 {
-    m_project = ProjectService::fromSession(name, sessionSnapshot(), m_offsetX, m_offsetY);
+    const SessionSnapshot defaults = SessionSettings::defaultSnapshot();
+    applySessionSnapshot(defaults);
+    m_offsetX = 0;
+    m_offsetY = 0;
+    emit offsetChanged();
+    m_project = ProjectService::fromSession(name, defaults, 0, 0);
     m_projectFile = QUrl();
     updateWatchExportPrefix();
     restartAutosaveTimer();
@@ -1101,9 +1097,11 @@ bool DisplayConverter::openProject(const QUrl &url)
     }
     applyProject(project);
     m_projectFile = url;
-    m_uiState.lastProjectFile = url.toLocalFile();
-    if (m_session)
+    const QString localPath = url.toLocalFile();
+    if (!AppPaths::isExcludedFromRecentPath(localPath) && m_session)
         m_session->addRecentFile(url);
+    if (!AppPaths::isInternalDataPath(localPath))
+        m_uiState.lastProjectFile = localPath;
     updateWatchExportPrefix();
     restartAutosaveTimer();
     schedulePersistSession();
@@ -1122,14 +1120,23 @@ bool DisplayConverter::saveProject()
 
 bool DisplayConverter::saveProjectAs(const QUrl &url)
 {
-    m_project = ProjectService::fromSession(m_project.name, sessionSnapshot(), m_offsetX, m_offsetY);
+    const QString previousPath = m_projectFile.toLocalFile();
+    m_project = projectSnapshot();
     QString error;
     if (!ProjectService::save(m_project, url, &error)) {
         emit errorOccurred(error);
         return false;
     }
     m_projectFile = url;
-    m_uiState.lastProjectFile = url.toLocalFile();
+    const QString localPath = url.toLocalFile();
+    if (!AppPaths::isExcludedFromRecentPath(localPath) && m_session)
+        m_session->addRecentFile(url);
+    if (!previousPath.isEmpty() && AppPaths::isTabCachePath(previousPath)
+        && !AppPaths::isTabCachePath(localPath) && m_session) {
+        m_session->removeRecentPath(previousPath);
+    }
+    if (!AppPaths::isInternalDataPath(localPath))
+        m_uiState.lastProjectFile = localPath;
     schedulePersistSession();
     updateWatchExportPrefix();
     restartAutosaveTimer();
@@ -1198,6 +1205,7 @@ bool DisplayConverter::buildSpriteAtlas(const QVariantList &urls, const QUrl &ta
     request.padding = 1;
     request.encodingMode = m_encodingMode;
     request.monoLayout = m_monoLayout;
+    request.codeGenOptions = m_codeGenOptions;
     for (const QVariant &value : urls) {
         const QUrl url = value.toUrl();
         if (url.isValid())
@@ -1277,7 +1285,8 @@ bool DisplayConverter::saveBinaryToFile(const QUrl &url)
         m_lastResult.rgb888,
         m_lastResult.rgb233,
         m_lastResult.rgb24,
-        m_monoLayout);
+        m_monoLayout,
+        m_codeGenOptions);
 
     QString error;
     if (!BinaryExporter::save(path, data, &error)) {
@@ -1311,6 +1320,7 @@ void DisplayConverter::enqueueBatchCodeExport(const QVariantList &urls, const QU
     job.profileId = m_profileId;
     job.encodingMode = m_encodingMode;
     job.monoLayout = m_monoLayout;
+    job.codeGenOptions = m_codeGenOptions;
     m_batchService.enqueue(job);
 }
 
@@ -1326,7 +1336,12 @@ void DisplayConverter::onImageLoaded(const QImage &image, const QUrl &sourceUrl)
     m_flipHorizontal = false;
     m_flipVertical = false;
     markOrientedDirty();
-    Q_UNUSED(sourceUrl);
+    if (sourceUrl.isLocalFile()) {
+        const QString local = sourceUrl.toLocalFile();
+        m_sourceFilePath = local.isEmpty() ? sourceUrl.path() : local;
+    } else {
+        m_sourceFilePath.clear();
+    }
     refreshSourcePreview();
     emit hasImageChanged();
     emit rotationChanged();
@@ -1389,6 +1404,7 @@ void DisplayConverter::startAsyncRebuild()
     const auto encodingMode = m_encodingMode;
     const auto monoLayout = m_monoLayout;
     const DisplayCodeGenerator::CodeGenOptions codeOptions = m_codeGenOptions;
+    const bool linearColorSpace = m_linearColorSpace;
     const quint64 generation = ++m_nextGeneration;
 
     auto future = QtConcurrent::run([source,
@@ -1404,6 +1420,7 @@ void DisplayConverter::startAsyncRebuild()
                                      encodingMode,
                                      monoLayout,
                                      codeOptions,
+                                     linearColorSpace,
                                      generation]() -> AsyncBuildResult {
         AsyncBuildResult output;
         output.generation = generation;
@@ -1415,8 +1432,8 @@ void DisplayConverter::startAsyncRebuild()
                                                    filterParams,
                                                    encodingMode,
                                                    monoThreshold,
-                                                   invertMono);
-        DisplayRasterizer::applyPreviewEncoding(output.result, encodingMode);
+                                                   invertMono,
+                                                   linearColorSpace);
         if (output.result.preview.isNull())
             return output;
 
@@ -1442,7 +1459,8 @@ void DisplayConverter::startAsyncRebuild()
                                                               output.result.rgb24,
                                                               arrayName,
                                                               monoLayout,
-                                                              codeOptions);
+                                                              codeOptions,
+                                                              output.result.indexedPalette);
         return output;
     });
     m_rebuildWatcher.setFuture(future);
@@ -1465,9 +1483,9 @@ void DisplayConverter::onAsyncRebuildFinished()
             updateCodePreview();
             updateFlashReport();
         } else {
-            m_processPreviewPath = writeTempPreview(m_lastResult.processPreview, &m_processTemp);
+            m_processPreviewPath = writeTempPreview(QStringLiteral("process"), m_lastResult.processPreview);
             emit processPreviewPathChanged();
-            m_previewPath = writeTempPreview(m_lastResult.preview, &m_previewTemp);
+            m_previewPath = writeTempPreview(QStringLiteral("preview"), m_lastResult.preview);
             emit previewPathChanged();
             m_generatedCode = result.generatedCode;
             emit generatedCodeChanged();
@@ -1488,28 +1506,24 @@ void DisplayConverter::markOrientedDirty()
     m_orientedCache = QImage();
 }
 
-QUrl DisplayConverter::writeTempPreview(const QImage &img, QTemporaryFile **slot)
+QUrl DisplayConverter::writeTempPreview(const QString &slotName, const QImage &img)
 {
-    if (img.isNull())
+    if (img.isNull() || slotName.isEmpty())
         return {};
 
-    if (*slot) {
-        (*slot)->deleteLater();
-        *slot = nullptr;
-    }
-    auto *file = new QTemporaryFile(
-        QStandardPaths::writableLocation(QStandardPaths::TempLocation)
-        + QStringLiteral("/pixelstudio_XXXXXX.png"),
-        this);
-    file->setAutoRemove(true);
-    if (!file->open()) {
-        file->deleteLater();
+    const QString dir = AppPaths::runtimePreviewsDir();
+    QDir().mkpath(dir);
+    const QString path = dir + QLatin1Char('/') + slotName + QStringLiteral(".png");
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
         return {};
-    }
-    img.save(file, "PNG");
-    file->flush();
-    *slot = file;
-    return QUrl::fromLocalFile(file->fileName());
+    if (!img.save(&file, "PNG") || !file.commit())
+        return {};
+
+    // Fixed filenames are reused on disk; bump URL so QML Image reloads updated PNG.
+    QUrl url = QUrl::fromLocalFile(path);
+    url.setQuery(QString::number(++m_previewEpoch));
+    return url;
 }
 
 ConvertPipelineParams DisplayConverter::pipelineParams() const
@@ -1526,6 +1540,7 @@ ConvertPipelineParams DisplayConverter::pipelineParams() const
     p.flipVertical = m_flipVertical;
     p.filterParams = m_filterParams;
     p.encodingMode = m_encodingMode;
+    p.linearColorSpace = m_linearColorSpace;
     return p;
 }
 
@@ -1551,6 +1566,9 @@ SessionSnapshot DisplayConverter::sessionSnapshot() const
     s.codeIncludeComments = m_codeGenOptions.includeHeaderComments;
     s.codeUseProgmem = m_codeGenOptions.useProgmem;
     s.codeStaticStorage = m_codeGenOptions.staticStorage;
+    s.rgb565BigEndian = m_codeGenOptions.rgb565BigEndian;
+    s.codeDmaAlign = m_codeGenOptions.dmaPaddingAlign;
+    s.linearColorSpace = m_linearColorSpace;
     return s;
 }
 
@@ -1563,9 +1581,14 @@ void DisplayConverter::applySessionSnapshot(const SessionSnapshot &snapshot)
     m_dithering = snapshot.dithering;
     m_monoThreshold = snapshot.monoThreshold;
     m_arrayName = snapshot.arrayName;
-    m_encodingMode = static_cast<DisplayCodeGenerator::EncodingMode>(
-        qBound(0, snapshot.encodingMode, static_cast<int>(DisplayCodeGenerator::EncodingMode::Bricks)));
-    m_monoLayout = static_cast<DisplayCodeGenerator::MonoLayout>(snapshot.monoLayout);
+    const int storedEncoding = snapshot.encodingMode;
+    if (storedEncoding >= 0
+        && storedEncoding < static_cast<int>(DisplayCodeGenerator::EncodingMode::Count)) {
+        m_encodingMode = static_cast<DisplayCodeGenerator::EncodingMode>(storedEncoding);
+    } else {
+        m_encodingMode = PixelFormatCatalog::migrateLegacy(storedEncoding);
+    }
+    m_monoLayout = static_cast<DisplayCodeGenerator::MonoLayout>(qBound(0, snapshot.monoLayout, 2));
     m_rotation = snapshot.rotation;
     m_flipHorizontal = snapshot.flipHorizontal;
     m_flipVertical = snapshot.flipVertical;
@@ -1577,11 +1600,23 @@ void DisplayConverter::applySessionSnapshot(const SessionSnapshot &snapshot)
     m_codeGenOptions.includeHeaderComments = snapshot.codeIncludeComments;
     m_codeGenOptions.useProgmem = snapshot.codeUseProgmem;
     m_codeGenOptions.staticStorage = snapshot.codeStaticStorage;
-    applyProfile(DisplayProfile::byId(m_profileId));
+    m_codeGenOptions.rgb565BigEndian = snapshot.rgb565BigEndian;
+    m_codeGenOptions.dmaPaddingAlign = qBound(0, snapshot.codeDmaAlign, 8);
+    if (m_codeGenOptions.dmaPaddingAlign != 4 && m_codeGenOptions.dmaPaddingAlign != 8)
+        m_codeGenOptions.dmaPaddingAlign = 0;
+    m_linearColorSpace = snapshot.linearColorSpace;
+    if (m_filterParams.ditherMode == ImageFiltersPipeline::DitherMode::FloydSteinberg)
+        m_dithering = true;
+    else if (m_filterParams.ditherMode == ImageFiltersPipeline::DitherMode::None)
+        m_dithering = false;
+    syncProfileIdFromDimensions();
     m_colorMode = encodingIsColorMode(static_cast<int>(m_encodingMode))
         ? DisplayProfile::Rgb565
         : DisplayProfile::Mono1Bit;
     emit codeGenOptionsChanged();
+    emit rgb565BigEndianChanged();
+    emit codeDmaAlignChanged();
+    emit linearColorSpaceChanged();
     emit tonePresetChanged();
     emit profileIdChanged();
     emit displayWidthChanged();
@@ -1600,6 +1635,7 @@ void DisplayConverter::applySessionSnapshot(const SessionSnapshot &snapshot)
     emit showGridChanged();
     emit gridThresholdZoomChanged();
     emit colorModeChanged();
+    emitAllFilterSignals();
 }
 
 void DisplayConverter::schedulePersistSession()
@@ -1610,9 +1646,6 @@ void DisplayConverter::schedulePersistSession()
 
 void DisplayConverter::persistSession()
 {
-    if (!m_session)
-        return;
-    m_session->save(sessionSnapshot());
     persistUiState();
 }
 
@@ -1655,21 +1688,25 @@ void DisplayConverter::applyStoredUiState()
 
 QString DisplayConverter::lastProjectPath() const
 {
+    if (AppPaths::isInternalDataPath(m_uiState.lastProjectFile))
+        return {};
     return m_uiState.lastProjectFile;
 }
 
 bool DisplayConverter::hasRestorableProject() const
 {
-    return !m_uiState.lastProjectFile.isEmpty() && QFileInfo::exists(m_uiState.lastProjectFile);
+    const QString path = lastProjectPath();
+    return !path.isEmpty() && QFileInfo::exists(path);
 }
 
 bool DisplayConverter::restoreLastProject()
 {
     if (!m_appSettings || !m_appSettings->restoreLastProject())
         return false;
-    if (!hasRestorableProject())
+    const QString path = lastProjectPath();
+    if (path.isEmpty() || !QFileInfo::exists(path))
         return false;
-    return openProject(QUrl::fromLocalFile(m_uiState.lastProjectFile));
+    return openProject(QUrl::fromLocalFile(path));
 }
 
 void DisplayConverter::openUserDocumentsFolder()
@@ -1745,9 +1782,7 @@ void DisplayConverter::resetSession()
     if (!m_session)
         return;
     m_session->resetToDefaults();
-    SessionSnapshot snap;
-    m_session->load(&snap);
-    applySessionSnapshot(snap);
+    applySessionSnapshot(SessionSettings::defaultSnapshot());
     m_uiState = SessionUiState{};
     m_uiState.watchOutputFolder = AppPaths::watchDir();
     m_watchService.configure(QString(), m_uiState.watchOutputFolder);
@@ -1881,8 +1916,44 @@ void DisplayConverter::updateCodePreview()
 
 void DisplayConverter::updateFlashReport()
 {
-    m_flashReport = EncodingAnalyzer::analyze(m_lastResult, m_colorMode, m_monoLayout, m_encodingMode);
+    m_flashReport = EncodingAnalyzer::analyze(m_lastResult,
+                                              m_colorMode,
+                                              m_monoLayout,
+                                              m_encodingMode,
+                                              m_codeGenOptions);
     emit flashReportChanged();
+}
+
+StudioProject DisplayConverter::projectSnapshot() const
+{
+    StudioProject project = ProjectService::fromSession(m_project.name, sessionSnapshot(), m_offsetX, m_offsetY);
+    project.assets.clear();
+    project.sourceImagePng.clear();
+    project.resultPreviewPng.clear();
+
+    auto savePng = [](const QImage &image) -> QByteArray {
+        if (image.isNull())
+            return {};
+        QByteArray png;
+        QBuffer buffer(&png);
+        buffer.open(QIODevice::WriteOnly);
+        return image.save(&buffer, "PNG") ? png : QByteArray{};
+    };
+
+    const bool hasSourceFile = !m_sourceFilePath.isEmpty() && QFileInfo::exists(m_sourceFilePath);
+    if (hasSourceFile) {
+        project.assets.append(ProjectAsset{
+            m_sourceFilePath,
+            QFileInfo(m_sourceFilePath).fileName(),
+            0,
+            0,
+        });
+    } else if (!m_sourceImage.isNull()) {
+        project.sourceImagePng = savePng(m_sourceImage);
+    }
+
+    project.resultPreviewPng = savePng(m_lastResult.preview);
+    return project;
 }
 
 void DisplayConverter::applyProject(const StudioProject &project)
@@ -1890,11 +1961,40 @@ void DisplayConverter::applyProject(const StudioProject &project)
     m_project = project;
     m_offsetX = project.offsetX;
     m_offsetY = project.offsetY;
+    m_sourceFilePath.clear();
     applySessionSnapshot(project.session);
+
+    QImage image;
+    for (const ProjectAsset &asset : project.assets) {
+        if (!QFileInfo::exists(asset.path))
+            continue;
+        if (m_loader->loadFromFile(QUrl::fromLocalFile(asset.path), image)) {
+            m_sourceFilePath = QFileInfo(asset.path).absoluteFilePath();
+            break;
+        }
+    }
+    if (image.isNull() && !project.sourceImagePng.isEmpty())
+        image.loadFromData(project.sourceImagePng, "PNG");
+
+    if (!image.isNull()) {
+        m_sourceImage = image;
+        markOrientedDirty();
+        refreshSourcePreview();
+        emit hasImageChanged();
+        emit sourceWidthChanged();
+        emit sourceHeightChanged();
+        scheduleRebuild(true);
+    } else {
+        m_sourceImage = QImage();
+        m_sourcePath.clear();
+        emit hasImageChanged();
+        emit sourcePathChanged();
+        scheduleRebuild(true);
+    }
+
     emit offsetChanged();
     updateWatchExportPrefix();
     emit projectChanged();
-    scheduleRebuild(true);
 }
 
 void DisplayConverter::onWatchExportRequested(const QVariantList &files, const QUrl &targetFile)

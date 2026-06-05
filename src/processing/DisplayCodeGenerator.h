@@ -8,36 +8,43 @@
 
 #include "processing/DisplayProfile.h"
 
+struct DisplayCodeGenOptions {
+    bool includeHeaderComments = true;
+    bool useProgmem = true;
+    bool staticStorage = true;
+    bool rgb565BigEndian = false;
+    int dmaPaddingAlign = 4;
+};
+
 class DisplayCodeGenerator
 {
 public:
+    using CodeGenOptions = DisplayCodeGenOptions;
+
     enum class EncodingMode {
-        Mono1PixPerByte = 0,
-        Mono8HorizontalLsb = 1,
-        Mono8HorizontalMsb = 2,
-        Mono8VerticalCol = 3,
-        Mono8VerticalRow = 4,
-        PackedImageAuto = 5,
-        PackedImageHeader = 6,
-        PackedImageRle = 7,
-        Grayscale8 = 8,
-        Rgb24 = 9,
-        Rgb888 = 10,
-        Rgb565 = 11,
-        Rgb233 = 12,
-        Ascii = 13,
-        Bricks = 14
+        Mono1Bit = 0,
+        Grayscale4 = 1,
+        Grayscale8 = 2,
+        Indexed8 = 3,
+        Rgb565 = 4,
+        Rgb666 = 5,
+        Rgb888 = 6,
+        Argb8888 = 7,
+        Bgr565 = 8,
+        Bgr888 = 9,
+        Abgr8888 = 10,
+        YuvNv12 = 11,
+        YuvYuyv = 12,
+        YuvYv12 = 13,
+        R16f = 14,
+        Rgba32f = 15,
+        Count = 16
     };
 
     enum class MonoLayout {
         RowPacked = 0,
-        Ssd1306Page = 1
-    };
-
-    struct CodeGenOptions {
-        bool includeHeaderComments = true;
-        bool useProgmem = true;
-        bool staticStorage = true;
+        Ssd1306Page = 1,
+        VerticalColumn = 2
     };
 
     static QVariantList availableEncodings();
@@ -54,7 +61,22 @@ public:
                                  const QByteArray &rgb888,
                                  const QByteArray &rgb233,
                                  const QVector<quint32> &rgb24,
-                                 MonoLayout monoLayout = MonoLayout::RowPacked);
+                                 MonoLayout monoLayout = MonoLayout::RowPacked,
+                                 const CodeGenOptions &options = CodeGenOptions{});
+
+    static int flashFootprintBytes(EncodingMode mode,
+                                   int width,
+                                   int height,
+                                   const QVector<bool> &monoBits,
+                                   const QByteArray &monoBuffer,
+                                   const QByteArray &grayscale8,
+                                   const QVector<quint16> &rgb565,
+                                   const QByteArray &rgb888,
+                                   const QByteArray &rgb233,
+                                   const QVector<quint32> &rgb24,
+                                   MonoLayout monoLayout,
+                                   const CodeGenOptions &options,
+                                   const QVector<quint32> &indexedPalette = {});
 
     static QString generate(const DisplayProfile &profile,
                             int width,
@@ -68,7 +90,8 @@ public:
                             const QByteArray &rgb233,
                             const QVector<quint32> &rgb24,
                             const QString &arrayName = QStringLiteral("image_data"),
-                            MonoLayout monoLayout = MonoLayout::RowPacked);
+                            MonoLayout monoLayout = MonoLayout::RowPacked,
+                            const QVector<quint32> &indexedPalette = {});
 
     static QString generate(const DisplayProfile &profile,
                             int width,
@@ -83,7 +106,8 @@ public:
                             const QVector<quint32> &rgb24,
                             const QString &arrayName,
                             MonoLayout monoLayout,
-                            CodeGenOptions options);
+                            CodeGenOptions options,
+                            const QVector<quint32> &indexedPalette = {});
 };
 
 #endif // DISPLAYCODEGENERATOR_H

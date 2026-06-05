@@ -16,8 +16,9 @@ struct BatchExportJob {
     QUrl targetFile;
     ConvertPipelineParams pipeline;
     QString profileId;
-    DisplayCodeGenerator::EncodingMode encodingMode = DisplayCodeGenerator::EncodingMode::Mono8HorizontalMsb;
+    DisplayCodeGenerator::EncodingMode encodingMode = DisplayCodeGenerator::EncodingMode::Mono1Bit;
     DisplayCodeGenerator::MonoLayout monoLayout = DisplayCodeGenerator::MonoLayout::RowPacked;
+    DisplayCodeGenerator::CodeGenOptions codeGenOptions;
 };
 
 struct BatchExportResult {

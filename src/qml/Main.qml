@@ -36,6 +36,10 @@ ApplicationWindow {
     property bool forceClose: false
     property int folderPickTarget: 0
 
+    function dialogBodyWidth(preferred, outerMargin) {
+        return Math.max(240, Math.min(preferred, width - outerMargin))
+    }
+
     function openWelcome() {
         tabController.activateWelcome()
     }
@@ -725,14 +729,16 @@ ApplicationWindow {
         anchors.centerIn: parent
         standardButtons: Dialog.Ok
         padding: appPalette.spacingLg
+        property int bodyWidth: window.dialogBodyWidth(360, appPalette.spacingXl * 4)
+        width: bodyWidth + 2 * padding
         background: Rectangle {
             radius: appPalette.radiusLg
             color: appPalette.surface
             border.width: 1
             border.color: appPalette.border
         }
-        Label {
-            width: 360
+        contentItem: Label {
+            width: aboutDialog.bodyWidth
             wrapMode: Text.WordWrap
             text: qsTr("Converts images to C arrays for OLED and TFT displays.")
             font.family: appPalette.fontFamily
@@ -747,7 +753,8 @@ ApplicationWindow {
         anchors.centerIn: parent
         standardButtons: Dialog.Ok
         padding: appPalette.spacingLg
-        width: Math.min(520, window.width - appPalette.spacingXl * 2)
+        property int bodyWidth: window.dialogBodyWidth(488, appPalette.spacingXl * 4)
+        width: bodyWidth + 2 * padding
 
         background: Rectangle {
             radius: appPalette.radiusLg
@@ -757,7 +764,7 @@ ApplicationWindow {
         }
 
         ColumnLayout {
-            width: parent.width
+            width: preferencesDialog.bodyWidth
             spacing: appPalette.spacingMd
 
             StudioSection {
@@ -951,6 +958,8 @@ ApplicationWindow {
         anchors.centerIn: parent
         standardButtons: Dialog.Yes | Dialog.No
         padding: appPalette.spacingLg
+        property int bodyWidth: window.dialogBodyWidth(320, appPalette.spacingXl * 4)
+        width: bodyWidth + 2 * padding
         onAccepted: {
             converter.resetSession()
             statusMessage(qsTr("Session reset"))
@@ -961,8 +970,8 @@ ApplicationWindow {
             border.width: 1
             border.color: appPalette.border
         }
-        Label {
-            width: 320
+        contentItem: Label {
+            width: resetSessionConfirmDialog.bodyWidth
             wrapMode: Text.WordWrap
             text: qsTr("Clears inspector settings, recent lists, and watch folders. Projects on disk are not deleted.")
             font.family: appPalette.fontFamily
@@ -977,6 +986,8 @@ ApplicationWindow {
         anchors.centerIn: parent
         standardButtons: Dialog.Yes | Dialog.No
         padding: appPalette.spacingLg
+        property int bodyWidth: window.dialogBodyWidth(360, appPalette.spacingXl * 4)
+        width: bodyWidth + 2 * padding
         onAccepted: {
             if (closeTabDontAsk.checked)
                 appSettings.setConfirmCloseTab(false)
@@ -991,12 +1002,12 @@ ApplicationWindow {
             border.width: 1
             border.color: appPalette.border
         }
-        ColumnLayout {
+        contentItem: ColumnLayout {
+            width: closeTabConfirmDialog.bodyWidth
             spacing: appPalette.spacingMd
             Label {
                 Layout.fillWidth: true
                 wrapMode: Text.WordWrap
-                width: 360
                 text: qsTr("Close “%1”? Unsaved changes in this tab may be lost.")
                     .arg(tabTitleForId(pendingCloseTabId))
                 font.family: appPalette.fontFamily
@@ -1017,6 +1028,8 @@ ApplicationWindow {
         anchors.centerIn: parent
         standardButtons: Dialog.Yes | Dialog.No
         padding: appPalette.spacingLg
+        property int bodyWidth: window.dialogBodyWidth(360, appPalette.spacingXl * 4)
+        width: bodyWidth + 2 * padding
         onAccepted: {
             forceClose = true
             window.close()
@@ -1027,8 +1040,8 @@ ApplicationWindow {
             border.width: 1
             border.color: appPalette.border
         }
-        Label {
-            width: 360
+        contentItem: Label {
+            width: exitConfirmDialog.bodyWidth
             wrapMode: Text.WordWrap
             text: qsTr("Close the application? Unsaved exported files or project changes may be lost.")
             font.family: appPalette.fontFamily
@@ -1062,6 +1075,7 @@ ApplicationWindow {
             }
             onRecentFileRequested: (path) => openLocalPath(path)
             onFileDropped: (urls) => openDroppedUrls(urls)
+            onSettingsRequested: preferencesDialog.open()
         }
 
         SplitView {
