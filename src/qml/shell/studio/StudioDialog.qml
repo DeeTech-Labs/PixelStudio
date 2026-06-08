@@ -14,11 +14,14 @@ Dialog {
     property int frameBorderWidth: studio.pixelBorderWidth
     property int frameRadius: studio.radiusSm
     property color headerTitleColor: studio.text
+    property int headerTitleElide: Text.ElideRight
 
     padding: studio.spacingXl
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
     background: Item {
+        clip: true
+
         Rectangle {
             anchors.fill: parent
             radius: root.frameRadius
@@ -103,15 +106,15 @@ Dialog {
                 font.family: studio.fontFamilyPixel
                 font.pixelSize: studio.fontSizePixel
                 color: root.headerTitleColor
-                elide: Text.ElideRight
+                elide: root.headerTitleElide
                 Layout.fillWidth: true
             }
 
             Button {
                 flat: true
                 text: "\u00d7"
-                font.pixelSize: 18
-                font.family: studio.fontFamily
+                font.pixelSize: studio.fontSizePixel
+                font.family: studio.fontFamilyPixel
                 implicitWidth: 28
                 implicitHeight: 28
                 Layout.alignment: Qt.AlignVCenter

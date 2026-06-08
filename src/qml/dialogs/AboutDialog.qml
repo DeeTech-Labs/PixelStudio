@@ -9,10 +9,12 @@ StudioDialog {
 
     property int bodyWidth: 440
 
+    showCornerBrackets: false
     frameBorderWidth: 2
     frameRadius: 0
     frameDoubleBorder: true
     headerTitleColor: studio.text
+    headerTitleElide: Text.ElideNone
 
     readonly property string repoUrl: "https://github.com/DeeTech-Labs/PixelStudio"
     readonly property string docsUrl: repoUrl + "/blob/main/docs/README.md"
@@ -46,6 +48,15 @@ StudioDialog {
         }
     }
 
+    FontLoader {
+        id: aboutPixelFont
+        source: "qrc:/fonts/PressStart2P-Regular.ttf"
+    }
+
+    readonly property string pixelFont: aboutPixelFont.status === FontLoader.Ready
+        ? aboutPixelFont.name
+        : studio.fontFamilyPixel
+
     title: qsTr("About PixelStudio")
     modal: true
     anchors.centerIn: parent
@@ -55,20 +66,23 @@ StudioDialog {
     component SectionHeader: Row {
         id: headerRoot
         required property var studio
+        required property string pixelFont
         property string label: ""
 
         width: parent.width
         spacing: headerRoot.studio.spacingSm
+        height: sectionLabel.height
 
         Text {
             id: sectionLabel
             text: headerRoot.label
-            font.family: headerRoot.studio.fontFamilyPixel
+            font.family: headerRoot.pixelFont
             font.pixelSize: headerRoot.studio.fontSizePixel
             color: headerRoot.studio.accent
         }
 
         PixelDottedRule {
+            anchors.verticalCenter: parent.verticalCenter
             width: Math.max(0, headerRoot.width - sectionLabel.width - headerRoot.studio.spacingSm)
             height: 1
             lineColor: headerRoot.studio.accent
@@ -77,25 +91,27 @@ StudioDialog {
 
     component BodyText: Text {
         required property var studio
+        required property string pixelFont
         property string body: ""
         width: parent.width
         wrapMode: Text.WordWrap
         text: body
-        font.family: studio.fontFamily
-        font.pixelSize: studio.fontSizeSm
+        font.family: pixelFont
+        font.pixelSize: 8
         color: studio.text
-        lineHeight: 1.45
+        lineHeight: 1.75
     }
 
     component AboutLink: Item {
         id: link
         required property var studio
+        required property string pixelFont
         property string label: ""
         property string url: ""
         property string iconName: ""
 
         width: parent.width
-        height: Math.max(labelText.implicitHeight, 18)
+        height: linkRow.height
 
         HoverHandler { id: linkHover }
 
@@ -109,65 +125,77 @@ StudioDialog {
         }
 
         Row {
-            anchors.left: parent.left
+            id: linkRow
             spacing: studio.spacingSm
 
-            StudioIcon {
-                anchors.verticalCenter: parent.verticalCenter
-                name: link.iconName
-                iconSize: 14
-                tint: linkHover.hovered ? studio.accentHover : studio.accent
+            Item {
+                width: 14
+                height: labelText.implicitHeight
+
+                StudioIcon {
+                    anchors.centerIn: parent
+                    name: link.iconName
+                    iconSize: 14
+                    tint: linkHover.hovered ? studio.accentHover : studio.accent
+                }
             }
 
             Text {
                 id: labelText
-                anchors.verticalCenter: parent.verticalCenter
                 text: link.label
-                font.family: studio.fontFamily
-                font.pixelSize: studio.fontSizeSm
+                font.family: pixelFont
+                font.pixelSize: 8
                 color: linkHover.hovered ? studio.accentHover : studio.accent
                 font.underline: true
             }
         }
     }
 
-    component MetaRow: Row {
+    component MetaRow: Item {
+        id: metaRow
         required property var studio
+        required property string pixelFont
         property string iconName: ""
         property string line: ""
 
         width: parent.width
-        spacing: studio.spacingSm
+        readonly property real iconSlot: iconName.length > 0 ? 14 + studio.spacingSm : 0
+        implicitHeight: metaText.implicitHeight
+        height: implicitHeight
 
         StudioIcon {
-            visible: iconName.length > 0
-            anchors.verticalCenter: parent.verticalCenter
-            name: iconName
+            visible: metaRow.iconName.length > 0
+            x: 0
+            y: Math.max(0, (metaRow.height - 14) / 2)
+            name: metaRow.iconName
             iconSize: 14
             tint: studio.accent
         }
 
         Text {
-            width: parent.width - (iconName.length > 0 ? 14 + studio.spacingSm : 0)
+            id: metaText
+            x: metaRow.iconSlot
+            width: metaRow.width - metaRow.iconSlot
             wrapMode: Text.WordWrap
             text: line
-            font.family: studio.fontFamily
-            font.pixelSize: studio.fontSizeSm
+            font.family: pixelFont
+            font.pixelSize: 8
+            lineHeight: 1.6
             color: studio.text
         }
     }
 
     footer: Item {
-        implicitHeight: studio.spacingLg + 46 + studio.spacingSm
+        implicitHeight: studio.spacingLg + 48 + studio.spacingSm
 
         Button {
             id: okButton
             anchors.centerIn: parent
-            implicitWidth: Math.max(152, implicitContentWidth + studio.spacing2xl * 2)
-            implicitHeight: 46
+            implicitWidth: Math.max(168, implicitContentWidth + studio.spacing2xl * 2)
+            implicitHeight: 48
             text: qsTr("OK")
-            font.family: studio.fontFamilyPixel
-            font.pixelSize: studio.fontSizePixel
+            font.family: root.pixelFont
+            font.pixelSize: root.studio.fontSizePixel
             onClicked: root.accept()
 
             HoverHandler { id: okHover }
@@ -193,7 +221,7 @@ StudioDialog {
                     anchors.margins: 5
                     color: "transparent"
                     border.width: 1
-                    border.color: Qt.rgba(0, 0, 0, 0.4)
+                    border.color: Qt.rgba(0, 0, 0, 0.45)
                 }
 
                 Repeater {
@@ -220,145 +248,104 @@ StudioDialog {
 
     contentItem: Column {
         width: root.bodyWidth
-        spacing: studio.spacingMd
+        spacing: studio.spacingLg
         topPadding: studio.spacingSm
-        bottomPadding: studio.spacingXs
+        bottomPadding: studio.spacingSm
+        clip: true
 
-        Item {
+        Column {
             width: parent.width
-            height: heroRow.height
+            spacing: studio.spacingMd
 
             Row {
-                id: heroRow
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: studio.spacingLg
 
-                Item {
-                    width: 80
-                    height: 72
-
-                    AboutBrandMark {
-                        id: brandMark
-                        anchors.centerIn: parent
-                        studio: root.studio
-                    }
-
-                    WelcomeSparkle {
-                        anchors.right: brandMark.left
-                        anchors.rightMargin: 2
-                        anchors.verticalCenter: brandMark.verticalCenter
-                        anchors.verticalCenterOffset: 4
-                        tint: studio.accent
-                        armLength: 4
-                    }
-                    WelcomeSparkle {
-                        anchors.left: brandMark.right
-                        anchors.leftMargin: 0
-                        anchors.top: brandMark.top
-                        anchors.topMargin: -2
-                        tint: studio.accent
-                        armLength: 5
-                        sparkleOpacity: 0.9
-                    }
-                    WelcomeSparkle {
-                        anchors.left: brandMark.right
-                        anchors.leftMargin: 14
-                        anchors.bottom: brandMark.bottom
-                        anchors.bottomMargin: 10
-                        tint: Qt.rgba(1, 1, 1, 0.45)
-                        armLength: 4
-                        sparkleOpacity: 0.5
-                    }
-                    WelcomeSparkle {
-                        anchors.right: brandMark.left
-                        anchors.rightMargin: 10
-                        anchors.top: brandMark.top
-                        anchors.topMargin: -4
-                        tint: Qt.rgba(1, 1, 1, 0.35)
-                        armLength: 4
-                        sparkleOpacity: 0.4
-                    }
+                AboutBrandMark {
+                    anchors.verticalCenter: parent.verticalCenter
+                    markSize: 64
                 }
 
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: studio.spacingSm
 
-                    Row {
-                        spacing: 0
-
-                        Text {
-                            text: qsTr("Pixel")
-                            font.family: studio.fontFamilyPixel
-                            font.pixelSize: studio.fontSizePixelLg
-                            color: studio.text
-                        }
-
-                        Text {
-                            text: qsTr("Studio")
-                            font.family: studio.fontFamilyPixel
-                            font.pixelSize: studio.fontSizePixelLg
-                            color: studio.accent
-                        }
+                    Text {
+                        text: qsTr("PixelStudio")
+                        font.family: root.pixelFont
+                        font.pixelSize: studio.fontSizePixelLg
+                        color: studio.accent
                     }
 
                     Text {
                         text: qsTr("Version %1").arg(applicationVersion)
-                        font.family: studio.fontFamilyPixel
+                        font.family: root.pixelFont
                         font.pixelSize: studio.fontSizePixel
                         color: studio.accent
                     }
                 }
             }
-        }
 
-        BodyText {
-            studio: root.studio
-            horizontalAlignment: Text.AlignHCenter
-            body: qsTr("Convert your pixel art to amazing creations.")
-        }
-
-        SectionHeader {
-            studio: root.studio
-            label: qsTr("OVERVIEW")
-        }
-
-        BodyText {
-            studio: root.studio
-            body: qsTr("PixelStudio turns source images into firmware-ready assets for OLED, TFT and retro displays. Designed for pixel artists. Built for hardware makers.")
+            Text {
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                text: qsTr("Convert pixel art to OLED, TFT and retro displays with ease.")
+                font.family: root.pixelFont
+                font.pixelSize: 8
+                color: studio.text
+                lineHeight: 1.6
+            }
         }
 
         SectionHeader {
             studio: root.studio
-            label: qsTr("LINKS")
+            pixelFont: root.pixelFont
+            label: qsTr("Overview")
+        }
+
+        BodyText {
+            studio: root.studio
+            pixelFont: root.pixelFont
+            body: qsTr("Desktop studio for turning images into C/C++ firmware arrays and binary exports. Display profiles, batch export, sprite atlas, and .pspx project files.")
+        }
+
+        SectionHeader {
+            studio: root.studio
+            pixelFont: root.pixelFont
+            label: qsTr("Links")
         }
 
         Column {
             width: parent.width
-            spacing: studio.spacingSm
+            spacing: studio.spacingMd
 
             AboutLink {
                 studio: root.studio
+                pixelFont: root.pixelFont
                 iconName: "book"
                 label: qsTr("Documentation")
                 url: root.docsUrl
             }
             AboutLink {
                 studio: root.studio
+                pixelFont: root.pixelFont
                 iconName: "download"
                 label: qsTr("Download releases")
                 url: root.releasesUrl
             }
             AboutLink {
                 studio: root.studio
+                pixelFont: root.pixelFont
                 iconName: "github"
-                label: qsTr("GitHub")
+                label: qsTr("Source code on GitHub")
                 url: root.repoUrl
             }
             AboutLink {
                 studio: root.studio
+                pixelFont: root.pixelFont
                 iconName: "bug"
-                label: qsTr("Report issue")
+                label: qsTr("Report an issue")
                 url: root.issuesUrl
             }
         }
@@ -368,34 +355,38 @@ StudioDialog {
             spacing: studio.spacingMd
 
             readonly property real columnWidth: (width - 1 - spacing) / 2
+            readonly property real splitHeight: Math.max(creditsColumn.height, systemColumn.height)
 
             Column {
                 id: creditsColumn
                 width: parent.columnWidth
-                spacing: studio.spacingSm
+                spacing: studio.spacingMd
 
                 SectionHeader {
                     width: parent.width
                     studio: root.studio
-                    label: qsTr("CREDITS")
+                    pixelFont: root.pixelFont
+                    label: qsTr("Credits")
                 }
 
                 MetaRow {
                     studio: root.studio
+                    pixelFont: root.pixelFont
                     iconName: "user"
                     line: qsTr("Producer: DeeTech")
                 }
 
                 MetaRow {
                     studio: root.studio
-                    iconName: ""
-                    line: qsTr("© %1 DeeTech. All rights reserved.").arg(new Date().getFullYear())
+                    pixelFont: root.pixelFont
+                    iconName: "calendar"
+                    line: qsTr("© %1 DeeTech Labs").arg(new Date().getFullYear())
                 }
             }
 
             Item {
                 width: 1
-                height: creditsColumn.height
+                height: parent.splitHeight
 
                 PixelDottedRule {
                     anchors.fill: parent
@@ -405,67 +396,55 @@ StudioDialog {
             }
 
             Column {
+                id: systemColumn
                 width: parent.columnWidth
-                spacing: studio.spacingSm
+                spacing: studio.spacingMd
 
                 SectionHeader {
                     width: parent.width
                     studio: root.studio
-                    label: qsTr("SYSTEM")
+                    pixelFont: root.pixelFont
+                    label: qsTr("System")
                 }
 
                 MetaRow {
                     studio: root.studio
+                    pixelFont: root.pixelFont
                     iconName: root.platformIcon
                     line: qsTr("Platform: %1").arg(root.platformLabel)
                 }
 
                 MetaRow {
                     studio: root.studio
+                    pixelFont: root.pixelFont
                     iconName: "qt"
-                    line: qsTr("Qt version: %1").arg(qtRuntimeVersion)
+                    line: qsTr("Qt %1").arg(qtRuntimeVersion)
                 }
             }
         }
 
         Item {
             width: parent.width
-            height: licenseRow.height
+            height: licenseText.height
 
-            Row {
-                id: licenseRow
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 0
+            HoverHandler { id: licenseHover }
 
-                Text {
-                    text: qsTr("PixelStudio is licensed under the ")
-                    font.family: studio.fontFamily
-                    font.pixelSize: studio.fontSizeSm
-                    color: studio.text
-                }
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Qt.openUrlExternally(root.licenseUrl)
+            }
 
-                Text {
-                    text: qsTr("MIT License")
-                    font.family: studio.fontFamily
-                    font.pixelSize: studio.fontSizeSm
-                    color: licenseHover.hovered ? studio.accentHover : studio.accent
-                    font.underline: true
-
-                    HoverHandler { id: licenseHover }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: Qt.openUrlExternally(root.licenseUrl)
-                    }
-                }
-
-                Text {
-                    text: "."
-                    font.family: studio.fontFamily
-                    font.pixelSize: studio.fontSizeSm
-                    color: studio.text
-                }
+            Text {
+                id: licenseText
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                text: qsTr("Distributed under the MIT License.")
+                font.family: root.pixelFont
+                font.pixelSize: 8
+                lineHeight: 1.6
+                color: licenseHover.hovered ? studio.accentHover : studio.text
             }
         }
     }

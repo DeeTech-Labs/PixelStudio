@@ -772,7 +772,7 @@ ApplicationWindow {
     AboutDialog {
         id: aboutDialog
         studio: appPalette
-        bodyWidth: window.dialogBodyWidth(420, appPalette.spacingXl * 4)
+        bodyWidth: window.dialogBodyWidth(440, appPalette.spacingXl * 4)
     }
 
     CodeSyntaxColorsDialog {
