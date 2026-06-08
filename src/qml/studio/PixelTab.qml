@@ -10,12 +10,15 @@ Item {
     property string label: ""
     property bool selected: false
     property bool closable: false
+    property bool compact: false
 
     signal clicked()
     signal closeClicked()
 
-    implicitWidth: Math.max(72, labelRow.implicitWidth + studio.spacingMd * 2)
-    implicitHeight: 28
+    implicitWidth: compact
+        ? Math.max(40, tabLabel.implicitWidth + studio.spacingSm * 2)
+        : Math.max(72, labelRow.implicitWidth + studio.spacingMd * 2)
+    implicitHeight: compact ? 24 : 28
 
     Rectangle {
         anchors.fill: parent
@@ -39,10 +42,18 @@ Item {
         spacing: studio.spacingXs
 
         Label {
+            id: tabLabel
+            width: compact && root.width > 0
+                ? Math.max(0, root.width - studio.spacingSm * 2 - (closable ? 20 : 0))
+                : implicitWidth
             text: label
             font.family: selected ? studio.fontFamilyPixel : studio.fontFamily
-            font.pixelSize: selected ? studio.fontSizePixel : studio.fontSizeSm
+            font.pixelSize: compact
+                ? studio.fontSizeXs
+                : (selected ? studio.fontSizePixel : studio.fontSizeSm)
             color: selected ? studio.accent : studio.textSecondary
+            elide: Text.ElideRight
+            horizontalAlignment: compact ? Text.AlignHCenter : Text.AlignLeft
         }
 
         ToolButton {

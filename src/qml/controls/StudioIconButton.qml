@@ -12,8 +12,15 @@ Button {
     property bool toggled: false
     property string toolTipText: ""
 
-    implicitWidth: small ? 26 : 32
-    implicitHeight: implicitWidth
+    readonly property int _textPadH: small ? studio.spacingSm : studio.spacingMd
+    readonly property int _minSide: small ? 26 : 32
+
+    implicitWidth: iconName.length > 0
+        ? _minSide
+        : Math.max(_minSide, labelText.implicitWidth + _textPadH * 2)
+    implicitHeight: _minSide
+    leftPadding: iconName.length > 0 ? 0 : _textPadH
+    rightPadding: leftPadding
     text: iconText.length ? iconText : root.text
 
     font.family: studio.fontFamily
@@ -34,8 +41,8 @@ Button {
     }
 
     contentItem: Item {
-        implicitWidth: icon.implicitWidth
-        implicitHeight: icon.implicitHeight
+        implicitWidth: root.iconName.length > 0 ? icon.implicitWidth : labelText.implicitWidth
+        implicitHeight: root.iconName.length > 0 ? icon.implicitHeight : labelText.implicitHeight
         anchors.centerIn: parent
 
         StudioIcon {
@@ -50,6 +57,7 @@ Button {
         }
 
         Text {
+            id: labelText
             visible: root.iconName.length === 0
             anchors.centerIn: parent
             text: root.text

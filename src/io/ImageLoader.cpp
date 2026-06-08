@@ -5,12 +5,46 @@
 #include <QMimeData>
 #include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QPixmap>
 #include <QVariant>
 
 namespace {
 constexpr qint64 kMaxDownloadedImageBytes = 20 * 1024 * 1024;
 constexpr int kNetworkTimeoutMs = 12000;
+
+struct ClipboardImageFormat {
+    const char *mime;
+    const char *reader;
+};
+
+constexpr ClipboardImageFormat kClipboardImageFormats[] = {
+    { "image/png", "PNG" },
+    { "image/jpeg", "JPEG" },
+    { "image/bmp", "BMP" },
+    { "image/webp", "WEBP" },
+    { "image/gif", "GIF" },
+};
+
+QImage imageFromMimeData(const QMimeData *mime)
+{
+    if (!mime)
+        return {};
+
+    if (mime->hasImage()) {
+        const QImage img = qvariant_cast<QImage>(mime->imageData());
+        if (!img.isNull())
+            return img;
+    }
+
+    for (const ClipboardImageFormat &entry : kClipboardImageFormats) {
+        if (!mime->hasFormat(entry.mime))
+            continue;
+        QImage img;
+        if (img.loadFromData(mime->data(entry.mime), entry.reader))
+            return img;
+    }
+
+    return {};
+}
 }
 
 ImageLoader::ImageLoader(QObject *parent)
@@ -36,17 +70,15 @@ bool ImageLoader::loadFromFile(const QUrl &url, QImage &outImage)
 bool ImageLoader::loadFromClipboard(QImage &outImage)
 {
     QClipboard *clipboard = QGuiApplication::clipboard();
-    QImage img = clipboard->image();
-    if (img.isNull()) {
-        const QPixmap pix = clipboard->pixmap();
-        if (!pix.isNull())
-            img = pix.toImage();
+    if (!clipboard) {
+        emit error(AppLocale::tr("No image in clipboard"));
+        return false;
     }
-    if (img.isNull()) {
-        const QMimeData *mime = clipboard->mimeData();
-        if (mime && mime->hasImage())
-            img = qvariant_cast<QImage>(mime->imageData());
-    }
+
+    // Single clipboard read — multiple image()/pixmap()/mimeData() calls on Windows
+    // trigger qt.qpa.mime "Retrying to obtain clipboard" noise.
+    const QMimeData *mime = clipboard->mimeData(QClipboard::Clipboard);
+    const QImage img = imageFromMimeData(mime);
     if (img.isNull()) {
         emit error(AppLocale::tr("No image in clipboard"));
         return false;

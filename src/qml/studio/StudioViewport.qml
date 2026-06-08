@@ -136,7 +136,13 @@ Item {
 
     function zoomIn() { zoomInAt(viewport.width / 2, viewport.height / 2) }
     function zoomOut() { zoomOutAt(viewport.width / 2, viewport.height / 2) }
-    function fitToView() { zoomTo(fitZoom()) }
+    function fitToView() {
+        if (img.status !== Image.Ready || imgW < 1 || imgH < 1
+                || viewport.width < 1 || viewport.height < 1)
+            return
+        zoomLevel = fitZoom()
+        centerContent()
+    }
 
     function scrollByWheel(deltaY, deltaX) {
         panY += deltaY
@@ -212,11 +218,15 @@ Item {
                 fillMode: Image.Stretch
                 smooth: false
                 cache: false
+                onStatusChanged: {
+                    if (status === Image.Ready && root.imageSource.toString().length > 0)
+                        Qt.callLater(root.fitToView)
+                }
             }
 
             Canvas {
                 anchors.fill: parent
-                visible: root.effectiveShowGrid && root.zoomLevel >= root.effectiveGridThreshold
+                visible: root.effectiveShowGrid
                 onPaint: {
                     const ctx = getContext("2d")
                     ctx.reset()
@@ -363,7 +373,7 @@ Item {
             RowLayout {
                 id: zoomRow
                 anchors.centerIn: parent
-                spacing: 0
+                spacing: studio.spacingXs
 
                 StudioIconButton {
                     studio: root.studio
@@ -376,7 +386,7 @@ Item {
                     font.family: studio.fontFamilyMono
                     font.pixelSize: studio.fontSizeXs
                     color: studio.textSecondary
-                    Layout.minimumWidth: 48
+                    Layout.minimumWidth: Math.max(48, implicitWidth + studio.spacingSm)
                     horizontalAlignment: Text.AlignHCenter
                 }
                 StudioIconButton {
@@ -402,7 +412,11 @@ Item {
         }
     }
 
-    onImageSourceChanged: Qt.callLater(fitToView)
+    onImageSourceChanged: {
+        panX = 0
+        panY = 0
+        Qt.callLater(fitToView)
+    }
     onDisplayWChanged: clampPan()
     onDisplayHChanged: clampPan()
     Component.onCompleted: Qt.callLater(fitToView)

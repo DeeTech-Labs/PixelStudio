@@ -19,7 +19,7 @@ Item {
     property string pendingCloseTabTitle: ""
     property int bodyWidth: 360
 
-    RetroDialog {
+    StudioDialog {
         id: exitConfirmDialog
         studio: root.studio
         title: qsTr("Exit PixelStudio?")
@@ -38,7 +38,7 @@ Item {
         function openDialog() { open() }
     }
 
-    RetroDialog {
+    StudioDialog {
         id: resetSessionConfirmDialog
         studio: root.studio
         title: qsTr("Reset session?")
@@ -57,7 +57,7 @@ Item {
         function openDialog() { open() }
     }
 
-    RetroDialog {
+    StudioDialog {
         id: closeTabConfirmDialog
         studio: root.studio
         title: qsTr("Close tab?")

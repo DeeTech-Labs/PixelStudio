@@ -44,12 +44,18 @@ Item {
                     anchors.fill: parent
                     anchors.leftMargin: studio.spacingSm
                     anchors.rightMargin: studio.spacingSm
+                    spacing: studio.spacingXs
 
                     Label {
+                        Layout.fillWidth: root.subtitle.length === 0
+                        Layout.maximumWidth: root.subtitle.length > 0
+                            ? Math.min(implicitWidth, parent.width * 0.42)
+                            : implicitWidth
                         text: root.title.toUpperCase()
                         font.family: studio.fontFamilyPixel
                         font.pixelSize: studio.fontSizePixel
                         color: studio.accent
+                        elide: Text.ElideRight
                     }
 
                     Rectangle {
@@ -66,17 +72,22 @@ Item {
                             text: root.badge
                             font.pixelSize: studio.fontSizeXs
                             color: studio.accent
+                            elide: Text.ElideRight
                         }
                     }
 
-                    Item { Layout.fillWidth: true }
+                    Item { Layout.fillWidth: true; Layout.minimumWidth: studio.spacingXs }
 
                     Label {
                         visible: subtitle.length > 0
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        horizontalAlignment: Text.AlignRight
                         text: root.subtitle
                         font.family: studio.fontFamilyMono
                         font.pixelSize: studio.fontSizeXs
                         color: studio.textMuted
+                        elide: Text.ElideLeft
                     }
                 }
 

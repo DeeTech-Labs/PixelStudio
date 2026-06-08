@@ -112,10 +112,10 @@ set(PIXELSTUDIO_QML_FILES
     src/qml/studio/PixelButton.qml
     src/qml/studio/PixelTab.qml
     src/qml/studio/PixelDivider.qml
-    src/qml/studio/RetroBackdrop.qml
+    src/qml/studio/StudioBackdrop.qml
     src/qml/workspace/StudioDropCanvas.qml
     src/qml/workspace/StudioExportHub.qml
-    src/qml/workspace/RetroStudioLayout.qml
+    src/qml/workspace/StudioLayout.qml
     src/qml/workspace/CodePanel.qml
     src/qml/workspace/CodeSyntaxView.qml
     src/qml/workspace/dock/LeftAssetDock.qml
@@ -126,13 +126,13 @@ set(PIXELSTUDIO_QML_FILES
     src/qml/panels/InspectorPageImage.qml
     src/qml/panels/InspectorPageExport.qml
     src/qml/panels/ExportActionsPanel.qml
-    src/qml/shell/retro/RetroShell.qml
-    src/qml/shell/retro/RetroTabBar.qml
-    src/qml/shell/retro/RetroTabChip.qml
-    src/qml/shell/retro/RetroToolbar.qml
-    src/qml/shell/retro/RetroStatusBar.qml
-    src/qml/shell/retro/RetroToast.qml
-    src/qml/shell/retro/RetroDialog.qml
+    src/qml/shell/studio/StudioShell.qml
+    src/qml/shell/studio/StudioTabBar.qml
+    src/qml/shell/studio/StudioTabChip.qml
+    src/qml/shell/studio/StudioToolbar.qml
+    src/qml/shell/studio/StudioStatusBar.qml
+    src/qml/shell/studio/StudioToast.qml
+    src/qml/shell/studio/StudioDialog.qml
     src/qml/dialogs/AboutDialog.qml
     src/qml/dialogs/CodeSyntaxColorsDialog.qml
     src/qml/dialogs/ConfirmDialogs.qml

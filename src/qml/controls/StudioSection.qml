@@ -60,6 +60,8 @@ Item {
                     font.weight: Font.DemiBold
                     color: studio.sectionLabel
                     verticalAlignment: Text.AlignVCenter
+                    wrapMode: Text.WordWrap
+                    maximumLineCount: 2
                 }
             }
 

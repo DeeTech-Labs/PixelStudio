@@ -1,6 +1,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QtGlobal>
 #include <QLocale>
 #include <QQuickStyle>
 #include <QColor>
@@ -54,6 +55,8 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     engine.setUiLanguage(AppTranslations::effectiveLanguageCode(appSettings.languageCode()));
     engine.rootContext()->setContextProperty("applicationVersion", appVersion);
+    engine.rootContext()->setContextProperty("qtRuntimeVersion",
+                                              QString::fromLatin1(qVersion()));
     engine.rootContext()->setContextProperty("converter", &converter);
     engine.rootContext()->setContextProperty("tabController", &tabController);
     engine.rootContext()->setContextProperty("appSettings", &appSettings);

@@ -13,6 +13,8 @@ Rectangle {
     property int pageIndex: 0
     signal notify(string message)
 
+    readonly property bool stackedHeader: width < 300
+
     radius: studio.radiusMd
     color: studio.surfaceInset
     border.width: studio.pixelBorderWidth
@@ -33,34 +35,77 @@ Rectangle {
         spacing: 0
 
         Rectangle {
+            id: headerBar
             Layout.fillWidth: true
-            Layout.preferredHeight: 30
+            Layout.preferredHeight: root.stackedHeader ? 52 : 30
             color: studio.surface
 
-            Label {
-                anchors.left: parent.left
+            ColumnLayout {
+                visible: root.stackedHeader
+                anchors.fill: parent
                 anchors.leftMargin: studio.spacingSm
-                anchors.verticalCenter: parent.verticalCenter
-                text: qsTr("Inspector").toUpperCase()
-                font.family: studio.fontFamilyPixel
-                font.pixelSize: studio.fontSizePixel
-                color: studio.accent
-            }
-
-            Row {
-                anchors.right: parent.right
                 anchors.rightMargin: studio.spacingSm
-                anchors.verticalCenter: parent.verticalCenter
                 spacing: studio.spacingXs
 
-                Repeater {
-                    model: root.pages
-                    delegate: PixelTab {
-                        required property var modelData
-                        studio: root.studio
-                        label: modelData.title
-                        selected: root.pageIndex === modelData.id
-                        onClicked: root.pageIndex = modelData.id
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Inspector").toUpperCase()
+                    font.family: studio.fontFamilyPixel
+                    font.pixelSize: studio.fontSizePixel
+                    color: studio.accent
+                    elide: Text.ElideRight
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: studio.spacingXs
+
+                    Repeater {
+                        model: root.pages
+                        delegate: PixelTab {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
+                            studio: root.studio
+                            compact: true
+                            label: modelData.title
+                            selected: root.pageIndex === modelData.id
+                            onClicked: root.pageIndex = modelData.id
+                        }
+                    }
+                }
+            }
+
+            RowLayout {
+                visible: !root.stackedHeader
+                anchors.fill: parent
+                anchors.leftMargin: studio.spacingSm
+                anchors.rightMargin: studio.spacingSm
+                spacing: studio.spacingSm
+
+                Label {
+                    Layout.maximumWidth: Math.min(96, headerBar.width * 0.34)
+                    text: qsTr("Inspector").toUpperCase()
+                    font.family: studio.fontFamilyPixel
+                    font.pixelSize: studio.fontSizePixel
+                    color: studio.accent
+                    elide: Text.ElideRight
+                }
+
+                Item { Layout.fillWidth: true; Layout.minimumWidth: studio.spacingSm }
+
+                RowLayout {
+                    spacing: studio.spacingXs
+                    Repeater {
+                        model: root.pages
+                        delegate: PixelTab {
+                            required property var modelData
+                            studio: root.studio
+                            compact: true
+                            label: modelData.title
+                            selected: root.pageIndex === modelData.id
+                            onClicked: root.pageIndex = modelData.id
+                        }
                     }
                 }
             }
@@ -74,27 +119,58 @@ Rectangle {
         }
 
         StudioScroll {
+            id: inspectorScroll
             Layout.fillWidth: true
             Layout.fillHeight: true
             studio: root.studio
 
-            InspectorPageImage {
+            Loader {
+                id: pageLoader
                 Layout.fillWidth: true
-                visible: root.pageIndex === 0
-                studio: root.studio
+                Layout.preferredHeight: item ? item.implicitHeight : 0
+                sourceComponent: {
+                    switch (root.pageIndex) {
+                    case 1:
+                        return displayPageComponent
+                    case 2:
+                        return exportPageComponent
+                    default:
+                        return imagePageComponent
+                    }
+                }
             }
-            InspectorPageDisplay {
-                Layout.fillWidth: true
-                visible: root.pageIndex === 1
-                studio: root.studio
-            }
-            InspectorPageExport {
-                Layout.fillWidth: true
-                visible: root.pageIndex === 2
-                studio: root.studio
-                exportBridge: root.exportBridge
-                onNotify: (m) => root.notify(m)
-            }
+        }
+    }
+
+    Component {
+        id: imagePageComponent
+        InspectorPageImage {
+            studio: root.studio
+            width: inspectorScroll.availableWidth > 0
+                ? inspectorScroll.availableWidth
+                : root.width
+        }
+    }
+
+    Component {
+        id: displayPageComponent
+        InspectorPageDisplay {
+            studio: root.studio
+            width: inspectorScroll.availableWidth > 0
+                ? inspectorScroll.availableWidth
+                : root.width
+        }
+    }
+
+    Component {
+        id: exportPageComponent
+        InspectorPageExport {
+            studio: root.studio
+            exportBridge: root.exportBridge
+            width: inspectorScroll.availableWidth > 0
+                ? inspectorScroll.availableWidth
+                : root.width
+            onNotify: (m) => root.notify(m)
         }
     }
 }

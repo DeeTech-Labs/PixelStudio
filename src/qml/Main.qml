@@ -420,6 +420,12 @@ ApplicationWindow {
                 checked: appSettings.codeWrap
                 onTriggered: appSettings.setCodeWrap(!appSettings.codeWrap)
             }
+            Action {
+                text: qsTr("Show pixel grid")
+                checkable: true
+                checked: appSettings.showPixelGrid
+                onTriggered: appSettings.setShowPixelGrid(!appSettings.showPixelGrid)
+            }
         }
         Menu {
             title: qsTr("&Tools")
@@ -766,7 +772,7 @@ ApplicationWindow {
     AboutDialog {
         id: aboutDialog
         studio: appPalette
-        bodyWidth: window.dialogBodyWidth(360, appPalette.spacingXl * 4)
+        bodyWidth: window.dialogBodyWidth(420, appPalette.spacingXl * 4)
     }
 
     CodeSyntaxColorsDialog {
@@ -820,6 +826,13 @@ ApplicationWindow {
                     text: qsTr("Show inspector panel")
                     checked: appSettings.showSidebar
                     onToggled: appSettings.setShowSidebar(checked)
+                }
+                StudioCheck {
+                    Layout.fillWidth: true
+                    studio: appPalette
+                    text: qsTr("Show pixel grid")
+                    checked: appSettings.showPixelGrid
+                    onToggled: appSettings.setShowPixelGrid(checked)
                 }
                 StudioCheck {
                     Layout.fillWidth: true
@@ -1091,8 +1104,8 @@ ApplicationWindow {
             + "  " + converter.previewColorCount + " " + qsTr("Colors")
     }
 
-    RetroShell {
-        id: retroShell
+    StudioShell {
+        id: studioShell
         anchors.fill: parent
         studio: appPalette
         statusText: toast.text.length > 0 ? toast.text : qsTr("Ready")
@@ -1105,7 +1118,7 @@ ApplicationWindow {
         onNewProjectRequested: tabController.newProjectTab(qsTr("Untitled"))
         onOpenRequested: openDialog.open()
         onSaveRequested: exportBridge.saveProject()
-        onToggleGridRequested: converter.setShowGrid(!converter.showGrid)
+        onToggleGridRequested: appSettings.setShowPixelGrid(!appSettings.showPixelGrid)
         onViewDualRequested: setWorkspaceView(0)
         onViewSourceRequested: setWorkspaceView(1)
         onViewOutputRequested: setWorkspaceView(3)
@@ -1127,7 +1140,7 @@ ApplicationWindow {
             onSettingsRequested: preferencesDialog.open()
         }
 
-        RetroStudioLayout {
+        StudioLayout {
             id: studioLayout
             anchors.fill: parent
             visible: !tabController.activeIsWelcome

@@ -22,6 +22,7 @@ void AppSettings::load()
     if (m_languageCode != QStringLiteral("system") && m_languageCode != QStringLiteral("en") && m_languageCode != QStringLiteral("ru"))
         m_languageCode = QStringLiteral("system");
     m_showSidebar = m_settings.value(QStringLiteral("app/showSidebar"), m_showSidebar).toBool();
+    m_showPixelGrid = m_settings.value(QStringLiteral("app/showPixelGrid"), m_showPixelGrid).toBool();
     m_codeWrap = m_settings.value(QStringLiteral("app/codeWrap"), m_codeWrap).toBool();
     m_confirmExit = m_settings.value(QStringLiteral("app/confirmExit"), m_confirmExit).toBool();
     m_confirmCloseTab = m_settings.value(QStringLiteral("app/confirmCloseTab"), m_confirmCloseTab).toBool();
@@ -56,6 +57,7 @@ QVariantList AppSettings::availableLanguages() const
 void AppSettings::resetUiDefaults()
 {
     setShowSidebar(true);
+    setShowPixelGrid(true);
     setCodeWrap(false);
     setConfirmExit(true);
     setConfirmCloseTab(true);
@@ -81,6 +83,15 @@ void AppSettings::setShowSidebar(bool on)
     m_showSidebar = on;
     saveValue(QStringLiteral("app/showSidebar"), on);
     emit showSidebarChanged();
+}
+
+void AppSettings::setShowPixelGrid(bool on)
+{
+    if (m_showPixelGrid == on)
+        return;
+    m_showPixelGrid = on;
+    saveValue(QStringLiteral("app/showPixelGrid"), on);
+    emit showPixelGridChanged();
 }
 
 void AppSettings::setCodeWrap(bool on)

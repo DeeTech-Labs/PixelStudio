@@ -38,10 +38,12 @@ CheckBox {
     }
 
     contentItem: Text {
+        width: root.width > 0 ? root.width : implicitWidth
         leftPadding: root.indicator.width + root.spacing
         text: root.text
         font: root.font
         color: studio.text
         verticalAlignment: Text.AlignVCenter
+        elide: Text.ElideRight
     }
 }

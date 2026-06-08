@@ -58,6 +58,7 @@ Item {
                     color: modelData.value === root.selectedValue ? studio.text : studio.textSecondary
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
                 }
                 onClicked: {
                     root.selectedValue = modelData.value

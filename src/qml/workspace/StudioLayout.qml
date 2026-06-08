@@ -93,8 +93,8 @@ Item {
         }
 
         LeftAssetDock {
-            SplitView.preferredWidth: studio.leftDockWidth
-            SplitView.minimumWidth: 160
+            SplitView.preferredWidth: Math.min(studio.leftDockWidth, root.width * 0.22)
+            SplitView.minimumWidth: 140
             SplitView.maximumWidth: 280
             studio: root.studio
             onAssetActivated: (path) => root.assetOpenRequested(path)
@@ -158,9 +158,8 @@ Item {
                         studio: root.studio
                         visible: converter.hasPreview
                         allowUpscale: true
-                        showGrid: converter.showGrid
-                        autoPixelGrid: root.compactDisplay
-                        gridThresholdZoom: converter.gridThresholdZoom
+                        showGrid: appSettings.showPixelGrid
+                        autoPixelGrid: false
                         imageSource: converter.previewPath
                         overlayTopLeft: converter.displayWidth + " × " + converter.displayHeight
                         overlayTopRight: converter.encodingModeName
@@ -172,7 +171,7 @@ Item {
                         color: studio.textMuted
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
-                        width: parent.width - studio.spacing2xl * 2
+                        width: Math.max(80, parent.width - studio.spacing2xl * 2)
                     }
                 }
             }
@@ -192,8 +191,10 @@ Item {
         InspectorDock {
             id: inspectorDock
             visible: appSettings.showSidebar
-            SplitView.preferredWidth: appSettings.showSidebar ? studio.inspectorWidth : 0
-            SplitView.minimumWidth: appSettings.showSidebar ? 240 : 0
+            SplitView.preferredWidth: appSettings.showSidebar
+                ? Math.min(studio.inspectorWidth, root.width * 0.34)
+                : 0
+            SplitView.minimumWidth: appSettings.showSidebar ? 220 : 0
             SplitView.maximumWidth: appSettings.showSidebar ? 400 : 0
             studio: root.studio
             exportBridge: root.exportBridge

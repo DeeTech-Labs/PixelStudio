@@ -176,7 +176,6 @@ Item {
             StudioSegmented {
                 id: rotationSeg
                 Layout.fillWidth: true
-                Layout.minimumWidth: 200
                 studio: root.studio
                 segments: [
                     { label: qsTr("0"), value: 0 },
@@ -188,8 +187,9 @@ Item {
                 onSegmentActivated: (v) => converter.setRotation(v)
             }
 
-            RowLayout {
+            ColumnLayout {
                 Layout.fillWidth: true
+                spacing: studio.spacingXs
                 StudioCheck {
                     Layout.fillWidth: true
                     studio: root.studio

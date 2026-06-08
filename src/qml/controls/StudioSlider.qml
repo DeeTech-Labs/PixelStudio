@@ -40,6 +40,9 @@ Item {
             }
             Item { Layout.fillWidth: true }
             Label {
+                Layout.maximumWidth: 72
+                horizontalAlignment: Text.AlignRight
+                elide: Text.ElideLeft
                 text: valueText.length ? valueText : Math.round(slider.value)
                 font.family: studio.fontFamilyMono
                 font.pixelSize: studio.fontSizeXs

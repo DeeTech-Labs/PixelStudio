@@ -68,6 +68,8 @@ Rectangle {
                     color: studio.border
                 }
 
+                readonly property bool gridActive: modelData.action === "grid" && appSettings.showPixelGrid
+
                 ToolButton {
                     visible: modelData.sep !== true
                     anchors.fill: parent
@@ -87,16 +89,18 @@ Rectangle {
                     }
                     background: Rectangle {
                         radius: studio.radiusSm
-                        color: parent.hovered && parent.enabled ? studio.railHover : "transparent"
-                        border.width: parent.enabled && parent.hovered ? 1 : 0
-                        border.color: studio.accent
+                        color: gridActive
+                            ? studio.accentSoft
+                            : (parent.hovered && parent.enabled ? studio.railHover : "transparent")
+                        border.width: gridActive || (parent.enabled && parent.hovered) ? 1 : 0
+                        border.color: gridActive ? studio.accent : studio.accent
                     }
                     contentItem: StudioIcon {
                         anchors.centerIn: parent
                         name: modelData.icon || "plus"
                         iconSize: 14
                         tint: modelData.enabled
-                            ? (parent.hovered ? studio.accent : studio.textSecondary)
+                            ? (gridActive || parent.hovered ? studio.accent : studio.textSecondary)
                             : studio.decorativeDisabled
                     }
                 }

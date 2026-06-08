@@ -60,7 +60,7 @@ Rectangle {
                     Repeater {
                         id: tabRepeater
                         model: tabController.tabs
-                        delegate: RetroTabChip {
+                        delegate: StudioTabChip {
                             required property var modelData
                             required property int index
                             studio: root.studio

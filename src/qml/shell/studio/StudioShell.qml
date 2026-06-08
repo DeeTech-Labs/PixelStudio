@@ -30,7 +30,7 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        RetroTabBar {
+        StudioTabBar {
             Layout.fillWidth: true
             Layout.preferredHeight: studio.tabBarHeight
             Layout.minimumHeight: studio.tabBarHeight
@@ -40,7 +40,7 @@ Item {
             onSettingsRequested: root.settingsRequested()
         }
 
-        RetroToolbar {
+        StudioToolbar {
             Layout.fillWidth: true
             Layout.preferredHeight: studio.toolbarHeight
             Layout.minimumHeight: studio.toolbarHeight
@@ -59,7 +59,7 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            RetroBackdrop {
+            StudioBackdrop {
                 anchors.fill: parent
                 visible: tabController.activeIsWelcome
             }
@@ -70,7 +70,7 @@ Item {
             }
         }
 
-        RetroStatusBar {
+        StudioStatusBar {
             Layout.fillWidth: true
             studio: root.studio
             statusText: root.statusText
@@ -78,7 +78,7 @@ Item {
         }
     }
 
-    RetroToast {
+    StudioToast {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: studio.statusHeight + studio.spacingMd

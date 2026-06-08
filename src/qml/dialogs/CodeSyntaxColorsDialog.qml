@@ -6,7 +6,7 @@ import PixelStudio
 
 pragma Translator: PixelStudio
 
-RetroDialog {
+StudioDialog {
     id: root
 
     title: qsTr("Code syntax colors")

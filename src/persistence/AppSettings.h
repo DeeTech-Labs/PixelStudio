@@ -12,6 +12,7 @@ class AppSettings : public QObject
     Q_OBJECT
     Q_PROPERTY(QString languageCode READ languageCode WRITE setLanguageCode NOTIFY languageCodeChanged)
     Q_PROPERTY(bool showSidebar READ showSidebar WRITE setShowSidebar NOTIFY showSidebarChanged)
+    Q_PROPERTY(bool showPixelGrid READ showPixelGrid WRITE setShowPixelGrid NOTIFY showPixelGridChanged)
     Q_PROPERTY(bool codeWrap READ codeWrap WRITE setCodeWrap NOTIFY codeWrapChanged)
     Q_PROPERTY(bool confirmExit READ confirmExit WRITE setConfirmExit NOTIFY confirmExitChanged)
     Q_PROPERTY(bool confirmCloseTab READ confirmCloseTab WRITE setConfirmCloseTab NOTIFY confirmCloseTabChanged)
@@ -31,6 +32,7 @@ public:
 
     QString languageCode() const { return m_languageCode; }
     bool showSidebar() const { return m_showSidebar; }
+    bool showPixelGrid() const { return m_showPixelGrid; }
     bool codeWrap() const { return m_codeWrap; }
     bool confirmExit() const { return m_confirmExit; }
     bool confirmCloseTab() const { return m_confirmCloseTab; }
@@ -48,6 +50,7 @@ public:
 public slots:
     void setLanguageCode(const QString &code);
     void setShowSidebar(bool on);
+    void setShowPixelGrid(bool on);
     void setCodeWrap(bool on);
     void setConfirmExit(bool on);
     void setConfirmCloseTab(bool on);
@@ -62,6 +65,7 @@ public slots:
 signals:
     void languageCodeChanged();
     void showSidebarChanged();
+    void showPixelGridChanged();
     void codeWrapChanged();
     void confirmExitChanged();
     void confirmCloseTabChanged();
@@ -80,6 +84,7 @@ private:
     QSettings m_settings;
     QString m_languageCode = QStringLiteral("system");
     bool m_showSidebar = true;
+    bool m_showPixelGrid = true;
     bool m_codeWrap = false;
     bool m_confirmExit = true;
     bool m_confirmCloseTab = true;
