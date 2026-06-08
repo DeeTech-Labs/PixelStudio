@@ -16,7 +16,6 @@
 #include "processing/DisplayRasterizer.h"
 #include "processing/DisplayCodeGenerator.h"
 #include "processing/ConvertPipeline.h"
-#include "processing/ControllerCatalog.h"
 #include "processing/EncodingAnalyzer.h"
 #include "export/BatchExportService.h"
 #include "io/WatchFolderService.h"
@@ -253,19 +252,12 @@ public:
     Q_INVOKABLE void setShowFullGeneratedCode(bool on);
     Q_INVOKABLE void swapDisplayDimensions();
     Q_INVOKABLE bool loadImage(const QUrl &url);
-    Q_INVOKABLE bool loadRecentFile(const QString &localPath);
-    Q_INVOKABLE bool restoreLastProject();
     Q_INVOKABLE bool loadFromClipboard();
     Q_INVOKABLE void loadFromUrl(const QString &urlString);
     Q_INVOKABLE void clear();
-    Q_INVOKABLE void refresh();
     Q_INVOKABLE QVariantList displayPresets() const;
     Q_INVOKABLE QVariantList availableEncodingModes() const;
     Q_INVOKABLE QVariantList availableEncodingModesForUi() const;
-    Q_INVOKABLE QVariantList availableBasicEncodingModes() const;
-    Q_INVOKABLE void applyBasicEncoding(int mode, int monoLayout);
-    Q_INVOKABLE QVariantList workflowPresets() const;
-    Q_INVOKABLE void applyWorkflowPreset(const QString &id);
     Q_INVOKABLE void newProject(const QString &name);
     Q_INVOKABLE bool openProject(const QUrl &url);
     Q_INVOKABLE bool saveProject();

@@ -32,7 +32,6 @@ set(PIXELSTUDIO_CORE_SOURCES
     src/processing/DisplayRasterizer.cpp
     src/processing/DisplayCodeGenerator.cpp
     src/processing/ConvertPipeline.cpp
-    src/processing/ControllerCatalog.cpp
     src/processing/EncodingAnalyzer.cpp
     src/processing/PixelFormatCatalog.cpp
     src/processing/PixelFormatPacking.cpp
@@ -109,7 +108,6 @@ set(PIXELSTUDIO_QML_FILES
     src/qml/controls/StudioSection.qml
     src/qml/controls/StudioButton.qml
     src/qml/controls/StudioIcon.qml
-    src/qml/controls/StudioNavIcon.qml
     src/qml/controls/StudioIconButton.qml
     src/qml/controls/StudioCheck.qml
     src/qml/controls/StudioSegmented.qml
@@ -118,18 +116,14 @@ set(PIXELSTUDIO_QML_FILES
     src/qml/controls/StudioCombo.qml
     src/qml/controls/StudioTextField.qml
     src/qml/controls/StudioScroll.qml
-    src/qml/studio/StudioFrame.qml
     src/qml/studio/StudioViewport.qml
     src/qml/studio/PixelPanel.qml
     src/qml/studio/PixelFrame.qml
-    src/qml/studio/PixelButton.qml
     src/qml/studio/PixelTab.qml
-    src/qml/studio/PixelDivider.qml
     src/qml/studio/PixelDottedRule.qml
     src/qml/dialogs/AboutBrandMark.qml
     src/qml/studio/StudioBackdrop.qml
     src/qml/workspace/StudioDropCanvas.qml
-    src/qml/workspace/StudioExportHub.qml
     src/qml/workspace/StudioLayout.qml
     src/qml/workspace/CodePanel.qml
     src/qml/workspace/CodeSyntaxView.qml
@@ -150,10 +144,8 @@ set(PIXELSTUDIO_QML_FILES
     src/qml/shell/studio/StudioDialog.qml
     src/qml/dialogs/AboutDialog.qml
     src/qml/dialogs/CodeSyntaxColorsDialog.qml
-    src/qml/dialogs/ConfirmDialogs.qml
     src/qml/welcome/WelcomeScreen.qml
     src/qml/welcome/WelcomeBackdrop.qml
-    src/qml/welcome/WelcomeDisplayViz.qml
     src/qml/welcome/WelcomeRecentCard.qml
     src/qml/welcome/WelcomeFooterNav.qml
     src/qml/welcome/WelcomeBrandMark.qml

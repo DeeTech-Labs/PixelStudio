@@ -8,7 +8,6 @@
 #include "persistence/AppSettings.h"
 #include "processing/DisplayCodeGenerator.h"
 #include "processing/PixelFormatCatalog.h"
-#include "processing/ControllerCatalog.h"
 #include "processing/EncodingAnalyzer.h"
 #include "io/ImageLoader.h"
 #include "io/BinaryExporter.h"
@@ -948,16 +947,6 @@ bool DisplayConverter::loadImage(const QUrl &url)
     return true;
 }
 
-bool DisplayConverter::loadRecentFile(const QString &localPath)
-{
-    if (localPath.isEmpty())
-        return false;
-    const QFileInfo info(localPath);
-    if (info.suffix().compare(QStringLiteral("json"), Qt::CaseInsensitive) == 0)
-        return openProject(QUrl::fromLocalFile(localPath));
-    return loadImage(QUrl::fromLocalFile(localPath));
-}
-
 bool DisplayConverter::loadFromClipboard()
 {
     QImage img;
@@ -1035,11 +1024,6 @@ void DisplayConverter::clear()
     ImagePipelineController::updateCodePreview(m_state, *this);
 }
 
-void DisplayConverter::refresh()
-{
-    rebuild();
-}
-
 QVariantList DisplayConverter::displayPresets() const
 {
     QVariantList list;
@@ -1070,101 +1054,6 @@ QVariantList DisplayConverter::availableEncodingModes() const
 QVariantList DisplayConverter::availableEncodingModesForUi() const
 {
     return availableEncodingModes();
-}
-
-QVariantList DisplayConverter::availableBasicEncodingModes() const
-{
-    using Mode = DisplayCodeGenerator::EncodingMode;
-    using Layout = DisplayCodeGenerator::MonoLayout;
-    QVariantList list;
-    if (m_state.colorMode == DisplayProfile::Rgb565) {
-        list.append(QVariantMap{
-            {QStringLiteral("name"), AppLocale::tr("RGB565")},
-            {QStringLiteral("mode"), static_cast<int>(Mode::Rgb565)},
-            {QStringLiteral("monoLayout"), static_cast<int>(Layout::RowPacked)},
-        });
-        list.append(QVariantMap{
-            {QStringLiteral("name"), AppLocale::tr("Indexed color (8-bit palette)")},
-            {QStringLiteral("mode"), static_cast<int>(Mode::Indexed8)},
-            {QStringLiteral("monoLayout"), static_cast<int>(Layout::RowPacked)},
-        });
-        return list;
-    }
-    list.append(QVariantMap{
-        {QStringLiteral("name"), AppLocale::tr("Standard row")},
-        {QStringLiteral("mode"), static_cast<int>(Mode::Mono1Bit)},
-        {QStringLiteral("monoLayout"), static_cast<int>(Layout::RowPacked)},
-    });
-    list.append(QVariantMap{
-        {QStringLiteral("name"), AppLocale::tr("Vertical page buffer")},
-        {QStringLiteral("mode"), static_cast<int>(Mode::Mono1Bit)},
-        {QStringLiteral("monoLayout"), static_cast<int>(Layout::Ssd1306Page)},
-    });
-    list.append(QVariantMap{
-        {QStringLiteral("name"), AppLocale::tr("Vertical column")},
-        {QStringLiteral("mode"), static_cast<int>(Mode::Mono1Bit)},
-        {QStringLiteral("monoLayout"), static_cast<int>(Layout::VerticalColumn)},
-    });
-    list.append(QVariantMap{
-        {QStringLiteral("name"), AppLocale::tr("Grayscale (4-bit)")},
-        {QStringLiteral("mode"), static_cast<int>(Mode::Grayscale4)},
-        {QStringLiteral("monoLayout"), static_cast<int>(Layout::RowPacked)},
-    });
-    return list;
-}
-
-void DisplayConverter::applyBasicEncoding(int mode, int monoLayout)
-{
-    setEncodingMode(mode);
-    if (encodingIsMono1Bit())
-        setMonoLayout(monoLayout);
-}
-
-QVariantList DisplayConverter::workflowPresets() const
-{
-    QVariantList list = ControllerCatalog::workflowPresets();
-    for (QVariant &item : list) {
-        QVariantMap m = item.toMap();
-        for (const char *key : {"name", "description"}) {
-            const QString text = m.value(QString::fromLatin1(key)).toString();
-            if (!text.isEmpty())
-                m.insert(QString::fromLatin1(key), AppLocale::tr(text.toUtf8().constData()));
-        }
-        item = m;
-    }
-    return list;
-}
-
-void DisplayConverter::applyWorkflowPreset(const QString &id)
-{
-    if (id == QStringLiteral("icon")) {
-        setProfileId(QStringLiteral("128x64"));
-        setColorMode(static_cast<int>(DisplayProfile::Mono1Bit));
-        m_state.scaleMode = DisplayProfile::Crop;
-        m_state.encodingMode = DisplayCodeGenerator::EncodingMode::Mono1Bit;
-    } else if (id == QStringLiteral("splash")) {
-        setProfileId(QStringLiteral("240x240"));
-        setColorMode(static_cast<int>(DisplayProfile::Rgb565));
-        m_state.scaleMode = DisplayProfile::Crop;
-    } else if (id == QStringLiteral("epaper")) {
-        setProfileId(QStringLiteral("250x122"));
-        setColorMode(static_cast<int>(DisplayProfile::Mono1Bit));
-        m_state.filterParams.contrast = 140;
-        m_state.filterParams.ditherMode = ImageFiltersPipeline::DitherMode::FloydSteinberg;
-    } else if (id == QStringLiteral("indexed")) {
-        setProfileId(QStringLiteral("240x240"));
-        setColorMode(static_cast<int>(DisplayProfile::Rgb565));
-        m_state.encodingMode = DisplayCodeGenerator::EncodingMode::Indexed8;
-        m_state.filterParams.posterizeRgb = 6;
-    } else {
-        return;
-    }
-    emit scaleModeChanged();
-    emit encodingModeChanged();
-    emit contrastChanged();
-    emit ditherModeChanged();
-    emit posterizeRgbChanged();
-    scheduleRebuild();
 }
 
 void DisplayConverter::newProject(const QString &name)
@@ -1631,16 +1520,6 @@ bool DisplayConverter::hasRestorableProject() const
 {
     const QString path = lastProjectPath();
     return !path.isEmpty() && QFileInfo::exists(path);
-}
-
-bool DisplayConverter::restoreLastProject()
-{
-    if (!m_appSettings || !m_appSettings->restoreLastProject())
-        return false;
-    const QString path = lastProjectPath();
-    if (path.isEmpty() || !QFileInfo::exists(path))
-        return false;
-    return openProject(QUrl::fromLocalFile(path));
 }
 
 void DisplayConverter::openUserDocumentsFolder()
