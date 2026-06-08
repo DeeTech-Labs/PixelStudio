@@ -18,6 +18,11 @@ void appendS16(QByteArray &out, qint16 v)
     appendU16(out, quint16(v));
 }
 
+void appendS32(QByteArray &out, qint32 v)
+{
+    appendU32(out, quint32(v));
+}
+
 void appendU32(QByteArray &out, quint32 v)
 {
     out.append(char(v & 0xff));
@@ -66,6 +71,15 @@ bool readS16(const QByteArray &in, int &pos, qint16 *v)
     if (!readU16(in, pos, &u))
         return false;
     *v = qint16(u);
+    return true;
+}
+
+bool readS32(const QByteArray &in, int &pos, qint32 *v)
+{
+    quint32 u = 0;
+    if (!readU32(in, pos, &u))
+        return false;
+    *v = qint32(u);
     return true;
 }
 
