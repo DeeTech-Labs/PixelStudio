@@ -112,6 +112,8 @@ set(PIXELSTUDIO_QML_FILES
     src/qml/studio/PixelButton.qml
     src/qml/studio/PixelTab.qml
     src/qml/studio/PixelDivider.qml
+    src/qml/studio/PixelDottedRule.qml
+    src/qml/dialogs/AboutBrandMark.qml
     src/qml/studio/StudioBackdrop.qml
     src/qml/workspace/StudioDropCanvas.qml
     src/qml/workspace/StudioExportHub.qml
@@ -154,12 +156,12 @@ set_source_files_properties(src/qml/I18n.qml
     PROPERTIES QT_QML_SINGLETON_TYPE TRUE
 )
 
-file(GLOB PIXELSTUDIO_ICON_SVGS CONFIGURE_DEPENDS
-    ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.svg)
+file(GLOB PIXELSTUDIO_ICON_PNGS CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.png)
 qt_add_resources(appPixelStudio "app_icons"
     PREFIX /icons
     BASE resources/icons
-    FILES ${PIXELSTUDIO_ICON_SVGS}
+    FILES ${PIXELSTUDIO_ICON_PNGS}
 )
 
 qt_add_resources(appPixelStudio "app_welcome_assets"

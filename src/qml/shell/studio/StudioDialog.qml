@@ -10,6 +10,10 @@ Dialog {
     required property var studio
 
     property bool showCornerBrackets: true
+    property bool frameDoubleBorder: false
+    property int frameBorderWidth: studio.pixelBorderWidth
+    property int frameRadius: studio.radiusSm
+    property color headerTitleColor: studio.text
 
     padding: studio.spacingXl
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -17,10 +21,21 @@ Dialog {
     background: Item {
         Rectangle {
             anchors.fill: parent
-            radius: studio.radiusSm
+            radius: root.frameRadius
             color: studio.canvas
-            border.width: studio.pixelBorderWidth
+            border.width: root.frameBorderWidth
             border.color: studio.accent
+        }
+
+        Rectangle {
+            visible: root.frameDoubleBorder
+            anchors.fill: parent
+            anchors.margins: 4
+            radius: root.frameRadius
+            color: "transparent"
+            border.width: 1
+            border.color: studio.accent
+            opacity: 0.85
         }
 
         component CornerBracket: Item {
@@ -87,7 +102,7 @@ Dialog {
                 text: root.title
                 font.family: studio.fontFamilyPixel
                 font.pixelSize: studio.fontSizePixel
-                color: studio.accent
+                color: root.headerTitleColor
                 elide: Text.ElideRight
                 Layout.fillWidth: true
             }

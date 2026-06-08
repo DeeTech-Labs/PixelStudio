@@ -15,7 +15,7 @@ Item {
     Image {
         id: glyph
         anchors.fill: parent
-        source: name.length > 0 ? ("qrc:/icons/" + name + ".svg") : ""
+        source: name.length > 0 ? ("qrc:/icons/" + name + ".png") : ""
         sourceSize: Qt.size(root.iconSize * 2, root.iconSize * 2)
         fillMode: Image.PreserveAspectFit
         smooth: false
