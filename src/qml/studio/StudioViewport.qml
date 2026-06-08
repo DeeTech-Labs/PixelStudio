@@ -187,20 +187,33 @@ Item {
         }
 
         Canvas {
-            anchors.fill: parent
-            z: -1
+            id: checkerTile
+            width: 24
+            height: 24
+            visible: false
             onPaint: {
                 const ctx = getContext("2d")
                 ctx.reset()
                 const sz = 12
-                for (let y = 0; y < height; y += sz) {
-                    for (let x = 0; x < width; x += sz) {
-                        const odd = ((x / sz) + (y / sz)) % 2
+                for (let y = 0; y < 2; ++y) {
+                    for (let x = 0; x < 2; ++x) {
+                        const odd = (x + y) % 2
                         ctx.fillStyle = odd ? studio.checkerA : studio.checkerB
-                        ctx.fillRect(x, y, sz, sz)
+                        ctx.fillRect(x * sz, y * sz, sz, sz)
                     }
                 }
             }
+            Component.onCompleted: requestPaint()
+        }
+
+        ShaderEffectSource {
+            anchors.fill: parent
+            z: -1
+            sourceItem: checkerTile
+            textureSize: Qt.size(24, 24)
+            wrapMode: ShaderEffectSource.Repeat
+            live: false
+            hideSource: true
         }
 
         Item {
@@ -225,8 +238,18 @@ Item {
             }
 
             Canvas {
+                id: pixelGridCanvas
                 anchors.fill: parent
                 visible: root.effectiveShowGrid
+                onWidthChanged: requestPaint()
+                onHeightChanged: requestPaint()
+                onVisibleChanged: if (visible) requestPaint()
+                Connections {
+                    target: root
+                    function onDisplayWChanged() { pixelGridCanvas.requestPaint() }
+                    function onDisplayHChanged() { pixelGridCanvas.requestPaint() }
+                    function onEffectiveShowGridChanged() { pixelGridCanvas.requestPaint() }
+                }
                 onPaint: {
                     const ctx = getContext("2d")
                     ctx.reset()

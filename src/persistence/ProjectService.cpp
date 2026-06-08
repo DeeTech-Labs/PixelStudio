@@ -3,6 +3,7 @@
 #include "persistence/ProjectService.h"
 
 #include <QFile>
+#include <QFileInfo>
 #include <QSaveFile>
 
 StudioProject ProjectService::fromSession(const QString &name,
@@ -36,6 +37,26 @@ bool ProjectService::save(const StudioProject &project, const QUrl &url, QString
         return false;
     }
     return true;
+}
+
+bool ProjectService::hasImageContent(const StudioProject &project)
+{
+    if (!project.sourceImagePng.isEmpty())
+        return true;
+    for (const ProjectAsset &asset : project.assets) {
+        if (QFileInfo::exists(asset.path))
+            return true;
+    }
+    return false;
+}
+
+QString ProjectService::primaryImagePath(const StudioProject &project)
+{
+    for (const ProjectAsset &asset : project.assets) {
+        if (QFileInfo::exists(asset.path))
+            return asset.path;
+    }
+    return {};
 }
 
 bool ProjectService::load(const QUrl &url, StudioProject *project, QString *errorText)

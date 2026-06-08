@@ -364,10 +364,19 @@ QVariantMap CodeSyntaxTheme::asMap() const
     };
 }
 
+void CodeSyntaxTheme::clearHighlightCache()
+{
+    m_highlightCache.clear();
+}
+
 QString CodeSyntaxTheme::highlight(const QString &code) const
 {
     if (code.isEmpty())
         return QString();
+
+    const quint64 cacheKey = qHash(code) ^ (quint64(m_revision) << 32);
+    if (const auto it = m_highlightCache.constFind(cacheKey); it != m_highlightCache.constEnd())
+        return it.value();
 
     const QVariantMap colors = asMap();
     QString html;
@@ -389,6 +398,10 @@ QString CodeSyntaxTheme::highlight(const QString &code) const
         if (lineIndex + 1 < lines.size())
             html += QStringLiteral("<br>");
     }
+
+    if (m_highlightCache.size() >= 32)
+        m_highlightCache.clear();
+    m_highlightCache.insert(cacheKey, html);
     return html;
 }
 
@@ -400,6 +413,7 @@ void CodeSyntaxTheme::resetDefaults()
         m_settings->sync();
     }
     ++m_revision;
+    clearHighlightCache();
     emit changed();
 }
 
@@ -411,6 +425,7 @@ void CodeSyntaxTheme::setColor(QString &field, const QString &value, const char 
     field = normalized;
     saveColor(settingsKey, field);
     ++m_revision;
+    clearHighlightCache();
     emit changed();
 }
 

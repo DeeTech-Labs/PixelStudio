@@ -6,6 +6,10 @@
 #include <QUrl>
 #include <QVariantList>
 
+#include <optional>
+
+#include "persistence/ProjectService.h"
+
 class DisplayConverter;
 
 class StudioTabController : public QObject
@@ -16,6 +20,7 @@ class StudioTabController : public QObject
     Q_PROPERTY(QString activeTabTitle READ activeTabTitle NOTIFY tabsChanged)
     Q_PROPERTY(bool activeIsWelcome READ activeIsWelcome NOTIFY activeTabIdChanged)
     Q_PROPERTY(int activeViewMode READ activeViewMode WRITE setActiveViewMode NOTIFY activeViewModeChanged)
+    Q_PROPERTY(QVariantList welcomeRecentItems READ welcomeRecentItems NOTIFY welcomeRecentItemsChanged)
 
 public:
     static constexpr const char *kWelcomeTabId = "welcome";
@@ -28,6 +33,7 @@ public:
     bool activeIsWelcome() const;
     int activeViewMode() const;
     void setActiveViewMode(int mode);
+    QVariantList welcomeRecentItems() const;
 
     void setConverter(DisplayConverter *converter);
 
@@ -52,6 +58,7 @@ signals:
     void tabsChanged();
     void activeTabIdChanged();
     void activeViewModeChanged();
+    void welcomeRecentItemsChanged();
     void tabActionFailed(const QString &message);
 
 private:
@@ -65,7 +72,10 @@ private:
         QString projectPath;
         QString cachePath;
         int viewMode = 0;
+        std::optional<StudioProject> memorySnapshot;
     };
+
+    void flushTabCachesToDisk();
 
     TabEntry *findTab(const QString &id);
     const TabEntry *findTab(const QString &id) const;
@@ -82,6 +92,7 @@ private:
     void saveTabsToSettings();
     void applyStartupTabPolicy(bool wasCleanExit);
     QString formatTabTitle(const TabEntry &entry) const;
+    QVariantMap welcomeTabRecentRow(const TabEntry &tab) const;
     static QString stripRecoveredPrefix(const QString &title);
     QVariantList tabsToVariant() const;
     bool setActiveTabIdInternal(const QString &id, bool persistNow);

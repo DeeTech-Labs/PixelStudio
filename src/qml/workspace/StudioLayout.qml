@@ -129,15 +129,24 @@ Item {
                     StudioViewport {
                         anchors.fill: parent
                         studio: root.studio
-                        visible: converter.hasImage
+                        visible: converter.hasImage && !converter.imageLoading
                         allowUpscale: true
                         imageSource: converter.sourcePath
                         overlayTopLeft: converter.sourceWidth + " × " + converter.sourceHeight
                     }
+                    Label {
+                        anchors.centerIn: parent
+                        visible: converter.imageLoading
+                        text: qsTr("Loading image…")
+                        color: studio.textMuted
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        width: Math.max(80, parent.width - studio.spacing2xl * 2)
+                    }
                     StudioDropCanvas {
                         anchors.fill: parent
                         studio: root.studio
-                        visible: !converter.hasImage
+                        visible: !converter.hasImage && !converter.imageLoading
                         onFileDropped: (url) => converter.loadImage(url)
                         onOpenRequested: if (root.onOpenRequested) root.onOpenRequested()
                         onPasteRequested: root.pasteRequested()
@@ -166,7 +175,16 @@ Item {
                     }
                     Label {
                         anchors.centerIn: parent
-                        visible: !converter.hasPreview
+                        visible: converter.imageLoading
+                        text: qsTr("Loading image…")
+                        color: studio.textMuted
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        width: Math.max(80, parent.width - studio.spacing2xl * 2)
+                    }
+                    Label {
+                        anchors.centerIn: parent
+                        visible: !converter.imageLoading && !converter.hasPreview
                         text: converter.hasImage ? qsTr("Rasterizing…") : qsTr("Process an image to see the result here.")
                         color: studio.textMuted
                         horizontalAlignment: Text.AlignHCenter

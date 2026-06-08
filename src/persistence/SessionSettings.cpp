@@ -187,6 +187,11 @@ void SessionSettings::pruneMissingRecentFiles()
         const QString path = StoredPath::decode(entry);
         if (AppPaths::isExcludedFromRecentPath(path) || !QFileInfo::exists(path))
             continue;
+        if (ProjectFormat::isProjectPath(path)) {
+            ProjectFormat::RecentSummary summary;
+            if (ProjectFormat::loadRecentSummary(path, &summary) && !summary.hasImageContent)
+                continue;
+        }
         kept.append(entry);
     }
     if (kept == stored)
@@ -254,6 +259,47 @@ void SessionSettings::removeRecentPath(const QString &absolutePath)
     emit recentFilesChanged();
 }
 
+QVariantMap SessionSettings::makeRecentEntry(const QString &path,
+                                             const QString &fallbackName,
+                                             bool requireImageContent)
+{
+    if (path.isEmpty() || AppPaths::isExcludedFromRecentPath(path) || !QFileInfo::exists(path))
+        return {};
+
+    const QFileInfo fi(path);
+    QVariantMap row;
+    row.insert(QStringLiteral("path"), path);
+    row.insert(QStringLiteral("name"), fallbackName.isEmpty() ? fi.fileName() : fallbackName);
+
+    if (ProjectFormat::isProjectPath(path)) {
+        ProjectFormat::RecentSummary summary;
+        if (!ProjectFormat::loadRecentSummary(path, &summary))
+            return requireImageContent ? QVariantMap{} : row;
+        if (requireImageContent && !summary.hasImageContent)
+            return {};
+        if (!summary.title.isEmpty())
+            row.insert(QStringLiteral("name"), summary.title);
+        if (!summary.specsMeta.isEmpty())
+            row.insert(QStringLiteral("projectMeta"), summary.specsMeta);
+        if (!summary.thumbnailPath.isEmpty())
+            row.insert(QStringLiteral("thumbnailUrl"),
+                        QUrl::fromLocalFile(summary.thumbnailPath).toString());
+    } else if (isRasterImagePath(path)) {
+        row.insert(QStringLiteral("thumbnailUrl"), QUrl::fromLocalFile(path).toString());
+        QImageReader reader(path);
+        const QSize size = reader.size();
+        if (size.isValid()) {
+            row.insert(QStringLiteral("projectMeta"),
+                       QStringLiteral("%1x%2px").arg(size.width()).arg(size.height()));
+        }
+    }
+
+    const QLocale locale;
+    row.insert(QStringLiteral("modifiedText"),
+               locale.toString(fi.lastModified(), QStringLiteral("MMM d, yyyy • h:mm AP")));
+    return row;
+}
+
 QVariantList SessionSettings::recentFiles() const
 {
     const QStringList stored = m_settings.value(QStringLiteral("recentFiles")).toStringList();
@@ -262,44 +308,17 @@ QVariantList SessionSettings::recentFiles() const
     QStringList seenKeys;
     for (const QString &entry : stored) {
         const QString path = StoredPath::decode(entry);
-        if (AppPaths::isExcludedFromRecentPath(path) || !QFileInfo::exists(path))
-            continue;
         const QString canonical = QFileInfo(path).canonicalFilePath();
         const QString key = canonical.isEmpty() ? path : canonical;
         if (seenKeys.contains(key))
             continue;
+
+        const QVariantMap row = makeRecentEntry(path,
+                                                 QString(),
+                                                 ProjectFormat::isProjectPath(path));
+        if (row.isEmpty())
+            continue;
         seenKeys.append(key);
-
-        QVariantMap row;
-        const QFileInfo fi(path);
-        row.insert(QStringLiteral("path"), path);
-        row.insert(QStringLiteral("name"), fi.fileName());
-
-        if (ProjectFormat::isProjectPath(path)) {
-            ProjectFormat::RecentSummary summary;
-            if (ProjectFormat::loadRecentSummary(path, &summary)) {
-                if (!summary.title.isEmpty())
-                    row.insert(QStringLiteral("name"), summary.title);
-                if (!summary.specsMeta.isEmpty())
-                    row.insert(QStringLiteral("projectMeta"), summary.specsMeta);
-                if (!summary.thumbnailPath.isEmpty())
-                    row.insert(QStringLiteral("thumbnailUrl"),
-                                QUrl::fromLocalFile(summary.thumbnailPath).toString());
-            }
-        } else if (isRasterImagePath(path)) {
-            row.insert(QStringLiteral("thumbnailUrl"), QUrl::fromLocalFile(path).toString());
-            QImageReader reader(path);
-            const QSize size = reader.size();
-            if (size.isValid()) {
-                row.insert(QStringLiteral("projectMeta"),
-                           QStringLiteral("%1x%2px").arg(size.width()).arg(size.height()));
-            }
-        }
-
-        const QDateTime modified = fi.lastModified();
-        const QLocale locale;
-        row.insert(QStringLiteral("modifiedText"),
-                   locale.toString(modified, QStringLiteral("MMM d, yyyy • h:mm AP")));
         out.append(row);
     }
     return out;

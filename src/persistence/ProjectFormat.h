@@ -18,6 +18,7 @@ struct RecentSummary {
     int resultWidth = 0;
     int resultHeight = 0;
     QString encodingLabel;
+    bool hasImageContent = false;
 };
 
 QString extension();

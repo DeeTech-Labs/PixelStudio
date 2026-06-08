@@ -87,17 +87,13 @@ PixelFrame {
             border.color: studio.border
             clip: true
 
-            ScrollView {
+            CodeSyntaxView {
                 anchors.fill: parent
                 anchors.margins: studio.spacingXs
-                clip: true
-                CodeSyntaxView {
-                    anchors.fill: parent
-                    studio: root.studio
-                    sourceText: converter.generatedCodePreview
-                    wrap: appSettings.codeWrap
-                    placeholderText: qsTr("// Code appears here after you import an image.")
-                }
+                studio: root.studio
+                sourceText: converter.generatedCodePreview
+                wrap: appSettings.codeWrap
+                placeholderText: qsTr("// Code appears here after you import an image.")
             }
         }
     }

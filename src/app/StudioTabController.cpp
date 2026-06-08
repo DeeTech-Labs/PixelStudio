@@ -1,16 +1,20 @@
 #include "app/StudioTabController.h"
 
 #include "app/DisplayConverter.h"
+#include "app/converter/ProjectSessionController.h"
 #include "i18n/AppLocale.h"
 #include "persistence/AppPaths.h"
 #include "persistence/StoredPath.h"
 #include "persistence/ProjectFormat.h"
 #include "persistence/ProjectService.h"
+#include "persistence/SessionSettings.h"
 
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QUuid>
+
+#include <algorithm>
 
 namespace {
 
@@ -62,6 +66,8 @@ void StudioTabController::setConverter(DisplayConverter *converter)
     m_converter = converter;
     if (m_converter) {
         connect(m_converter, &DisplayConverter::projectChanged, this, &StudioTabController::onProjectChanged);
+        connect(m_converter, &DisplayConverter::recentFilesChanged, this,
+                &StudioTabController::welcomeRecentItemsChanged);
     }
 }
 
@@ -85,6 +91,100 @@ QVariantList StudioTabController::tabsToVariant() const
 QVariantList StudioTabController::tabs() const
 {
     return tabsToVariant();
+}
+
+QVariantMap StudioTabController::welcomeTabRecentRow(const TabEntry &tab) const
+{
+    auto finish = [&](QVariantMap row) -> QVariantMap {
+        if (row.isEmpty())
+            return row;
+        row.insert(QStringLiteral("tabId"), tab.id);
+        return row;
+    };
+
+    if (tab.memorySnapshot.has_value()) {
+        if (!ProjectService::hasImageContent(*tab.memorySnapshot))
+            return {};
+
+        const QString imagePath = ProjectService::primaryImagePath(*tab.memorySnapshot);
+        if (!imagePath.isEmpty())
+            return finish(SessionSettings::makeRecentEntry(imagePath, tab.title));
+
+        QString path;
+        if (!tab.projectPath.isEmpty() && QFileInfo::exists(tab.projectPath))
+            path = tab.projectPath;
+        else if (!tab.cachePath.isEmpty() && QFileInfo::exists(tab.cachePath))
+            path = tab.cachePath;
+        if (!path.isEmpty())
+            return finish(SessionSettings::makeRecentEntry(path, tab.title, true));
+        return {};
+    }
+
+    QString path;
+    if (!tab.projectPath.isEmpty() && QFileInfo::exists(tab.projectPath))
+        path = tab.projectPath;
+    else if (!tab.cachePath.isEmpty() && QFileInfo::exists(tab.cachePath))
+        path = tab.cachePath;
+    else
+        return {};
+    return finish(SessionSettings::makeRecentEntry(path, tab.title, true));
+}
+
+QVariantList StudioTabController::welcomeRecentItems() const
+{
+    QHash<QString, QVariantMap> rows;
+    QHash<QString, QDateTime> modified;
+
+    const auto ingest = [&](const QVariantMap &row, const QDateTime &mtimeHint = {}) {
+        const QString path = row.value(QStringLiteral("path")).toString();
+        const QString tabId = row.value(QStringLiteral("tabId")).toString();
+        if (path.isEmpty() && tabId.isEmpty())
+            return;
+        const QString key = !path.isEmpty() ? tabPathKey(path) : QStringLiteral("tab:") + tabId;
+        const QDateTime mtime = mtimeHint.isValid()
+            ? mtimeHint
+            : (path.isEmpty() ? QDateTime::currentDateTime() : QFileInfo(path).lastModified());
+        if (!rows.contains(key) || modified.value(key) < mtime) {
+            rows.insert(key, row);
+            modified.insert(key, mtime);
+        }
+    };
+
+    if (m_converter) {
+        for (const QVariant &item : m_converter->recentFiles()) {
+            const QVariantMap row = item.toMap();
+            const QString path = row.value(QStringLiteral("path")).toString();
+            if (path.isEmpty())
+                continue;
+            if (ProjectFormat::isProjectPath(path)) {
+                const QVariantMap filtered = SessionSettings::makeRecentEntry(path, QString(), true);
+                if (filtered.isEmpty())
+                    continue;
+                ingest(filtered);
+            } else {
+                ingest(row);
+            }
+        }
+    }
+
+    for (const TabEntry &tab : m_tabs) {
+        if (tab.isWelcome)
+            continue;
+        const QVariantMap row = welcomeTabRecentRow(tab);
+        if (!row.isEmpty())
+            ingest(row);
+    }
+
+    QStringList keys = rows.keys();
+    std::sort(keys.begin(), keys.end(), [&](const QString &a, const QString &b) {
+        return modified.value(a) > modified.value(b);
+    });
+
+    QVariantList out;
+    out.reserve(keys.size());
+    for (const QString &key : keys)
+        out.append(rows.value(key));
+    return out;
 }
 
 bool StudioTabController::activeIsWelcome() const
@@ -241,8 +341,20 @@ void StudioTabController::stashActiveTab()
     if (!active || active->isWelcome)
         return;
 
-    m_converter->flushPersistence();
     active->title = displayTitle();
+
+    if (!m_converter->hasImage() && m_converter->projectFile().isEmpty()) {
+        if (!active->cachePath.isEmpty()) {
+            QFile::remove(active->cachePath);
+            active->cachePath.clear();
+        }
+        active->projectPath.clear();
+        active->memorySnapshot.reset();
+        return;
+    }
+
+    active->memorySnapshot = m_converter->projectSnapshot();
+    m_converter->rememberOpenSourceInRecent();
 
     if (!m_converter->projectFile().isEmpty()) {
         const QString path = m_converter->projectFile().toLocalFile();
@@ -252,25 +364,26 @@ void StudioTabController::stashActiveTab()
                 active->cachePath = path;
         } else {
             active->cachePath.clear();
+            m_converter->saveProject();
         }
-        m_converter->saveProject();
-        return;
     }
-
-    if (!m_converter->hasImage() && m_converter->projectName().isEmpty())
-        return;
-
-    if (active->cachePath.isEmpty()) {
-        active->cachePath = AppPaths::tabCacheDir() + QLatin1Char('/')
-            + active->id + ProjectFormat::extension();
-    }
-    m_converter->saveProjectAs(QUrl::fromLocalFile(active->cachePath));
 }
 
 bool StudioTabController::restoreTab(const TabEntry &entry)
 {
     if (!m_converter || entry.isWelcome)
         return true;
+
+    if (entry.memorySnapshot.has_value()) {
+        m_converter->applyProject(*entry.memorySnapshot);
+        if (!entry.projectPath.isEmpty())
+            ProjectSessionController::setProjectFileUrl(*m_converter, QUrl::fromLocalFile(entry.projectPath));
+        else if (!entry.cachePath.isEmpty())
+            ProjectSessionController::setProjectFileUrl(*m_converter, QUrl::fromLocalFile(entry.cachePath));
+        else
+            ProjectSessionController::clearProjectFileUrl(*m_converter);
+        return true;
+    }
 
     if (!entry.projectPath.isEmpty() && QFileInfo::exists(entry.projectPath))
         return m_converter->openProject(QUrl::fromLocalFile(entry.projectPath));
@@ -281,6 +394,25 @@ bool StudioTabController::restoreTab(const TabEntry &entry)
     m_converter->clear();
     m_converter->newProject(entry.title.isEmpty() ? AppLocale::tr("Untitled") : entry.title);
     return true;
+}
+
+void StudioTabController::flushTabCachesToDisk()
+{
+    if (!m_converter)
+        return;
+
+    for (TabEntry &tab : m_tabs) {
+        if (tab.isWelcome || !tab.memorySnapshot.has_value())
+            continue;
+        if (!ProjectService::hasImageContent(*tab.memorySnapshot))
+            continue;
+
+        if (tab.cachePath.isEmpty()) {
+            tab.cachePath = AppPaths::tabCacheDir() + QLatin1Char('/')
+                + tab.id + ProjectFormat::extension();
+        }
+        ProjectService::save(*tab.memorySnapshot, QUrl::fromLocalFile(tab.cachePath), nullptr);
+    }
 }
 
 void StudioTabController::removeTabCache(const TabEntry &entry)
@@ -396,10 +528,13 @@ bool StudioTabController::setActiveTabIdInternal(const QString &id, bool persist
     m_activeTabId = id;
 
     const TabEntry *entry = findTab(id);
-    if (entry && entry->isWelcome && m_converter)
-        m_converter->clear();
-    else if (entry && !entry->isWelcome)
+    if (entry && entry->isWelcome) {
+        if (m_converter)
+            m_converter->clear();
+        emit welcomeRecentItemsChanged();
+    } else if (entry && !entry->isWelcome) {
         restoreTab(*entry);
+    }
 
     emit activeTabIdChanged();
     emit activeViewModeChanged();
@@ -438,9 +573,11 @@ void StudioTabController::initialize(bool restoreLastProject)
 void StudioTabController::persist()
 {
     stashActiveTab();
+    flushTabCachesToDisk();
     saveTabsToSettings();
     m_settings.setValue(QLatin1String(kCleanExitKey), true);
     m_settings.sync();
+    emit welcomeRecentItemsChanged();
 }
 
 QString StudioTabController::activateWelcome()

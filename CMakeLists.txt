@@ -63,6 +63,9 @@ set(APP_SOURCES
     src/app/AppTranslations.h
     src/app/DisplayConverter.cpp
     src/app/DisplayConverter.h
+    src/app/converter/ImagePipelineController.cpp
+    src/app/converter/ProjectSessionController.cpp
+    src/app/converter/ExportController.cpp
     src/app/StudioTabController.cpp
     src/app/StudioTabController.h
     src/app/WinTaskbarRecent.cpp
@@ -91,6 +94,9 @@ qt_add_translations(appPixelStudio
 set(PIXELSTUDIO_QML_FILES
     src/qml/I18n.qml
     src/qml/Main.qml
+    src/qml/shell/MainMenuBar.qml
+    src/qml/shell/MainDialogs.qml
+    src/qml/shell/PreferencesDialog.qml
     src/qml/Theme.qml
     src/qml/controls/StudioField.qml
     src/qml/controls/StudioSection.qml

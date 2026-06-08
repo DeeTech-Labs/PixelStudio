@@ -1,14 +1,19 @@
 #include "i18n/AppLocale.h"
 #include "io/ImageLoader.h"
+
 #include <QClipboard>
+#include <QFileInfo>
 #include <QGuiApplication>
+#include <QImageReader>
 #include <QMimeData>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QtConcurrent>
 #include <QVariant>
 
 namespace {
-constexpr qint64 kMaxDownloadedImageBytes = 20 * 1024 * 1024;
+constexpr qint64 kMaxImageBytes = 20 * 1024 * 1024;
+constexpr int kMaxImagePixels = 4096 * 4096;
 constexpr int kNetworkTimeoutMs = 12000;
 
 struct ClipboardImageFormat {
@@ -45,26 +50,112 @@ QImage imageFromMimeData(const QMimeData *mime)
 
     return {};
 }
-}
 
-ImageLoader::ImageLoader(QObject *parent)
-    : QObject{parent}
-{
-}
-
-bool ImageLoader::loadFromFile(const QUrl &url, QImage &outImage)
+QString resolveLocalPath(const QUrl &url)
 {
     QString path = url.toLocalFile();
     if (path.isEmpty())
         path = url.path();
+    return path;
+}
 
-    QImage img(path);
-    if (img.isNull()) {
-        emit error(AppLocale::tr("Failed to load image: %1").arg(path));
+} // namespace
+
+ImageLoader::ImageLoader(QObject *parent)
+    : QObject{parent}
+{
+    connect(&m_fileLoadWatcher, &QFutureWatcher<FileLoadOutcome>::finished, this, &ImageLoader::onFileLoadFinished);
+}
+
+void ImageLoader::setLoading(bool loading)
+{
+    if (m_loading == loading)
+        return;
+    m_loading = loading;
+    emit loadingChanged();
+}
+
+FileLoadOutcome ImageLoader::loadFileWorker(const QUrl &url)
+{
+    FileLoadOutcome outcome;
+    outcome.sourceUrl = url;
+
+    const QString path = resolveLocalPath(url);
+    if (path.isEmpty()) {
+        outcome.errorMessage = AppLocale::tr("Failed to load image: %1").arg(url.toString());
+        return outcome;
+    }
+
+    const QFileInfo info(path);
+    if (!info.exists() || !info.isFile()) {
+        outcome.errorMessage = AppLocale::tr("Failed to load image: %1").arg(path);
+        return outcome;
+    }
+
+    if (info.size() > kMaxImageBytes) {
+        outcome.errorMessage = AppLocale::tr("Image is too large (over %1 MB)")
+                                   .arg(kMaxImageBytes / (1024 * 1024));
+        return outcome;
+    }
+
+    QImageReader reader(path);
+    reader.setAutoTransform(true);
+    if (!reader.canRead()) {
+        outcome.errorMessage = AppLocale::tr("Failed to load image: %1").arg(path);
+        return outcome;
+    }
+
+    const QSize size = reader.size();
+    if (size.isValid() && size.width() > 0 && size.height() > 0) {
+        const qint64 pixels = qint64(size.width()) * qint64(size.height());
+        if (pixels > kMaxImagePixels) {
+            outcome.errorMessage = AppLocale::tr("Image resolution is too large (%1×%2)")
+                                       .arg(size.width())
+                                       .arg(size.height());
+            return outcome;
+        }
+    }
+
+    QImage img;
+    if (!reader.read(&img) || img.isNull()) {
+        outcome.errorMessage = AppLocale::tr("Failed to load image: %1").arg(path);
+        return outcome;
+    }
+
+    outcome.ok = true;
+    outcome.image = img.convertToFormat(QImage::Format_ARGB32);
+    return outcome;
+}
+
+bool ImageLoader::loadFromFile(const QUrl &url, QImage &outImage)
+{
+    const FileLoadOutcome outcome = loadFileWorker(url);
+    if (!outcome.ok) {
+        emit error(outcome.errorMessage);
         return false;
     }
-    outImage = img.convertToFormat(QImage::Format_ARGB32);
+    outImage = outcome.image;
     return true;
+}
+
+void ImageLoader::loadFromFileAsync(const QUrl &url)
+{
+    if (m_fileLoadWatcher.isRunning())
+        m_fileLoadWatcher.cancel();
+
+    setLoading(true);
+    m_fileLoadWatcher.setFuture(QtConcurrent::run(loadFileWorker, url));
+}
+
+void ImageLoader::onFileLoadFinished()
+{
+    setLoading(false);
+    const FileLoadOutcome outcome = m_fileLoadWatcher.result();
+    if (!outcome.ok) {
+        emit error(outcome.errorMessage);
+        return;
+    }
+    emit loaded(outcome.image, outcome.sourceUrl);
 }
 
 bool ImageLoader::loadFromClipboard(QImage &outImage)
@@ -75,14 +166,21 @@ bool ImageLoader::loadFromClipboard(QImage &outImage)
         return false;
     }
 
-    // Single clipboard read — multiple image()/pixmap()/mimeData() calls on Windows
-    // trigger qt.qpa.mime "Retrying to obtain clipboard" noise.
     const QMimeData *mime = clipboard->mimeData(QClipboard::Clipboard);
     const QImage img = imageFromMimeData(mime);
     if (img.isNull()) {
         emit error(AppLocale::tr("No image in clipboard"));
         return false;
     }
+
+    const qint64 pixels = qint64(img.width()) * qint64(img.height());
+    if (pixels > kMaxImagePixels) {
+        emit error(AppLocale::tr("Image resolution is too large (%1×%2)")
+                       .arg(img.width())
+                       .arg(img.height()));
+        return false;
+    }
+
     outImage = img.convertToFormat(QImage::Format_ARGB32);
     return true;
 }
@@ -95,11 +193,10 @@ void ImageLoader::loadFromUrl(const QString &urlString)
         return;
     }
     if (url.scheme() == "file") {
-        QImage img;
-        if (loadFromFile(url, img))
-            emit loaded(img, url);
+        loadFromFileAsync(url);
         return;
     }
+    setLoading(true);
     QNetworkRequest request(url);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -107,11 +204,12 @@ void ImageLoader::loadFromUrl(const QString &urlString)
     request.setRawHeader("Accept", "image/*");
     QNetworkReply *reply = m_networkManager.get(request);
     connect(reply, &QNetworkReply::downloadProgress, this, [this, reply](qint64 received, qint64) {
-        if (received > kMaxDownloadedImageBytes) {
+        if (received > kMaxImageBytes) {
             reply->setProperty("tooLarge", true);
             reply->abort();
+            setLoading(false);
             emit error(AppLocale::tr("Image is too large (over %1 MB)")
-                           .arg(kMaxDownloadedImageBytes / (1024 * 1024)));
+                           .arg(kMaxImageBytes / (1024 * 1024)));
         }
     });
     connect(reply, &QNetworkReply::finished, this, &ImageLoader::onUrlDownloadFinished);
@@ -119,8 +217,10 @@ void ImageLoader::loadFromUrl(const QString &urlString)
 
 void ImageLoader::onUrlDownloadFinished()
 {
+    setLoading(false);
     QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
-    if (!reply) return;
+    if (!reply)
+        return;
     reply->deleteLater();
 
     if (reply->property("tooLarge").toBool())
@@ -138,9 +238,9 @@ void ImageLoader::onUrlDownloadFinished()
     }
 
     QByteArray data = reply->readAll();
-    if (data.size() > kMaxDownloadedImageBytes) {
+    if (data.size() > kMaxImageBytes) {
         emit error(AppLocale::tr("Image is too large (over %1 MB)")
-                       .arg(kMaxDownloadedImageBytes / (1024 * 1024)));
+                       .arg(kMaxImageBytes / (1024 * 1024)));
         return;
     }
     QImage img;
@@ -148,5 +248,14 @@ void ImageLoader::onUrlDownloadFinished()
         emit error(AppLocale::tr("Could not decode image from URL"));
         return;
     }
+
+    const qint64 pixels = qint64(img.width()) * qint64(img.height());
+    if (pixels > kMaxImagePixels) {
+        emit error(AppLocale::tr("Image resolution is too large (%1×%2)")
+                       .arg(img.width())
+                       .arg(img.height()));
+        return;
+    }
+
     emit loaded(img.convertToFormat(QImage::Format_ARGB32), reply->url());
 }

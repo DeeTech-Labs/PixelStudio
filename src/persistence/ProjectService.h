@@ -36,6 +36,8 @@ public:
                                      int offsetY);
     static bool save(const StudioProject &project, const QUrl &url, QString *errorText = nullptr);
     static bool load(const QUrl &url, StudioProject *project, QString *errorText = nullptr);
+    static bool hasImageContent(const StudioProject &project);
+    static QString primaryImagePath(const StudioProject &project);
     static QVariantList assetsToVariantList(const QVector<ProjectAsset> &assets);
 };
 

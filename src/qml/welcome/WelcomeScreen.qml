@@ -14,7 +14,7 @@ DropArea {
     signal openProjectRequested()
     signal newProjectRequested()
     signal continueLastProjectRequested()
-    signal recentFileRequested(string path)
+    signal recentItemRequested(string path, string tabId)
     signal fileDropped(var urls)
     signal settingsRequested()
 
@@ -44,17 +44,8 @@ DropArea {
     readonly property int recentCardThumb: 80
     readonly property int recentCardHeight: recentCardThumb + 24
     readonly property int recentGridGap: 16
-    readonly property var recentProjectFiles: {
-        const out = []
-        const files = converter.recentFiles
-        for (let i = 0; i < files.length; ++i) {
-            const path = files[i].path ?? ""
-            if (path.endsWith(".pspx", Qt.CaseInsensitive))
-                out.push(files[i])
-        }
-        return out
-    }
-    readonly property int recentCount: Math.min(recentMax, recentProjectFiles.length)
+    readonly property var recentWelcomeItems: tabController.welcomeRecentItems
+    readonly property int recentCount: Math.min(recentMax, recentWelcomeItems.length)
     readonly property int recentRowCount: recentCount > 0 ? Math.ceil(recentCount / recentColumns) : 0
     readonly property int recentGridHeight: recentCount > 0
         ? recentRowCount * recentCardHeight + Math.max(0, recentRowCount - 1) * recentGridGap
@@ -334,12 +325,15 @@ DropArea {
                                         studio: root.studio
                                         fontPixel: root.fontPixel
                                         fontUi: root.fontUi
-                                    fileName: root.recentProjectFiles[index].name ?? ""
-                                    filePath: root.recentProjectFiles[index].path ?? ""
-                                    thumbnailUrl: root.recentProjectFiles[index].thumbnailUrl ?? ""
-                                    projectMeta: root.recentProjectFiles[index].projectMeta ?? ""
-                                    dateTimeText: root.recentProjectFiles[index].modifiedText ?? ""
-                                    onOpenRequested: root.recentFileRequested(root.recentProjectFiles[index].path)
+                                    fileName: root.recentWelcomeItems[index].name ?? ""
+                                    filePath: root.recentWelcomeItems[index].path ?? ""
+                                    thumbnailUrl: root.recentWelcomeItems[index].thumbnailUrl ?? ""
+                                    projectMeta: root.recentWelcomeItems[index].projectMeta ?? ""
+                                    dateTimeText: root.recentWelcomeItems[index].modifiedText ?? ""
+                                    onOpenRequested: {
+                                        const item = root.recentWelcomeItems[index]
+                                        root.recentItemRequested(item.path ?? "", item.tabId ?? "")
+                                    }
                                     }
                                 }
                             }

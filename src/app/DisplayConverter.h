@@ -23,14 +23,21 @@
 
 class AppSettings;
 class ImageLoader;
+class ImagePipelineController;
+class ProjectSessionController;
+class ExportController;
 
 class DisplayConverter : public QObject
 {
+    friend class ImagePipelineController;
+    friend class ProjectSessionController;
+    friend class ExportController;
     Q_OBJECT
     Q_PROPERTY(QUrl sourcePath READ sourcePath NOTIFY sourcePathChanged)
     Q_PROPERTY(QUrl previewPath READ previewPath NOTIFY previewPathChanged)
     Q_PROPERTY(QUrl processPreviewPath READ processPreviewPath NOTIFY processPreviewPathChanged)
     Q_PROPERTY(bool hasImage READ hasImage NOTIFY hasImageChanged)
+    Q_PROPERTY(bool imageLoading READ imageLoading NOTIFY imageLoadingChanged)
     Q_PROPERTY(int sourceWidth READ sourceWidth NOTIFY sourceWidthChanged)
     Q_PROPERTY(int sourceHeight READ sourceHeight NOTIFY sourceHeightChanged)
     Q_PROPERTY(int displayWidth READ displayWidth WRITE setDisplayWidth NOTIFY displayWidthChanged)
@@ -115,6 +122,7 @@ public:
     QUrl previewPath() const { return m_previewPath; }
     QUrl processPreviewPath() const { return m_processPreviewPath; }
     bool hasImage() const { return !m_sourceImage.isNull(); }
+    bool imageLoading() const { return m_imageLoading; }
     bool hasPreview() const { return !m_previewPath.isEmpty(); }
     bool batchRunning() const { return m_batchService.running(); }
     int batchProgress() const { return m_batchService.progress(); }
@@ -130,6 +138,7 @@ public:
     QString watchInputFolder() const { return m_watchService.inputFolder(); }
     QString watchOutputFolder() const { return m_watchService.outputFolder(); }
     QVariantList recentFiles() const;
+    void rememberOpenSourceInRecent();
     QString lastProjectPath() const;
     bool hasRestorableProject() const;
     QString lastOpenImageDir() const;
@@ -280,6 +289,8 @@ public:
     Q_INVOKABLE void rememberOpenImageDir(const QString &dir);
     Q_INVOKABLE void rememberExportDir(const QString &dir);
     Q_INVOKABLE void refreshLocalization();
+    void applyProject(const StudioProject &project);
+    StudioProject projectSnapshot() const;
 
     int localizationRevision() const { return m_localizationRevision; }
 
@@ -289,6 +300,7 @@ signals:
     void previewPathChanged();
     void processPreviewPathChanged();
     void hasImageChanged();
+    void imageLoadingChanged();
     void sourceWidthChanged();
     void sourceHeightChanged();
     void displayWidthChanged();
@@ -376,8 +388,6 @@ private:
     void schedulePersistSession();
     void updateCodePreview();
     void updateFlashReport();
-    void applyProject(const StudioProject &project);
-    StudioProject projectSnapshot() const;
     void applyStoredUiState();
     void persistUiState();
     void updateWatchExportPrefix();
@@ -437,6 +447,7 @@ private:
     QVariantList m_flashReport;
     SessionUiState m_uiState;
     int m_localizationRevision = 0;
+    bool m_imageLoading = false;
 };
 
 #endif // DISPLAYCONVERTER_H

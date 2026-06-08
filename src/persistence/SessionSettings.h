@@ -63,6 +63,9 @@ public:
     void removeRecentPath(const QString &absolutePath);
     void pruneMissingRecentFiles();
     QVariantList recentFiles() const;
+    static QVariantMap makeRecentEntry(const QString &path,
+                                       const QString &fallbackName = QString(),
+                                       bool requireImageContent = false);
 
     void addRecentExport(const QString &absolutePath);
     void pruneMissingRecentExports();

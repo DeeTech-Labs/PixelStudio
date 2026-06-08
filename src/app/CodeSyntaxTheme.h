@@ -1,6 +1,7 @@
 #ifndef PIXELSTUDIO_APP_CODESYNTAXTHEME_H
 #define PIXELSTUDIO_APP_CODESYNTAXTHEME_H
 
+#include <QHash>
 #include <QObject>
 #include <QSettings>
 #include <QString>
@@ -60,9 +61,11 @@ signals:
 private:
     void setColor(QString &field, const QString &value, const char *settingsKey);
     void saveColor(const char *settingsKey, const QString &value);
+    void clearHighlightCache();
     static QString normalizeColor(const QString &value, const QString &fallback);
     static void applyDefaults(CodeSyntaxTheme *theme);
 
+    mutable QHash<quint64, QString> m_highlightCache;
     QString m_comment;
     QString m_directive;
     QString m_keyword;

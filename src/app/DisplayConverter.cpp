@@ -1,4 +1,7 @@
 #include "app/DisplayConverter.h"
+#include "app/converter/ExportController.h"
+#include "app/converter/ImagePipelineController.h"
+#include "app/converter/ProjectSessionController.h"
 #include "i18n/AppLocale.h"
 #include "persistence/AppPaths.h"
 #include "persistence/AppSettings.h"
@@ -113,13 +116,22 @@ DisplayConverter::DisplayConverter(SessionSettings *session, AppSettings *appSet
 {
     connect(m_loader, &ImageLoader::loaded, this, &DisplayConverter::onImageLoaded);
     connect(m_loader, &ImageLoader::error, this, &DisplayConverter::errorOccurred);
+    connect(m_loader, &ImageLoader::loadingChanged, this, [this]() {
+        const bool loading = m_loader->loading();
+        if (m_imageLoading == loading)
+            return;
+        m_imageLoading = loading;
+        emit imageLoadingChanged();
+    });
     m_filterParams.ditherMode = ImageFiltersPipeline::DitherMode::FloydSteinberg;
     m_filterParams.threshold = m_monoThreshold;
     m_rebuildDebounceTimer.setSingleShot(true);
     m_rebuildDebounceTimer.setInterval(200);
-    connect(&m_rebuildDebounceTimer, &QTimer::timeout, this, &DisplayConverter::startAsyncRebuild);
+    connect(&m_rebuildDebounceTimer, &QTimer::timeout, this, [this]() {
+        ImagePipelineController::startAsyncRebuild(*this);
+    });
     connect(&m_rebuildWatcher, &QFutureWatcher<AsyncBuildResult>::finished,
-            this, &DisplayConverter::onAsyncRebuildFinished);
+            this, [this]() { ImagePipelineController::onAsyncRebuildFinished(*this); });
     m_sessionSaveTimer.setSingleShot(true);
     m_sessionSaveTimer.setInterval(400);
     connect(&m_sessionSaveTimer, &QTimer::timeout, this, &DisplayConverter::persistSession);
@@ -931,13 +943,7 @@ bool DisplayConverter::loadImage(const QUrl &url)
         loadFromUrl(url.toString());
         return true;
     }
-    QImage img;
-    if (!m_loader->loadFromFile(url, img))
-        return false;
-    onImageLoaded(img, url);
-    if (m_session)
-        m_session->addRecentFile(url);
-    rememberOpenImageDir(url.toLocalFile().isEmpty() ? url.path() : url.toLocalFile());
+    m_loader->loadFromFileAsync(url);
     return true;
 }
 
@@ -1023,6 +1029,7 @@ void DisplayConverter::clear()
     emit codeGenOptionsChanged();
     emit batchRunningChanged();
     emit batchProgressChanged();
+    updateCodePreview();
 }
 
 void DisplayConverter::refresh()
@@ -1159,73 +1166,22 @@ void DisplayConverter::applyWorkflowPreset(const QString &id)
 
 void DisplayConverter::newProject(const QString &name)
 {
-    const SessionSnapshot defaults = SessionSettings::defaultSnapshot();
-    applySessionSnapshot(defaults);
-    m_offsetX = 0;
-    m_offsetY = 0;
-    emit offsetChanged();
-    m_project = ProjectService::fromSession(name, defaults, 0, 0);
-    m_projectFile = QUrl();
-    updateWatchExportPrefix();
-    restartAutosaveTimer();
-    emit projectChanged();
+    ProjectSessionController::newProject(*this, name);
 }
 
 bool DisplayConverter::openProject(const QUrl &url)
 {
-    StudioProject project;
-    QString error;
-    if (!ProjectService::load(url, &project, &error)) {
-        emit errorOccurred(error);
-        return false;
-    }
-    applyProject(project);
-    m_projectFile = url;
-    const QString localPath = url.toLocalFile();
-    if (!AppPaths::isExcludedFromRecentPath(localPath) && m_session)
-        m_session->addRecentFile(url);
-    if (!AppPaths::isInternalDataPath(localPath))
-        m_uiState.lastProjectFile = localPath;
-    updateWatchExportPrefix();
-    restartAutosaveTimer();
-    schedulePersistSession();
-    emit projectChanged();
-    return true;
+    return ProjectSessionController::openProject(*this, url);
 }
 
 bool DisplayConverter::saveProject()
 {
-    if (m_projectFile.isEmpty()) {
-        emit errorOccurred(AppLocale::tr("Specify a project path"));
-        return false;
-    }
-    return saveProjectAs(m_projectFile);
+    return ProjectSessionController::saveProject(*this);
 }
 
 bool DisplayConverter::saveProjectAs(const QUrl &url)
 {
-    const QString previousPath = m_projectFile.toLocalFile();
-    m_project = projectSnapshot();
-    QString error;
-    if (!ProjectService::save(m_project, url, &error)) {
-        emit errorOccurred(error);
-        return false;
-    }
-    m_projectFile = url;
-    const QString localPath = url.toLocalFile();
-    if (!AppPaths::isExcludedFromRecentPath(localPath) && m_session)
-        m_session->addRecentFile(url);
-    if (!previousPath.isEmpty() && AppPaths::isTabCachePath(previousPath)
-        && !AppPaths::isTabCachePath(localPath) && m_session) {
-        m_session->removeRecentPath(previousPath);
-    }
-    if (!AppPaths::isInternalDataPath(localPath))
-        m_uiState.lastProjectFile = localPath;
-    schedulePersistSession();
-    updateWatchExportPrefix();
-    restartAutosaveTimer();
-    emit projectChanged();
-    return true;
+    return ProjectSessionController::saveProjectAs(*this, url);
 }
 
 bool DisplayConverter::importHeader(const QUrl &url)
@@ -1256,14 +1212,7 @@ bool DisplayConverter::importHeader(const QUrl &url)
 
 void DisplayConverter::configureWatchFolder(const QString &inputFolder, const QString &outputFolder)
 {
-    QString out = outputFolder.trimmed();
-    if (out.isEmpty())
-        out = AppPaths::watchDir();
-    m_uiState.watchInputFolder = inputFolder;
-    m_uiState.watchOutputFolder = out;
-    m_watchService.configure(inputFolder, out);
-    updateWatchExportPrefix();
-    schedulePersistSession();
+    ExportController::configureWatchFolder(*this, inputFolder, outputFolder);
 }
 
 void DisplayConverter::configureWatchFolders(const QUrl &inputFolder, const QUrl &outputFolder)
@@ -1273,45 +1222,12 @@ void DisplayConverter::configureWatchFolders(const QUrl &inputFolder, const QUrl
 
 void DisplayConverter::setWatchFolderActive(bool active)
 {
-    m_uiState.watchActive = active;
-    m_watchService.setActive(active);
-    schedulePersistSession();
+    ExportController::setWatchFolderActive(*this, active);
 }
 
 bool DisplayConverter::buildSpriteAtlas(const QVariantList &urls, const QUrl &targetFile, int frameWidth, int frameHeight)
 {
-    SpriteAtlasRequest request;
-    request.pipeline = pipelineParams();
-    request.arrayPrefix = m_arrayName.isEmpty() ? QStringLiteral("sprite") : m_arrayName;
-    request.frameWidth = frameWidth;
-    request.frameHeight = frameHeight;
-    request.fixedGrid = true;
-    request.padding = 1;
-    request.encodingMode = m_encodingMode;
-    request.monoLayout = m_monoLayout;
-    request.codeGenOptions = m_codeGenOptions;
-    for (const QVariant &value : urls) {
-        const QUrl url = value.toUrl();
-        if (url.isValid())
-            request.files.append(url);
-    }
-    const SpriteAtlasResult result = SpriteAtlasService::build(request);
-    if (!result.ok) {
-        emit errorOccurred(result.errorMessage);
-        return false;
-    }
-    QString path = targetFile.toLocalFile();
-    if (path.isEmpty())
-        path = targetFile.path();
-    QFile file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
-        emit errorOccurred(AppLocale::tr("Failed to write atlas: %1").arg(path));
-        return false;
-    }
-    QTextStream out(&file);
-    out.setEncoding(QStringConverter::Utf8);
-    out << result.headerCode;
-    return true;
+    return ExportController::buildSpriteAtlas(*this, urls, targetFile, frameWidth, frameHeight);
 }
 
 void DisplayConverter::copyToClipboard(const QString &text)
@@ -1321,91 +1237,17 @@ void DisplayConverter::copyToClipboard(const QString &text)
 
 bool DisplayConverter::saveCodeToFile(const QUrl &url)
 {
-    if (m_generatedCode.isEmpty())
-        return false;
-
-    QString path = url.toLocalFile();
-    if (path.isEmpty())
-        path = url.path();
-    if (path.isEmpty()) {
-        emit errorOccurred(AppLocale::tr("Specify a file path"));
-        return false;
-    }
-
-    QFile file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
-        emit errorOccurred(AppLocale::tr("Failed to write file: %1").arg(path));
-        return false;
-    }
-    QTextStream out(&file);
-    out.setEncoding(QStringConverter::Utf8);
-    out << m_generatedCode;
-    rememberExportDir(path);
-    if (m_session)
-        m_session->addRecentExport(path);
-    return true;
+    return ExportController::saveCodeToFile(*this, url);
 }
 
 bool DisplayConverter::saveBinaryToFile(const QUrl &url)
 {
-    if (m_lastResult.width < 1 || m_lastResult.height < 1)
-        return false;
-    QString path = url.toLocalFile();
-    if (path.isEmpty())
-        path = url.path();
-    if (path.isEmpty()) {
-        emit errorOccurred(AppLocale::tr("Specify a file path"));
-        return false;
-    }
-
-    const QByteArray data = DisplayCodeGenerator::binaryData(
-        m_encodingMode,
-        m_displayWidth,
-        m_displayHeight,
-        m_lastResult.monoBits,
-        m_lastResult.monoBuffer,
-        m_lastResult.grayscale8,
-        m_lastResult.rgb565,
-        m_lastResult.rgb888,
-        m_lastResult.rgb233,
-        m_lastResult.rgb24,
-        m_monoLayout,
-        m_codeGenOptions);
-
-    QString error;
-    if (!BinaryExporter::save(path, data, &error)) {
-        emit errorOccurred(error);
-        return false;
-    }
-    rememberExportDir(path);
-    if (m_session)
-        m_session->addRecentExport(path);
-    return true;
+    return ExportController::saveBinaryToFile(*this, url);
 }
 
 void DisplayConverter::enqueueBatchCodeExport(const QVariantList &urls, const QUrl &targetFile)
 {
-    QVector<QUrl> files;
-    files.reserve(urls.size());
-    for (const QVariant &entry : urls) {
-        const QUrl url = entry.toUrl();
-        if (!url.isValid())
-            continue;
-        files.append(url);
-    }
-    if (files.isEmpty()) {
-        emit errorOccurred(AppLocale::tr("Batch file list is empty"));
-        return;
-    }
-    BatchExportJob job;
-    job.files = files;
-    job.targetFile = targetFile;
-    job.pipeline = pipelineParams();
-    job.profileId = m_profileId;
-    job.encodingMode = m_encodingMode;
-    job.monoLayout = m_monoLayout;
-    job.codeGenOptions = m_codeGenOptions;
-    m_batchService.enqueue(job);
+    ExportController::enqueueBatchCodeExport(*this, urls, targetFile);
 }
 
 void DisplayConverter::cancelBatchExport()
@@ -1433,6 +1275,10 @@ void DisplayConverter::onImageLoaded(const QImage &image, const QUrl &sourceUrl)
     emit flipVerticalChanged();
     emit sourceWidthChanged();
     emit sourceHeightChanged();
+    if (m_session && sourceUrl.isLocalFile())
+        m_session->addRecentFile(sourceUrl);
+    if (sourceUrl.isLocalFile())
+        rememberOpenImageDir(sourceUrl.toLocalFile().isEmpty() ? sourceUrl.path() : sourceUrl.toLocalFile());
     scheduleRebuild(true);
 }
 
@@ -1449,139 +1295,37 @@ void DisplayConverter::rebuild()
 
 void DisplayConverter::scheduleRebuild(bool immediate)
 {
-    schedulePersistSession();
-    if (immediate) {
-        m_rebuildDebounceTimer.stop();
-        startAsyncRebuild();
-        return;
-    }
-    m_rebuildDebounceTimer.start();
+    ImagePipelineController::scheduleRebuild(*this, immediate);
 }
 
 void DisplayConverter::startAsyncRebuild()
 {
-    if (m_rebuildWatcher.isRunning()) {
-        m_rebuildPending = true;
-        return;
-    }
-
-    if (m_sourceImage.isNull()) {
-        m_previewPath.clear();
-        m_processPreviewPath.clear();
-        m_generatedCode.clear();
-        emit previewPathChanged();
-        emit processPreviewPathChanged();
-        emit generatedCodeChanged();
-        return;
-    }
-
-    const QImage source = orientedSource();
-    const int width = m_displayWidth;
-    const int height = m_displayHeight;
-    const auto colorMode = m_colorMode;
-    const auto scaleMode = m_scaleMode;
-    const int monoThreshold = m_monoThreshold;
-    const bool invertMono = m_invertMono;
-    const ImageFiltersPipeline::Params filterParams = m_filterParams;
-    const QString profileId = m_profileId;
-    const QString arrayName = m_arrayName;
-    const auto encodingMode = m_encodingMode;
-    const auto monoLayout = m_monoLayout;
-    const DisplayCodeGenerator::CodeGenOptions codeOptions = m_codeGenOptions;
-    const bool linearColorSpace = m_linearColorSpace;
-    const quint64 generation = ++m_nextGeneration;
-
-    auto future = QtConcurrent::run([source,
-                                     width,
-                                     height,
-                                     colorMode,
-                                     scaleMode,
-                                     monoThreshold,
-                                     invertMono,
-                                     filterParams,
-                                     profileId,
-                                     arrayName,
-                                     encodingMode,
-                                     monoLayout,
-                                     codeOptions,
-                                     linearColorSpace,
-                                     generation]() -> AsyncBuildResult {
-        AsyncBuildResult output;
-        output.generation = generation;
-        output.result = DisplayRasterizer::convert(source,
-                                                   width,
-                                                   height,
-                                                   colorMode,
-                                                   scaleMode,
-                                                   filterParams,
-                                                   encodingMode,
-                                                   monoThreshold,
-                                                   invertMono,
-                                                   linearColorSpace);
-        if (output.result.preview.isNull())
-            return output;
-
-        DisplayProfile profile = DisplayProfile::byId(profileId);
-        profile.width = width;
-        profile.height = height;
-        profile.colorMode = colorMode;
-        if (profile.id == QStringLiteral("custom"))
-            profile.name = QCoreApplication::translate("PixelStudio", "Custom %1×%2")
-                               .arg(width)
-                               .arg(height);
-
-        output.generatedCode = DisplayCodeGenerator::generate(profile,
-                                                              width,
-                                                              height,
-                                                              encodingMode,
-                                                              output.result.monoBits,
-                                                              output.result.monoBuffer,
-                                                              output.result.grayscale8,
-                                                              output.result.rgb565,
-                                                              output.result.rgb888,
-                                                              output.result.rgb233,
-                                                              output.result.rgb24,
-                                                              arrayName,
-                                                              monoLayout,
-                                                              codeOptions,
-                                                              output.result.indexedPalette);
-        return output;
-    });
-    m_rebuildWatcher.setFuture(future);
+    ImagePipelineController::startAsyncRebuild(*this);
 }
 
 void DisplayConverter::onAsyncRebuildFinished()
 {
-    const AsyncBuildResult result = m_rebuildWatcher.result();
-    if (result.generation >= m_lastAppliedGeneration) {
-        m_lastAppliedGeneration = result.generation;
-        m_lastResult = result.result;
+    ImagePipelineController::onAsyncRebuildFinished(*this);
+}
 
-        if (m_lastResult.preview.isNull()) {
-            m_previewPath.clear();
-            m_processPreviewPath.clear();
-            m_generatedCode.clear();
-            emit previewPathChanged();
-            emit processPreviewPathChanged();
-            emit generatedCodeChanged();
-            updateCodePreview();
-            updateFlashReport();
-        } else {
-            m_processPreviewPath = writeTempPreview(QStringLiteral("process"), m_lastResult.processPreview);
-            emit processPreviewPathChanged();
-            m_previewPath = writeTempPreview(QStringLiteral("preview"), m_lastResult.preview);
-            emit previewPathChanged();
-            m_generatedCode = result.generatedCode;
-            emit generatedCodeChanged();
-            updateCodePreview();
-            updateFlashReport();
-        }
-    }
+void DisplayConverter::updateCodePreview()
+{
+    ImagePipelineController::updateCodePreview(*this);
+}
 
-    if (m_rebuildPending) {
-        m_rebuildPending = false;
-        startAsyncRebuild();
-    }
+void DisplayConverter::updateFlashReport()
+{
+    ImagePipelineController::updateFlashReport(*this);
+}
+
+StudioProject DisplayConverter::projectSnapshot() const
+{
+    return ProjectSessionController::projectSnapshot(*this);
+}
+
+void DisplayConverter::applyProject(const StudioProject &project)
+{
+    ProjectSessionController::applyProject(*this, project);
 }
 
 void DisplayConverter::markOrientedDirty()
@@ -1845,6 +1589,15 @@ QVariantList DisplayConverter::recentFiles() const
     return m_session ? m_session->recentFiles() : QVariantList{};
 }
 
+void DisplayConverter::rememberOpenSourceInRecent()
+{
+    if (!m_session || !hasImage() || m_sourceFilePath.isEmpty())
+        return;
+    if (!QFileInfo::exists(m_sourceFilePath))
+        return;
+    m_session->addRecentFile(QUrl::fromLocalFile(m_sourceFilePath));
+}
+
 QVariantList DisplayConverter::recentExports() const
 {
     return m_session ? m_session->recentExports() : QVariantList{};
@@ -1974,111 +1727,6 @@ void DisplayConverter::setShowFullGeneratedCode(bool on)
     m_showFullGeneratedCode = on;
     emit showFullGeneratedCodeChanged();
     updateCodePreview();
-}
-
-void DisplayConverter::updateCodePreview()
-{
-    if (m_showFullGeneratedCode || m_generatedCode.isEmpty()) {
-        m_generatedCodePreview = m_generatedCode;
-        m_generatedCodeTruncated = false;
-    } else {
-        constexpr int kMaxLines = 80;
-        constexpr int kMaxChars = 12000;
-        QStringList lines = m_generatedCode.split(QLatin1Char('\n'));
-        m_generatedCodeTruncated = lines.size() > kMaxLines || m_generatedCode.size() > kMaxChars;
-        if (lines.size() > kMaxLines)
-            lines = lines.mid(0, kMaxLines);
-        m_generatedCodePreview = lines.join(QLatin1Char('\n'));
-        if (m_generatedCodePreview.size() > kMaxChars)
-            m_generatedCodePreview = m_generatedCodePreview.left(kMaxChars);
-        if (m_generatedCodeTruncated)
-            m_generatedCodePreview += QStringLiteral("\n\n// … %1 bytes omitted — use Copy for full output\n")
-                                          .arg(m_generatedCode.size());
-    }
-    emit generatedCodePreviewChanged();
-}
-
-void DisplayConverter::updateFlashReport()
-{
-    m_flashReport = EncodingAnalyzer::analyze(m_lastResult,
-                                              m_colorMode,
-                                              m_monoLayout,
-                                              m_encodingMode,
-                                              m_codeGenOptions);
-    emit flashReportChanged();
-}
-
-StudioProject DisplayConverter::projectSnapshot() const
-{
-    StudioProject project = ProjectService::fromSession(m_project.name, sessionSnapshot(), m_offsetX, m_offsetY);
-    project.assets.clear();
-    project.sourceImagePng.clear();
-    project.resultPreviewPng.clear();
-
-    auto savePng = [](const QImage &image) -> QByteArray {
-        if (image.isNull())
-            return {};
-        QByteArray png;
-        QBuffer buffer(&png);
-        buffer.open(QIODevice::WriteOnly);
-        return image.save(&buffer, "PNG") ? png : QByteArray{};
-    };
-
-    const bool hasSourceFile = !m_sourceFilePath.isEmpty() && QFileInfo::exists(m_sourceFilePath);
-    if (hasSourceFile) {
-        project.assets.append(ProjectAsset{
-            m_sourceFilePath,
-            QFileInfo(m_sourceFilePath).fileName(),
-            0,
-            0,
-        });
-    } else if (!m_sourceImage.isNull()) {
-        project.sourceImagePng = savePng(m_sourceImage);
-    }
-
-    project.resultPreviewPng = savePng(m_lastResult.preview);
-    return project;
-}
-
-void DisplayConverter::applyProject(const StudioProject &project)
-{
-    m_project = project;
-    m_offsetX = project.offsetX;
-    m_offsetY = project.offsetY;
-    m_sourceFilePath.clear();
-    applySessionSnapshot(project.session);
-
-    QImage image;
-    for (const ProjectAsset &asset : project.assets) {
-        if (!QFileInfo::exists(asset.path))
-            continue;
-        if (m_loader->loadFromFile(QUrl::fromLocalFile(asset.path), image)) {
-            m_sourceFilePath = QFileInfo(asset.path).absoluteFilePath();
-            break;
-        }
-    }
-    if (image.isNull() && !project.sourceImagePng.isEmpty())
-        image.loadFromData(project.sourceImagePng, "PNG");
-
-    if (!image.isNull()) {
-        m_sourceImage = image;
-        markOrientedDirty();
-        refreshSourcePreview();
-        emit hasImageChanged();
-        emit sourceWidthChanged();
-        emit sourceHeightChanged();
-        scheduleRebuild(true);
-    } else {
-        m_sourceImage = QImage();
-        m_sourcePath.clear();
-        emit hasImageChanged();
-        emit sourcePathChanged();
-        scheduleRebuild(true);
-    }
-
-    emit offsetChanged();
-    updateWatchExportPrefix();
-    emit projectChanged();
 }
 
 void DisplayConverter::onWatchExportRequested(const QVariantList &files, const QUrl &targetFile)

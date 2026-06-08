@@ -660,6 +660,7 @@ bool ProjectFormat::loadRecentSummary(const QString &path, RecentSummary *summar
         return false;
 
     summary->title = project.name;
+    summary->hasImageContent = ProjectService::hasImageContent(project);
     summary->resultWidth = project.session.displayWidth;
     summary->resultHeight = project.session.displayHeight;
     summary->encodingLabel = encodingLabelForMode(project.session.encodingMode);
