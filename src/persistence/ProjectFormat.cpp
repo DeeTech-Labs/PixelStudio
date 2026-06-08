@@ -8,9 +8,9 @@
 #include "processing/DisplayRasterizer.h"
 #include "processing/DisplayProfile.h"
 #include "processing/PixelFormatCatalog.h"
+#include "translation/AppLocale.h"
 
 #include <QBuffer>
-#include <QCoreApplication>
 #include <QFile>
 #include <QFileInfo>
 #include <QImageReader>
@@ -38,13 +38,13 @@ QString encodingLabelForMode(int encodingMode)
     const PixelFormatCatalog::Entry *order = PixelFormatCatalog::uiOrder(&count);
     for (int i = 0; i < count; ++i) {
         if (order[i].mode == mode)
-            return QCoreApplication::translate("PixelStudio", order[i].name);
+            return AppLocale::tr(order[i].name);
     }
     if (PixelFormatCatalog::isMono(mode))
-        return QCoreApplication::translate("PixelStudio", "Monochrome (1-bit)");
+        return AppLocale::tr("Monochrome (1-bit)");
     if (PixelFormatCatalog::isGrayscale(mode))
-        return QCoreApplication::translate("PixelStudio", "Grayscale (8-bit)");
-    return QCoreApplication::translate("PixelStudio", "Color");
+        return AppLocale::tr("Grayscale (8-bit)");
+    return AppLocale::tr("Color");
 }
 
 QString specsMeta(int width, int height, int encodingMode)

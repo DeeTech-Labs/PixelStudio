@@ -1,12 +1,12 @@
-#ifndef PIXELSTUDIO_I18N_APPLOCALE_H
-#define PIXELSTUDIO_I18N_APPLOCALE_H
+#ifndef PIXELSTUDIO_TRANSLATION_APPLOCALE_H
+#define PIXELSTUDIO_TRANSLATION_APPLOCALE_H
 
 #include <QCoreApplication>
 #include <QString>
 
 namespace AppLocale {
 
-inline constexpr const char *kContext = "PixelStudio";
+inline constexpr const char *kContext = "Core";
 
 inline QString tr(const char *text)
 {
@@ -15,4 +15,4 @@ inline QString tr(const char *text)
 
 } // namespace AppLocale
 
-#endif // PIXELSTUDIO_I18N_APPLOCALE_H
+#endif // PIXELSTUDIO_TRANSLATION_APPLOCALE_H

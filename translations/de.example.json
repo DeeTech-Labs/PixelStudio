@@ -1,0 +1,14 @@
+{
+  "language": "de",
+  "name": "Deutsch",
+  "author": "Your name",
+  "contributors": [
+    "Alice Example",
+    "Bob Example"
+  ],
+  "contexts": {
+    "Shell": {
+      "&File": "&Datei"
+    }
+  }
+}

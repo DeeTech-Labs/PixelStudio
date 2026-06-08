@@ -1,6 +1,6 @@
 #include "io/HeaderImportService.h"
 
-#include "i18n/AppLocale.h"
+#include "translation/AppLocale.h"
 
 #include <QFile>
 #include <QRegularExpression>

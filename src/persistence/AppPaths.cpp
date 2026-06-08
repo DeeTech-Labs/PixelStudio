@@ -171,6 +171,27 @@ void migrateLegacyCacheDirs()
     moveDirContents(root + QStringLiteral("/recent_previews"), recentThumbnailsDir());
 }
 
+void migrateLegacyTranslationsDir()
+{
+    const QString legacy = dataRoot() + QStringLiteral("/i18n");
+    const QString current = userTranslationsDir();
+    QDir legacyDir(legacy);
+    if (!legacyDir.exists())
+        return;
+
+    ensureDir(current);
+    const QFileInfoList files = legacyDir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
+    for (const QFileInfo &fi : files) {
+        const QString target = QDir(current).absoluteFilePath(fi.fileName());
+        if (QFileInfo::exists(target))
+            continue;
+        QFile::rename(fi.absoluteFilePath(), target);
+    }
+
+    if (legacyDir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot).isEmpty())
+        legacyDir.removeRecursively();
+}
+
 } // namespace
 
 QString dataRoot()
@@ -214,6 +235,11 @@ QString exportsDir()
 QString watchDir()
 {
     return userDocumentsRoot() + QStringLiteral("/watch");
+}
+
+QString userTranslationsDir()
+{
+    return dataRoot() + QStringLiteral("/translations");
 }
 
 QString cacheDir()
@@ -288,6 +314,8 @@ void ensureLayout()
     ensureDir(projectsDir());
     ensureDir(exportsDir());
     ensureDir(watchDir());
+    migrateLegacyTranslationsDir();
+    ensureDir(userTranslationsDir());
 
     if (!migrationCompleted()) {
         migrateLegacyStore();

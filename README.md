@@ -84,7 +84,7 @@ cmake --build build\Release
 ```
 cmake/          Версия и CMake
 src/            C++ ядро, QML, persistence, export
-i18n/           Переводы (.ts)
+translations/   Переводы JSON (en.json, ru.json; пользовательские — в AppData)
 resources/      Иконки и ресурсы
 installer/      Inno Setup и упаковка
 docs/           Документация (RU + docs/en/)

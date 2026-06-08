@@ -1,6 +1,6 @@
 #include "export/SpriteAtlasService.h"
 
-#include "i18n/AppLocale.h"
+#include "translation/AppLocale.h"
 
 #include <QFileInfo>
 #include <QPainter>

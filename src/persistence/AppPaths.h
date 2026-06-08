@@ -21,6 +21,9 @@ QString projectsDir();
 QString exportsDir();
 QString watchDir();
 
+// User-editable translation bundles (%AppData%/DeeTech/PixelStudio/translations).
+QString userTranslationsDir();
+
 // Derived/runtime data under dataRoot()/cache (regenerable, not authoritative).
 QString cacheDir();
 QString tabCacheDir();

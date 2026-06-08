@@ -2,7 +2,7 @@
 
 #include "app/DisplayConverter.h"
 #include "app/converter/ProjectSessionController.h"
-#include "i18n/AppLocale.h"
+#include "translation/AppLocale.h"
 #include "persistence/AppPaths.h"
 #include "persistence/StoredPath.h"
 #include "persistence/ProjectFormat.h"

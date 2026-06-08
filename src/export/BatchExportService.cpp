@@ -1,6 +1,6 @@
 #include "export/BatchExportService.h"
 
-#include "i18n/AppLocale.h"
+#include "translation/AppLocale.h"
 
 #include <QFile>
 #include <QFileInfo>

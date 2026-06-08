@@ -4,7 +4,8 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 import PixelStudio
 
-pragma Translator: PixelStudio
+pragma Translator: Shell
+
 
 Item {
     id: root
@@ -257,7 +258,7 @@ Item {
         anchors.centerIn: parent
         title: qsTr("Reset session?")
         modal: true
-        standardButtons: Dialog.Yes | Dialog.No
+        standardButtons: Dialog.NoButton
         padding: root.studio.spacingLg
         property int bodyWidth: win.dialogBodyWidth(320, root.studio.spacingXl * 4)
         width: bodyWidth + 2 * padding
@@ -278,6 +279,10 @@ Item {
             font.family: root.studio.fontFamily
             color: root.studio.text
         }
+        footer: StudioConfirmFooter {
+            studio: root.studio
+            dialog: resetSessionConfirmDialog
+        }
     }
 
     Dialog {
@@ -286,7 +291,7 @@ Item {
         anchors.centerIn: parent
         title: qsTr("Close tab?")
         modal: true
-        standardButtons: Dialog.Yes | Dialog.No
+        standardButtons: Dialog.NoButton
         padding: root.studio.spacingLg
         property int bodyWidth: win.dialogBodyWidth(360, root.studio.spacingXl * 4)
         width: bodyWidth + 2 * padding
@@ -321,34 +326,21 @@ Item {
                 text: qsTr("Don't ask again")
             }
         }
+        footer: StudioConfirmFooter {
+            studio: root.studio
+            dialog: closeTabConfirmDialog
+        }
     }
 
-    Dialog {
+    ExitConfirmDialog {
         id: exitConfirmDialog
-        parent: win.overlay
+        parent: root.win.overlay
         anchors.centerIn: parent
-        title: qsTr("Exit PixelStudio?")
-        modal: true
-        standardButtons: Dialog.Yes | Dialog.No
-        padding: root.studio.spacingLg
-        property int bodyWidth: win.dialogBodyWidth(360, root.studio.spacingXl * 4)
-        width: bodyWidth + 2 * padding
+        studio: root.studio
+        win: root.win
         onAccepted: {
-            win.forceClose = true
-            win.close()
-        }
-        background: Rectangle {
-            radius: root.studio.radiusMd
-            color: root.studio.surface
-            border.width: 2
-            border.color: root.studio.accent
-        }
-        contentItem: Label {
-            width: exitConfirmDialog.bodyWidth
-            wrapMode: Text.WordWrap
-            text: qsTr("Close the application? Unsaved exported files or project changes may be lost.")
-            font.family: root.studio.fontFamily
-            color: root.studio.text
+            root.win.forceClose = true
+            root.win.close()
         }
     }
 

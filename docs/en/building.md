@@ -5,7 +5,7 @@
 ## Prerequisites
 
 1. **Visual Studio 2022** with *Desktop development with C++* and MSVC v143 x64.
-2. **Qt 6.8.2** (or compatible 6.8.x) for `msvc2022_64`, including Qt Quick, Quick Controls 2, Svg, and Linguist tools.
+2. **Qt 6.8.2** (or compatible 6.8.x) for `msvc2022_64`, including Qt Quick, Quick Controls 2, and Svg.
 3. **CMake** 3.16+ and **Ninja** on `PATH`.
 4. Optional: **Inno Setup 6** for the Windows installer.
 

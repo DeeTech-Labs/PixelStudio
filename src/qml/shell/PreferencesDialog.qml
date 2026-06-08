@@ -3,7 +3,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import PixelStudio
 
-pragma Translator: PixelStudio
+pragma Translator: Shell
+
 
 Dialog {
     id: root
@@ -12,7 +13,7 @@ Dialog {
     required property var hostDialogs
 
     modal: true
-    standardButtons: Dialog.Ok
+    standardButtons: Dialog.NoButton
     padding: theme.spacingLg
     property int bodyWidth: win.dialogBodyWidth(488, theme.spacingXl * 4)
     width: bodyWidth + 2 * padding
@@ -37,6 +38,7 @@ Dialog {
 
                 StudioField { studio: theme; labelText: qsTr("Language") }
                 StudioCombo {
+                    id: languageCombo
                     Layout.fillWidth: true
                     studio: theme
                     model: appSettings.availableLanguages()
@@ -48,6 +50,59 @@ Dialog {
                             appSettings.setLanguageCode(item.code)
                     }
                 }
+
+                Item {
+                    id: languageCredits
+                    Layout.fillWidth: true
+                    implicitHeight: creditsColumn.implicitHeight
+
+                    readonly property var selectedLanguage: {
+                        const langs = appSettings.availableLanguages()
+                        const idx = languageCombo.currentIndex
+                        if (idx < 0 || idx >= langs.length)
+                            return null
+                        return langs[idx]
+                    }
+
+                    ColumnLayout {
+                        id: creditsColumn
+                        width: parent.width
+                        spacing: theme.spacingXs
+                        visible: languageCredits.selectedLanguage
+                                 && languageCredits.selectedLanguage.code !== "system"
+                                 && (languageCredits.selectedLanguage.author
+                                     || (languageCredits.selectedLanguage.contributors
+                                         && languageCredits.selectedLanguage.contributors.length > 0))
+
+                        Text {
+                            Layout.fillWidth: true
+                            visible: languageCredits.selectedLanguage
+                                     && languageCredits.selectedLanguage.author
+                            wrapMode: Text.WordWrap
+                            font.family: theme.fontFamily
+                            font.pixelSize: theme.fontSizeXs
+                            color: theme.textMuted
+                            text: languageCredits.selectedLanguage
+                                  ? qsTr("Author: %1").arg(languageCredits.selectedLanguage.author)
+                                  : ""
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            visible: languageCredits.selectedLanguage
+                                     && languageCredits.selectedLanguage.contributors
+                                     && languageCredits.selectedLanguage.contributors.length > 0
+                            wrapMode: Text.WordWrap
+                            font.family: theme.fontFamily
+                            font.pixelSize: theme.fontSizeXs
+                            color: theme.textMuted
+                            text: languageCredits.selectedLanguage
+                                  ? qsTr("Contributors: %1").arg(
+                                        languageCredits.selectedLanguage.contributors.join(", "))
+                                  : ""
+                        }
+                    }
+                }
+
                 StudioCheck {
                     Layout.fillWidth: true
                     studio: theme
@@ -224,4 +279,9 @@ Dialog {
                 }
             }
         }
+
+    footer: StudioOkFooter {
+        studio: theme
+        dialog: root
     }
+}

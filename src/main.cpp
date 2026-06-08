@@ -26,6 +26,7 @@
 #include "app/PreviewImageProvider.h"
 #include "app/StudioTabController.h"
 #include "app/WinTaskbarRecent.h"
+#include "translation/TranslationStore.h"
 #include "persistence/AppPaths.h"
 #include "persistence/AppSettings.h"
 #include "persistence/ProjectFormat.h"
@@ -46,6 +47,7 @@ int main(int argc, char *argv[])
     const QString appVersion = AppVersion::display();
     app.setApplicationVersion(appVersion);
     AppPaths::ensureLayout();
+    TranslationStore::instance().refreshCatalog();
 
     AppSettings appSettings;
     AppTranslations::install(app, appSettings.languageCode());

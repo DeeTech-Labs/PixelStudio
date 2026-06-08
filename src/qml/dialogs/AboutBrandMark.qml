@@ -1,6 +1,7 @@
 import QtQuick
 
-pragma Translator: PixelStudio
+pragma Translator: Shell
+
 
 Item {
     id: root

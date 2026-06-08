@@ -2,7 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-pragma Translator: PixelStudio
+pragma Translator: Workspace
+
 
 Item {
     id: root

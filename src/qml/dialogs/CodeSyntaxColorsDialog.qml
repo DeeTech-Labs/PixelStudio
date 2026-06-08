@@ -4,14 +4,15 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 import PixelStudio
 
-pragma Translator: PixelStudio
+pragma Translator: Shell
+
 
 StudioDialog {
     id: root
 
     title: qsTr("Code syntax colors")
     modal: true
-    standardButtons: Dialog.Ok
+    standardButtons: Dialog.NoButton
     width: 500
     property string activeKey: ""
 
@@ -193,5 +194,10 @@ StudioDialog {
             text: qsTr("Reset to VS Code defaults")
             onClicked: appSettings.codeSyntax.resetDefaults()
         }
+    }
+
+    footer: StudioOkFooter {
+        studio: root.studio
+        dialog: root
     }
 }

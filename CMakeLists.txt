@@ -14,13 +14,27 @@ endif()
 
 set(PS_GENERATED_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
 file(MAKE_DIRECTORY ${PS_GENERATED_INCLUDE_DIR}/app)
+file(MAKE_DIRECTORY ${PS_GENERATED_INCLUDE_DIR}/translation)
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/app/AppVersion.h.in
     ${PS_GENERATED_INCLUDE_DIR}/app/AppVersion.h
     @ONLY
 )
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Gui Network Concurrent LinguistTools Svg)
+file(GLOB PS_TRANSLATION_BUNDLES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/translations/??.json")
+set(PS_TRANSLATION_CODE_ENTRIES "inline constexpr const char *kBundledLanguageCodes[] = {")
+foreach(_ps_translation_bundle ${PS_TRANSLATION_BUNDLES})
+    get_filename_component(_ps_translation_code ${_ps_translation_bundle} NAME_WE)
+    string(APPEND PS_TRANSLATION_CODE_ENTRIES "\n    \"${_ps_translation_code}\",")
+endforeach()
+string(APPEND PS_TRANSLATION_CODE_ENTRIES "\n    nullptr\n};")
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/translation/TranslationStoreBuiltin.h.in
+    ${PS_GENERATED_INCLUDE_DIR}/translation/TranslationStoreBuiltin.h
+    @ONLY
+)
+
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Gui Network Concurrent Svg)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -53,10 +67,15 @@ set(PIXELSTUDIO_CORE_SOURCES
     src/io/BinaryExporter.cpp
     src/io/HeaderImportService.cpp
     src/io/WatchFolderService.cpp
+    src/translation/TranslationStore.cpp
+    src/translation/JsonTranslator.cpp
 )
 
 add_library(pixelstudio_core STATIC ${PIXELSTUDIO_CORE_SOURCES})
-target_include_directories(pixelstudio_core PUBLIC ${PIXELSTUDIO_SRC_DIR})
+target_include_directories(pixelstudio_core PUBLIC
+    ${PIXELSTUDIO_SRC_DIR}
+    ${PS_GENERATED_INCLUDE_DIR}
+)
 target_link_libraries(pixelstudio_core PUBLIC Qt6::Gui Qt6::Concurrent Qt6::Network)
 
 set(APP_SOURCES
@@ -89,21 +108,50 @@ target_include_directories(appPixelStudio PRIVATE
     ${PS_GENERATED_INCLUDE_DIR}
 )
 
-qt_add_translations(appPixelStudio
-    SOURCE_TARGETS pixelstudio_core appPixelStudio
-    TS_FILES
-        i18n/pixelstudio_en.ts
-        i18n/pixelstudio_ru.ts
-    RESOURCE_PREFIX /i18n
-)
-
 set(PIXELSTUDIO_QML_FILES
-    src/qml/I18n.qml
+    src/qml/Translation.qml
     src/qml/Main.qml
+    src/qml/Theme.qml
+    src/qml/welcome/WelcomeScreen.qml
+    src/qml/welcome/WelcomeBackdrop.qml
+    src/qml/welcome/WelcomeRecentCard.qml
+    src/qml/welcome/WelcomeFooterNav.qml
+    src/qml/welcome/WelcomeBrandMark.qml
+    src/qml/welcome/WelcomeSparkle.qml
+    src/qml/panels/InspectorDock.qml
+    src/qml/panels/InspectorPageDisplay.qml
+    src/qml/panels/InspectorPageImage.qml
+    src/qml/panels/InspectorPageExport.qml
+    src/qml/panels/ExportActionsPanel.qml
     src/qml/shell/MainMenuBar.qml
     src/qml/shell/MainDialogs.qml
+    src/qml/shell/ExitConfirmDialog.qml
     src/qml/shell/PreferencesDialog.qml
-    src/qml/Theme.qml
+    src/qml/shell/studio/StudioShell.qml
+    src/qml/shell/studio/StudioTabBar.qml
+    src/qml/shell/studio/StudioTabChip.qml
+    src/qml/shell/studio/StudioToolbar.qml
+    src/qml/shell/studio/StudioStatusBar.qml
+    src/qml/shell/studio/StudioToast.qml
+    src/qml/shell/studio/StudioDialog.qml
+    src/qml/shell/studio/StudioConfirmFooter.qml
+    src/qml/shell/studio/StudioOkFooter.qml
+    src/qml/dialogs/AboutDialog.qml
+    src/qml/dialogs/CodeSyntaxColorsDialog.qml
+    src/qml/dialogs/AboutBrandMark.qml
+    src/qml/workspace/StudioDropCanvas.qml
+    src/qml/workspace/StudioLayout.qml
+    src/qml/workspace/CodePanel.qml
+    src/qml/workspace/CodeSyntaxView.qml
+    src/qml/workspace/dock/LeftAssetDock.qml
+    src/qml/workspace/dock/PalettePanel.qml
+    src/qml/workspace/dock/ProjectPanel.qml
+    src/qml/studio/StudioViewport.qml
+    src/qml/studio/PixelPanel.qml
+    src/qml/studio/PixelFrame.qml
+    src/qml/studio/PixelTab.qml
+    src/qml/studio/PixelDottedRule.qml
+    src/qml/studio/StudioBackdrop.qml
     src/qml/controls/StudioField.qml
     src/qml/controls/StudioSection.qml
     src/qml/controls/StudioButton.qml
@@ -116,48 +164,14 @@ set(PIXELSTUDIO_QML_FILES
     src/qml/controls/StudioCombo.qml
     src/qml/controls/StudioTextField.qml
     src/qml/controls/StudioScroll.qml
-    src/qml/studio/StudioViewport.qml
-    src/qml/studio/PixelPanel.qml
-    src/qml/studio/PixelFrame.qml
-    src/qml/studio/PixelTab.qml
-    src/qml/studio/PixelDottedRule.qml
-    src/qml/dialogs/AboutBrandMark.qml
-    src/qml/studio/StudioBackdrop.qml
-    src/qml/workspace/StudioDropCanvas.qml
-    src/qml/workspace/StudioLayout.qml
-    src/qml/workspace/CodePanel.qml
-    src/qml/workspace/CodeSyntaxView.qml
-    src/qml/workspace/dock/LeftAssetDock.qml
-    src/qml/workspace/dock/PalettePanel.qml
-    src/qml/workspace/dock/ProjectPanel.qml
-    src/qml/panels/InspectorDock.qml
-    src/qml/panels/InspectorPageDisplay.qml
-    src/qml/panels/InspectorPageImage.qml
-    src/qml/panels/InspectorPageExport.qml
-    src/qml/panels/ExportActionsPanel.qml
-    src/qml/shell/studio/StudioShell.qml
-    src/qml/shell/studio/StudioTabBar.qml
-    src/qml/shell/studio/StudioTabChip.qml
-    src/qml/shell/studio/StudioToolbar.qml
-    src/qml/shell/studio/StudioStatusBar.qml
-    src/qml/shell/studio/StudioToast.qml
-    src/qml/shell/studio/StudioDialog.qml
-    src/qml/dialogs/AboutDialog.qml
-    src/qml/dialogs/CodeSyntaxColorsDialog.qml
-    src/qml/welcome/WelcomeScreen.qml
-    src/qml/welcome/WelcomeBackdrop.qml
-    src/qml/welcome/WelcomeRecentCard.qml
-    src/qml/welcome/WelcomeFooterNav.qml
-    src/qml/welcome/WelcomeBrandMark.qml
-    src/qml/welcome/WelcomeSparkle.qml
 )
 
-# QML qsTr() defaults to file name as context; all studio QML use context "PixelStudio".
-# All entries in pixelstudio_*.ts use context "PixelStudio" — align runtime lookup.
-set_source_files_properties(${PIXELSTUDIO_QML_FILES}
-    PROPERTIES QT_TR_CONTEXT "PixelStudio"
+qt_add_resources(appPixelStudio "app_translations"
+    PREFIX /translations
+    BASE translations
+    FILES ${PS_TRANSLATION_BUNDLES}
 )
-set_source_files_properties(src/qml/I18n.qml
+set_source_files_properties(src/qml/Translation.qml
     PROPERTIES QT_QML_SINGLETON_TYPE TRUE
 )
 

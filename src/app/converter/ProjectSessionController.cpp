@@ -2,7 +2,7 @@
 #include "app/converter/ImagePipelineController.h"
 #include "app/DisplayConverter.h"
 
-#include "i18n/AppLocale.h"
+#include "translation/AppLocale.h"
 #include "io/ImageLoader.h"
 #include "persistence/AppPaths.h"
 #include "persistence/ProjectService.h"

@@ -1,7 +1,8 @@
 #include "persistence/AppSettings.h"
 
 #include "app/CodeSyntaxTheme.h"
-#include "i18n/AppLocale.h"
+#include "translation/AppLocale.h"
+#include "translation/TranslationStore.h"
 #include "persistence/AppPaths.h"
 #include "persistence/SettingsSchema.h"
 
@@ -19,8 +20,10 @@ AppSettings::AppSettings(QObject *parent)
 void AppSettings::load()
 {
     m_languageCode = m_settings.value(QStringLiteral("app/language"), m_languageCode).toString();
-    if (m_languageCode != QStringLiteral("system") && m_languageCode != QStringLiteral("en") && m_languageCode != QStringLiteral("ru"))
+    if (m_languageCode != QStringLiteral("system")
+        && !TranslationStore::instance().hasLanguage(m_languageCode)) {
         m_languageCode = QStringLiteral("system");
+    }
     m_showSidebar = m_settings.value(QStringLiteral("app/showSidebar"), m_showSidebar).toBool();
     m_showPixelGrid = m_settings.value(QStringLiteral("app/showPixelGrid"), m_showPixelGrid).toBool();
     m_codeWrap = m_settings.value(QStringLiteral("app/codeWrap"), m_codeWrap).toBool();
@@ -44,14 +47,7 @@ void AppSettings::saveValue(const QString &key, const QVariant &value)
 
 QVariantList AppSettings::availableLanguages() const
 {
-    return {
-        QVariantMap{{QStringLiteral("code"), QStringLiteral("system")},
-                    {QStringLiteral("name"), AppLocale::tr("System language")}},
-        QVariantMap{{QStringLiteral("code"), QStringLiteral("ru")},
-                    {QStringLiteral("name"), QStringLiteral("Русский")}},
-        QVariantMap{{QStringLiteral("code"), QStringLiteral("en")},
-                    {QStringLiteral("name"), AppLocale::tr("English")}},
-    };
+    return TranslationStore::instance().availableLanguages();
 }
 
 void AppSettings::resetUiDefaults()
@@ -66,9 +62,12 @@ void AppSettings::resetUiDefaults()
 
 void AppSettings::setLanguageCode(const QString &code)
 {
-    const QString safe = (code == QStringLiteral("en") || code == QStringLiteral("ru"))
-        ? code
-        : QStringLiteral("system");
+    QString safe = code;
+    if (safe != QStringLiteral("system")) {
+        safe = safe.toLower();
+        if (!TranslationStore::instance().hasLanguage(safe))
+            safe = QStringLiteral("system");
+    }
     if (m_languageCode == safe)
         return;
     m_languageCode = safe;

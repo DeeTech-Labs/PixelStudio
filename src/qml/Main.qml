@@ -4,7 +4,8 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 import PixelStudio
 
-pragma Translator: PixelStudio
+pragma Translator: Shell
+
 
 ApplicationWindow {
     id: window

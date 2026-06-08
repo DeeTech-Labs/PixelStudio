@@ -1,7 +1,8 @@
 import QtQuick
 import PixelStudio
 
-pragma Translator: PixelStudio
+pragma Translator: Workspace
+
 
 Item {
     id: root

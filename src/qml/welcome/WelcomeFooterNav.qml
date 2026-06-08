@@ -2,7 +2,8 @@ import QtQuick
 import QtQuick.Layouts
 import PixelStudio
 
-pragma Translator: PixelStudio
+pragma Translator: Welcome
+
 
 RowLayout {
     id: root
@@ -83,13 +84,13 @@ RowLayout {
                                 const _lang = languageTag
                                 switch (modelData.key) {
                                 case "docs":
-                                    return qsTranslate("PixelStudio", "Documentation")
+                                    return qsTranslate("Welcome", "Documentation")
                                 case "examples":
-                                    return qsTranslate("PixelStudio", "Examples")
+                                    return qsTranslate("Welcome", "Examples")
                                 case "profiles":
-                                    return qsTranslate("PixelStudio", "Display Profiles")
+                                    return qsTranslate("Welcome", "Display Profiles")
                                 case "settings":
-                                    return qsTranslate("PixelStudio", "Settings")
+                                    return qsTranslate("Welcome", "Settings")
                                 }
                                 return ""
                             }
@@ -107,13 +108,13 @@ RowLayout {
                                 const _lang = languageTag
                                 switch (modelData.key) {
                                 case "docs":
-                                    return qsTranslate("PixelStudio", "Learn the basics")
+                                    return qsTranslate("Welcome", "Learn the basics")
                                 case "examples":
-                                    return qsTranslate("PixelStudio", "Explore sample projects")
+                                    return qsTranslate("Welcome", "Explore sample projects")
                                 case "profiles":
-                                    return qsTranslate("PixelStudio", "Manage your displays")
+                                    return qsTranslate("Welcome", "Manage your displays")
                                 case "settings":
-                                    return qsTranslate("PixelStudio", "Customize PixelStudio")
+                                    return qsTranslate("Welcome", "Customize PixelStudio")
                                 }
                                 return ""
                             }

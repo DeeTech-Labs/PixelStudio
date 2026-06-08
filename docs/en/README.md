@@ -37,7 +37,7 @@ Add PNG files under [`../screenshots/`](../screenshots/) ([guide](../screenshots
 - **Studio UI** — drag-and-drop, live preview, inspector (image / display / export)
 - **Export** — batch export, sprite atlas, binary export, watch folder
 - **Projects** — save/load studio sessions
-- **i18n** — English and Russian UI
+- **Translations** — English and Russian UI
 
 ## Download
 
@@ -50,7 +50,7 @@ Verify SHA256 checksums on the release page when provided.
 | Component | Version |
 |-----------|---------|
 | OS | Windows 10/11 x64 |
-| [Qt](https://www.qt.io/download) | 6.8.x (MSVC 2022 64-bit): Quick, QuickControls2, Gui, Network, Concurrent, LinguistTools, Svg |
+| [Qt](https://www.qt.io/download) | 6.8.x (MSVC 2022 64-bit): Quick, QuickControls2, Gui, Network, Concurrent, Svg |
 | [CMake](https://cmake.org/) | ≥ 3.16 |
 | [Ninja](https://ninja-build.org/) | recommended |
 | [Visual Studio](https://visualstudio.microsoft.com/) | 2022 with C++ desktop workload |
@@ -86,7 +86,7 @@ Version: [`cmake/PixelStudioVersion.cmake`](../../cmake/PixelStudioVersion.cmake
 ```
 cmake/          Version and CMake helpers
 src/            C++ core, QML UI, persistence, export
-i18n/           Translation sources (.ts)
+translations/   JSON translation bundles (user overrides in AppData/translations)
 resources/      Icons and assets
 installer/      Inno Setup and packaging
 docs/           Documentation (RU + docs/en/)

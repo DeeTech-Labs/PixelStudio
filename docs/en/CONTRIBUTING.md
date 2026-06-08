@@ -15,7 +15,7 @@ Thank you for improving PixelStudio. This document covers build, verification, a
 | Tool | Notes |
 |------|--------|
 | Windows 10/11 x64 | Primary platform |
-| Qt 6.8.x MSVC 2022 64-bit | Quick, QuickControls2, Gui, Network, Concurrent, LinguistTools, Svg |
+| Qt 6.8.x MSVC 2022 64-bit | Quick, QuickControls2, Gui, Network, Concurrent, Svg |
 | CMake ≥ 3.16 | Ninja recommended |
 | Visual Studio 2022 | C++ desktop workload |
 | Inno Setup 6 | Installer only |
@@ -45,8 +45,7 @@ Edit [`cmake/PixelStudioVersion.cmake`](../../cmake/PixelStudioVersion.cmake) an
 
 ## Translations
 
-- QML context: `PixelStudio`.
-- Update `i18n/pixelstudio_en.ts` and `i18n/pixelstudio_ru.ts` for UI changes.
+Translations are JSON files (`translations/en.json`, `translations/ru.json`) with `language`, `name`, optional `author`, and `contributors` (string array). Users add `%AppData%/DeeTech/PixelStudio/translations/<code>.json` to register a language without rebuilding.
 
 ## Pull requests
 

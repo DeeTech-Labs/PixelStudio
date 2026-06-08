@@ -6,8 +6,7 @@
 #include "processing/DisplayProfile.h"
 #include "processing/DisplayRasterizer.h"
 #include "processing/EncodingAnalyzer.h"
-
-#include <QCoreApplication>
+#include "translation/AppLocale.h"
 #include <QtConcurrent>
 
 void ImagePipelineController::scheduleRebuild(DisplayConverter &converter, bool immediate)
@@ -90,7 +89,7 @@ void ImagePipelineController::startAsyncRebuild(DisplayConverter &converter)
         profile.height = height;
         profile.colorMode = colorMode;
         if (profile.id == QStringLiteral("custom"))
-            profile.name = QCoreApplication::translate("PixelStudio", "Custom %1×%2")
+            profile.name = AppLocale::tr("Custom %1×%2")
                                .arg(width)
                                .arg(height);
 

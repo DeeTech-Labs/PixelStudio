@@ -3,7 +3,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import PixelStudio
 
-pragma Translator: PixelStudio
+pragma Translator: Shell
+
 
 Rectangle {
     id: chip

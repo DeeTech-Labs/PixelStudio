@@ -15,7 +15,7 @@
 | Инструмент | Заметки |
 |------------|---------|
 | Windows 10/11 x64 | Основная платформа |
-| Qt 6.8.x MSVC 2022 64-bit | Quick, QuickControls2, Gui, Network, Concurrent, LinguistTools, Svg |
+| Qt 6.8.x MSVC 2022 64-bit | Quick, QuickControls2, Gui, Network, Concurrent, Svg |
 | CMake ≥ 3.16 | Рекомендуется Ninja |
 | Visual Studio 2022 | C++ desktop workload |
 | Inno Setup 6 | Только для сборки установщика |
@@ -51,8 +51,29 @@ cmake --build build\Release
 
 ## Переводы
 
-- Контекст QML: `PixelStudio`.
-- При изменении UI обновляйте `i18n/pixelstudio_en.ts` и `i18n/pixelstudio_ru.ts`.
+Переводы в JSON: `translations/en.json`, `translations/ru.json`. Код и название языка — в самом файле (`language`, `name`).
+
+```json
+{
+  "language": "ru",
+  "name": "Русский",
+  "author": "Имя основного переводчика",
+  "contributors": ["Кто помогал", "Кто правил строки"],
+  "contexts": {
+    "Shell": { "&File": "&Файл" },
+    "Core": { "Home": "Главная" }
+  }
+}
+```
+
+- `author` — основной автор перевода (отображается в настройках).
+- `contributors` — массив имён тех, кто помогал или вносил правки.
+
+Контексты: `Welcome`, `Inspector`, `Shell`, `Workspace`, `Controls`, `Core`. В QML — `pragma Translator: <Контекст>` и `qsTr()`.
+
+**Пользовательские языки** (без пересборки): положите `%AppData%/DeeTech/PixelStudio/translations/<код>.json` — язык появится в меню автоматически. Пример: `translations/de.example.json`.
+
+Встроенный язык: добавьте `translations/<код>.json` (два символа в имени файла), пересоберите.
 
 ## Pull request
 

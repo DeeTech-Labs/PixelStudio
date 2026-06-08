@@ -2,7 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import PixelStudio
 
-pragma Translator: PixelStudio
+pragma Translator: Workspace
+
 
 Item {
     id: root

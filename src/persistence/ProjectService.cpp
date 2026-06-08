@@ -1,4 +1,4 @@
-#include "i18n/AppLocale.h"
+#include "translation/AppLocale.h"
 #include "persistence/ProjectFormat.h"
 #include "persistence/ProjectService.h"
 

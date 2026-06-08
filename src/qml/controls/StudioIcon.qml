@@ -1,7 +1,8 @@
 import QtQuick
 import Qt5Compat.GraphicalEffects
 
-pragma Translator: PixelStudio
+pragma Translator: Controls
+
 
 Item {
     id: root

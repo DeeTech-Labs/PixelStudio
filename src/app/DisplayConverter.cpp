@@ -3,7 +3,7 @@
 #include "app/converter/ExportController.h"
 #include "app/converter/ImagePipelineController.h"
 #include "app/converter/ProjectSessionController.h"
-#include "i18n/AppLocale.h"
+#include "translation/AppLocale.h"
 #include "persistence/AppPaths.h"
 #include "persistence/AppSettings.h"
 #include "processing/DisplayCodeGenerator.h"
@@ -318,10 +318,10 @@ QString DisplayConverter::monoLayoutName() const
 {
     using Layout = DisplayCodeGenerator::MonoLayout;
     if (m_state.monoLayout == Layout::Ssd1306Page)
-        return QCoreApplication::translate("PixelStudio", "Vertical page buffer");
+        return AppLocale::tr("Vertical page buffer");
     if (m_state.monoLayout == Layout::VerticalColumn)
-        return QCoreApplication::translate("PixelStudio", "Vertical column");
-    return QCoreApplication::translate("PixelStudio", "Row-packed");
+        return AppLocale::tr("Vertical column");
+    return AppLocale::tr("Row-packed");
 }
 
 QVariantList DisplayConverter::previewPalette() const
@@ -346,7 +346,7 @@ QString DisplayConverter::imageFormatName() const
     const int dot = path.lastIndexOf(QLatin1Char('.'));
     if (dot >= 0 && dot < path.size() - 1)
         return path.mid(dot + 1).toUpper();
-    return QCoreApplication::translate("PixelStudio", "Image");
+    return AppLocale::tr("Image");
 }
 
 int DisplayConverter::sourceWidth() const
@@ -1030,7 +1030,7 @@ QVariantList DisplayConverter::displayPresets() const
     for (const DisplayProfile &p : DisplayProfile::presets()) {
         QVariantMap m;
         m[QStringLiteral("id")] = p.id;
-        m[QStringLiteral("name")] = QCoreApplication::translate("PixelStudio", p.name.toUtf8().constData());
+        m[QStringLiteral("name")] = AppLocale::tr(p.name.toUtf8().constData());
         m[QStringLiteral("width")] = p.width;
         m[QStringLiteral("height")] = p.height;
         list.append(m);

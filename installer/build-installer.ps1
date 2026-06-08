@@ -23,7 +23,7 @@ function Get-InstallerRuntimeFiles {
         'imageformats/qsvg.dll'
         'PixelStudio/qmldir'
         'PixelStudio/src/qml/qmldir'
-        'PixelStudio/src/qml/I18n.qml'
+        'PixelStudio/src/qml/Translation.qml'
         'PixelStudio/src/qml/Main.qml'
         'PixelStudio/src/qml/Theme.qml'
         'PixelStudio/src/qml/controls/qmldir'

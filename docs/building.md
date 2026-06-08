@@ -9,7 +9,6 @@
    - Qt Quick
    - Qt Quick Controls 2
    - Qt Svg
-   - Qt Linguist (инструменты)
 3. **CMake** 3.16+ и **Ninja** в `PATH`.
 4. По желанию: **Inno Setup 6** для установщика Windows.
 

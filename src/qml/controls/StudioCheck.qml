@@ -1,7 +1,8 @@
 import QtQuick
 import QtQuick.Controls
 
-pragma Translator: PixelStudio
+pragma Translator: Controls
+
 
 CheckBox {
     id: root
