@@ -43,6 +43,9 @@ set(PIXELSTUDIO_CORE_SOURCES
     src/persistence/SessionSettings.cpp
     src/persistence/ProjectService.cpp
     src/persistence/ProjectFormat.cpp
+    src/persistence/ProjectFormatIo.cpp
+    src/persistence/ProjectFormatEncoder.cpp
+    src/persistence/ProjectFormatDecoder.cpp
     src/persistence/RecentPreview.cpp
     src/persistence/StoredPath.cpp
     src/persistence/SettingsSchema.cpp
@@ -61,8 +64,12 @@ set(APP_SOURCES
     src/main.cpp
     src/app/AppTranslations.cpp
     src/app/AppTranslations.h
+    src/app/CodeSyntaxHighlighter.cpp
+    src/app/CodeSyntaxHighlighter.h
     src/app/DisplayConverter.cpp
     src/app/DisplayConverter.h
+    src/app/PreviewImageProvider.cpp
+    src/app/PreviewImageProvider.h
     src/app/converter/ImagePipelineController.cpp
     src/app/converter/ProjectSessionController.cpp
     src/app/converter/ExportController.cpp

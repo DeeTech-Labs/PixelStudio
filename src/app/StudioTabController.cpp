@@ -9,6 +9,7 @@
 #include "persistence/ProjectService.h"
 #include "persistence/SessionSettings.h"
 
+#include <QBuffer>
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
@@ -102,11 +103,15 @@ QVariantMap StudioTabController::welcomeTabRecentRow(const TabEntry &tab) const
         return row;
     };
 
-    if (tab.memorySnapshot.has_value()) {
-        if (!ProjectService::hasImageContent(*tab.memorySnapshot))
+    if (tab.tabSnapshot.has_value()) {
+        if (tab.tabSnapshot->sourceImage.isNull()
+            && !ProjectService::hasImageContent(tab.tabSnapshot->project)) {
             return {};
+        }
 
-        const QString imagePath = ProjectService::primaryImagePath(*tab.memorySnapshot);
+        const QString imagePath = !tab.tabSnapshot->sourceFilePath.isEmpty()
+            ? tab.tabSnapshot->sourceFilePath
+            : ProjectService::primaryImagePath(tab.tabSnapshot->project);
         if (!imagePath.isEmpty())
             return finish(SessionSettings::makeRecentEntry(imagePath, tab.title));
 
@@ -308,11 +313,8 @@ QString StudioTabController::displayTitle() const
         return QFileInfo(m_converter->projectFile().toLocalFile()).completeBaseName();
     if (!m_converter->projectName().isEmpty() && m_converter->projectName() != QStringLiteral("Untitled"))
         return m_converter->projectName();
-    if (m_converter->hasImage() && !m_converter->sourcePath().isEmpty()) {
-        const QString local = m_converter->sourcePath().toLocalFile();
-        if (!local.isEmpty())
-            return QFileInfo(local).fileName();
-    }
+    if (m_converter->hasImage() && !m_converter->sourceFilePath().isEmpty())
+        return QFileInfo(m_converter->sourceFilePath()).fileName();
     return m_converter->projectName().isEmpty() ? AppLocale::tr("Untitled") : m_converter->projectName();
 }
 
@@ -349,11 +351,11 @@ void StudioTabController::stashActiveTab()
             active->cachePath.clear();
         }
         active->projectPath.clear();
-        active->memorySnapshot.reset();
+        active->tabSnapshot.reset();
         return;
     }
 
-    active->memorySnapshot = m_converter->projectSnapshot();
+    active->tabSnapshot = m_converter->captureTabState();
     m_converter->rememberOpenSourceInRecent();
 
     if (!m_converter->projectFile().isEmpty()) {
@@ -374,8 +376,8 @@ bool StudioTabController::restoreTab(const TabEntry &entry)
     if (!m_converter || entry.isWelcome)
         return true;
 
-    if (entry.memorySnapshot.has_value()) {
-        m_converter->applyProject(*entry.memorySnapshot);
+    if (entry.tabSnapshot.has_value()) {
+        m_converter->restoreTabState(*entry.tabSnapshot);
         if (!entry.projectPath.isEmpty())
             ProjectSessionController::setProjectFileUrl(*m_converter, QUrl::fromLocalFile(entry.projectPath));
         else if (!entry.cachePath.isEmpty())
@@ -402,16 +404,46 @@ void StudioTabController::flushTabCachesToDisk()
         return;
 
     for (TabEntry &tab : m_tabs) {
-        if (tab.isWelcome || !tab.memorySnapshot.has_value())
+        if (tab.isWelcome || !tab.tabSnapshot.has_value())
             continue;
-        if (!ProjectService::hasImageContent(*tab.memorySnapshot))
+        if (tab.tabSnapshot->sourceImage.isNull()
+            && !ProjectService::hasImageContent(tab.tabSnapshot->project)) {
             continue;
+        }
 
         if (tab.cachePath.isEmpty()) {
             tab.cachePath = AppPaths::tabCacheDir() + QLatin1Char('/')
                 + tab.id + ProjectFormat::extension();
         }
-        ProjectService::save(*tab.memorySnapshot, QUrl::fromLocalFile(tab.cachePath), nullptr);
+
+        StudioProject diskProject = tab.tabSnapshot->project;
+        auto savePng = [](const QImage &image) -> QByteArray {
+            if (image.isNull())
+                return {};
+            QByteArray png;
+            QBuffer buffer(&png);
+            buffer.open(QIODevice::WriteOnly);
+            return image.save(&buffer, "PNG") ? png : QByteArray{};
+        };
+        diskProject.sourceImagePng.clear();
+        diskProject.resultPreviewPng.clear();
+        const bool hasSourceFile = !tab.tabSnapshot->sourceFilePath.isEmpty()
+            && QFileInfo::exists(tab.tabSnapshot->sourceFilePath);
+        if (hasSourceFile) {
+            diskProject.assets.clear();
+            diskProject.assets.append(ProjectAsset{
+                tab.tabSnapshot->sourceFilePath,
+                QFileInfo(tab.tabSnapshot->sourceFilePath).fileName(),
+                0,
+                0,
+            });
+        } else if (!tab.tabSnapshot->sourceImage.isNull()) {
+            diskProject.sourceImagePng = savePng(tab.tabSnapshot->sourceImage);
+        }
+        if (!tab.tabSnapshot->lastResult.preview.isNull())
+            diskProject.resultPreviewPng = savePng(tab.tabSnapshot->lastResult.preview);
+
+        ProjectService::save(diskProject, QUrl::fromLocalFile(tab.cachePath), nullptr);
     }
 }
 

@@ -2,6 +2,7 @@
 #define PIXELSTUDIO_APP_CODESYNTAXTHEME_H
 
 #include <QHash>
+#include <QMutex>
 #include <QObject>
 #include <QSettings>
 #include <QString>
@@ -65,6 +66,7 @@ private:
     static QString normalizeColor(const QString &value, const QString &fallback);
     static void applyDefaults(CodeSyntaxTheme *theme);
 
+    mutable QMutex m_highlightMutex;
     mutable QHash<quint64, QString> m_highlightCache;
     QString m_comment;
     QString m_directive;

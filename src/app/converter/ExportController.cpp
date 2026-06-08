@@ -16,20 +16,21 @@ void ExportController::configureWatchFolder(DisplayConverter &converter,
                                             const QString &inputFolder,
                                             const QString &outputFolder)
 {
+    ConverterState &state = converter.converterState();
     QString out = outputFolder.trimmed();
     if (out.isEmpty())
         out = AppPaths::watchDir();
-    converter.m_uiState.watchInputFolder = inputFolder;
-    converter.m_uiState.watchOutputFolder = out;
-    converter.m_watchService.configure(inputFolder, out);
+    state.uiState.watchInputFolder = inputFolder;
+    state.uiState.watchOutputFolder = out;
+    converter.watchService()->configure(inputFolder, out);
     converter.updateWatchExportPrefix();
     converter.schedulePersistSession();
 }
 
 void ExportController::setWatchFolderActive(DisplayConverter &converter, bool active)
 {
-    converter.m_uiState.watchActive = active;
-    converter.m_watchService.setActive(active);
+    converter.converterState().uiState.watchActive = active;
+    converter.watchService()->setActive(active);
     converter.schedulePersistSession();
 }
 
@@ -39,16 +40,17 @@ bool ExportController::buildSpriteAtlas(DisplayConverter &converter,
                                         int frameWidth,
                                         int frameHeight)
 {
+    const ConverterState &state = converter.converterState();
     SpriteAtlasRequest request;
     request.pipeline = converter.pipelineParams();
-    request.arrayPrefix = converter.m_arrayName.isEmpty() ? QStringLiteral("sprite") : converter.m_arrayName;
+    request.arrayPrefix = state.arrayName.isEmpty() ? QStringLiteral("sprite") : state.arrayName;
     request.frameWidth = frameWidth;
     request.frameHeight = frameHeight;
     request.fixedGrid = true;
     request.padding = 1;
-    request.encodingMode = converter.m_encodingMode;
-    request.monoLayout = converter.m_monoLayout;
-    request.codeGenOptions = converter.m_codeGenOptions;
+    request.encodingMode = state.encodingMode;
+    request.monoLayout = state.monoLayout;
+    request.codeGenOptions = state.codeGenOptions;
     for (const QVariant &value : urls) {
         const QUrl url = value.toUrl();
         if (url.isValid())
@@ -75,7 +77,8 @@ bool ExportController::buildSpriteAtlas(DisplayConverter &converter,
 
 bool ExportController::saveCodeToFile(DisplayConverter &converter, const QUrl &url)
 {
-    if (converter.m_generatedCode.isEmpty())
+    const ConverterState &state = converter.converterState();
+    if (state.generatedCode.isEmpty())
         return false;
 
     QString path = url.toLocalFile();
@@ -93,16 +96,17 @@ bool ExportController::saveCodeToFile(DisplayConverter &converter, const QUrl &u
     }
     QTextStream out(&file);
     out.setEncoding(QStringConverter::Utf8);
-    out << converter.m_generatedCode;
+    out << state.generatedCode;
     converter.rememberExportDir(path);
-    if (converter.m_session)
-        converter.m_session->addRecentExport(path);
+    if (converter.session())
+        converter.session()->addRecentExport(path);
     return true;
 }
 
 bool ExportController::saveBinaryToFile(DisplayConverter &converter, const QUrl &url)
 {
-    if (converter.m_lastResult.width < 1 || converter.m_lastResult.height < 1)
+    const ConverterState &state = converter.converterState();
+    if (state.lastResult.width < 1 || state.lastResult.height < 1)
         return false;
     QString path = url.toLocalFile();
     if (path.isEmpty())
@@ -113,18 +117,18 @@ bool ExportController::saveBinaryToFile(DisplayConverter &converter, const QUrl 
     }
 
     const QByteArray data = DisplayCodeGenerator::binaryData(
-        converter.m_encodingMode,
-        converter.m_displayWidth,
-        converter.m_displayHeight,
-        converter.m_lastResult.monoBits,
-        converter.m_lastResult.monoBuffer,
-        converter.m_lastResult.grayscale8,
-        converter.m_lastResult.rgb565,
-        converter.m_lastResult.rgb888,
-        converter.m_lastResult.rgb233,
-        converter.m_lastResult.rgb24,
-        converter.m_monoLayout,
-        converter.m_codeGenOptions);
+        state.encodingMode,
+        state.displayWidth,
+        state.displayHeight,
+        state.lastResult.monoBits,
+        state.lastResult.monoBuffer,
+        state.lastResult.grayscale8,
+        state.lastResult.rgb565,
+        state.lastResult.rgb888,
+        state.lastResult.rgb233,
+        state.lastResult.rgb24,
+        state.monoLayout,
+        state.codeGenOptions);
 
     QString error;
     if (!BinaryExporter::save(path, data, &error)) {
@@ -132,8 +136,8 @@ bool ExportController::saveBinaryToFile(DisplayConverter &converter, const QUrl 
         return false;
     }
     converter.rememberExportDir(path);
-    if (converter.m_session)
-        converter.m_session->addRecentExport(path);
+    if (converter.session())
+        converter.session()->addRecentExport(path);
     return true;
 }
 
@@ -141,6 +145,7 @@ void ExportController::enqueueBatchCodeExport(DisplayConverter &converter,
                                               const QVariantList &urls,
                                               const QUrl &targetFile)
 {
+    const ConverterState &state = converter.converterState();
     QVector<QUrl> files;
     files.reserve(urls.size());
     for (const QVariant &entry : urls) {
@@ -157,9 +162,9 @@ void ExportController::enqueueBatchCodeExport(DisplayConverter &converter,
     job.files = files;
     job.targetFile = targetFile;
     job.pipeline = converter.pipelineParams();
-    job.profileId = converter.m_profileId;
-    job.encodingMode = converter.m_encodingMode;
-    job.monoLayout = converter.m_monoLayout;
-    job.codeGenOptions = converter.m_codeGenOptions;
-    converter.m_batchService.enqueue(job);
+    job.profileId = state.profileId;
+    job.encodingMode = state.encodingMode;
+    job.monoLayout = state.monoLayout;
+    job.codeGenOptions = state.codeGenOptions;
+    converter.batchService()->enqueue(job);
 }

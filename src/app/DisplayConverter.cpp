@@ -1,4 +1,5 @@
 #include "app/DisplayConverter.h"
+#include "app/PreviewImageProvider.h"
 #include "app/converter/ExportController.h"
 #include "app/converter/ImagePipelineController.h"
 #include "app/converter/ProjectSessionController.h"
@@ -118,19 +119,19 @@ DisplayConverter::DisplayConverter(SessionSettings *session, AppSettings *appSet
     connect(m_loader, &ImageLoader::error, this, &DisplayConverter::errorOccurred);
     connect(m_loader, &ImageLoader::loadingChanged, this, [this]() {
         const bool loading = m_loader->loading();
-        if (m_imageLoading == loading)
+        if (m_state.imageLoading == loading)
             return;
-        m_imageLoading = loading;
+        m_state.imageLoading = loading;
         emit imageLoadingChanged();
     });
-    m_filterParams.ditherMode = ImageFiltersPipeline::DitherMode::FloydSteinberg;
-    m_filterParams.threshold = m_monoThreshold;
+    m_state.filterParams.ditherMode = ImageFiltersPipeline::DitherMode::FloydSteinberg;
+    m_state.filterParams.threshold = m_state.monoThreshold;
     m_rebuildDebounceTimer.setSingleShot(true);
     m_rebuildDebounceTimer.setInterval(200);
     connect(&m_rebuildDebounceTimer, &QTimer::timeout, this, [this]() {
         ImagePipelineController::startAsyncRebuild(*this);
     });
-    connect(&m_rebuildWatcher, &QFutureWatcher<AsyncBuildResult>::finished,
+    connect(&m_rebuildWatcher, &QFutureWatcher<ConverterAsyncBuildResult>::finished,
             this, [this]() { ImagePipelineController::onAsyncRebuildFinished(*this); });
     m_sessionSaveTimer.setSingleShot(true);
     m_sessionSaveTimer.setInterval(400);
@@ -152,23 +153,23 @@ DisplayConverter::DisplayConverter(SessionSettings *session, AppSettings *appSet
         connect(m_session, &SessionSettings::recentFilesChanged, this, &DisplayConverter::recentFilesChanged);
         connect(m_session, &SessionSettings::recentExportsChanged, this, &DisplayConverter::recentExportsChanged);
         applySessionSnapshot(SessionSettings::defaultSnapshot());
-        m_session->loadUiState(&m_uiState);
+        m_session->loadUiState(&m_state.uiState);
         m_session->pruneMissingRecentFiles();
         m_session->pruneMissingRecentExports();
         applyStoredUiState();
         updateWatchExportPrefix();
         restartAutosaveTimer();
     } else {
-        applyProfile(DisplayProfile::byId(m_profileId));
+        applyProfile(DisplayProfile::byId(m_state.profileId));
     }
 }
 
 void DisplayConverter::setDisplayWidth(int w)
 {
     w = qBound(8, w, 1024);
-    if (m_displayWidth == w)
+    if (m_state.displayWidth == w)
         return;
-    m_displayWidth = w;
+    m_state.displayWidth = w;
     emit displayWidthChanged();
     syncProfileIdFromDimensions();
     scheduleRebuild();
@@ -177,9 +178,9 @@ void DisplayConverter::setDisplayWidth(int w)
 void DisplayConverter::setDisplayHeight(int h)
 {
     h = qBound(8, h, 1024);
-    if (m_displayHeight == h)
+    if (m_state.displayHeight == h)
         return;
-    m_displayHeight = h;
+    m_state.displayHeight = h;
     emit displayHeightChanged();
     syncProfileIdFromDimensions();
     scheduleRebuild();
@@ -187,9 +188,9 @@ void DisplayConverter::setDisplayHeight(int h)
 
 void DisplayConverter::setProfileId(const QString &id)
 {
-    if (m_profileId == id)
+    if (m_state.profileId == id)
         return;
-    m_profileId = id;
+    m_state.profileId = id;
     if (id != QStringLiteral("custom"))
         applyProfile(DisplayProfile::byId(id));
     emit profileIdChanged();
@@ -203,22 +204,22 @@ void DisplayConverter::setColorMode(int mode)
     const auto next = mode == static_cast<int>(DisplayProfile::Rgb565)
                           ? DisplayProfile::Rgb565
                           : DisplayProfile::Mono1Bit;
-    if (m_colorMode == next)
+    if (m_state.colorMode == next)
         return;
-    m_colorMode = next;
+    m_state.colorMode = next;
 
-    const int enc = static_cast<int>(m_encodingMode);
-    if (m_colorMode == DisplayProfile::Rgb565) {
+    const int enc = static_cast<int>(m_state.encodingMode);
+    if (m_state.colorMode == DisplayProfile::Rgb565) {
         if (!encodingIsColorMode(enc))
-            m_encodingMode = DisplayCodeGenerator::EncodingMode::Rgb565;
+            m_state.encodingMode = DisplayCodeGenerator::EncodingMode::Rgb565;
     } else {
         if (!encodingIsMonoMode(enc))
-            m_encodingMode = DisplayCodeGenerator::EncodingMode::Mono1Bit;
+            m_state.encodingMode = DisplayCodeGenerator::EncodingMode::Mono1Bit;
     }
 
-    if (m_colorMode != DisplayProfile::Mono1Bit
-        && m_monoLayout != DisplayCodeGenerator::MonoLayout::RowPacked) {
-        m_monoLayout = DisplayCodeGenerator::MonoLayout::RowPacked;
+    if (m_state.colorMode != DisplayProfile::Mono1Bit
+        && m_state.monoLayout != DisplayCodeGenerator::MonoLayout::RowPacked) {
+        m_state.monoLayout = DisplayCodeGenerator::MonoLayout::RowPacked;
         emit monoLayoutChanged();
     }
 
@@ -231,9 +232,9 @@ void DisplayConverter::setColorMode(int mode)
 void DisplayConverter::setScaleMode(int mode)
 {
     const auto m = static_cast<DisplayProfile::ScaleMode>(qBound(0, mode, 2));
-    if (m_scaleMode == m)
+    if (m_state.scaleMode == m)
         return;
-    m_scaleMode = m;
+    m_state.scaleMode = m;
     emit scaleModeChanged();
     scheduleRebuild();
 }
@@ -243,10 +244,10 @@ void DisplayConverter::setDithering(bool on)
     const auto mode = on
         ? ImageFiltersPipeline::DitherMode::FloydSteinberg
         : ImageFiltersPipeline::DitherMode::None;
-    if (m_dithering == on && m_filterParams.ditherMode == mode)
+    if (m_state.dithering == on && m_state.filterParams.ditherMode == mode)
         return;
-    m_dithering = on;
-    m_filterParams.ditherMode = mode;
+    m_state.dithering = on;
+    m_state.filterParams.ditherMode = mode;
     emit ditheringChanged();
     emit ditherModeChanged();
     scheduleRebuild();
@@ -255,9 +256,9 @@ void DisplayConverter::setDithering(bool on)
 void DisplayConverter::setArrayName(const QString &name)
 {
     const QString safe = DisplayCodeGenerator::sanitizeIdentifier(name);
-    if (m_arrayName == safe)
+    if (m_state.arrayName == safe)
         return;
-    m_arrayName = safe;
+    m_state.arrayName = safe;
     emit arrayNameChanged();
     schedulePersistSession();
     if (hasImage())
@@ -266,24 +267,24 @@ void DisplayConverter::setArrayName(const QString &name)
 
 int DisplayConverter::dataByteCount() const
 {
-    return DisplayCodeGenerator::flashFootprintBytes(m_encodingMode,
-                                                     m_displayWidth,
-                                                     m_displayHeight,
-                                                     m_lastResult.monoBits,
-                                                     m_lastResult.monoBuffer,
-                                                     m_lastResult.grayscale8,
-                                                     m_lastResult.rgb565,
-                                                     m_lastResult.rgb888,
-                                                     m_lastResult.rgb233,
-                                                     m_lastResult.rgb24,
-                                                     m_monoLayout,
-                                                     m_codeGenOptions,
-                                                     m_lastResult.indexedPalette);
+    return DisplayCodeGenerator::flashFootprintBytes(m_state.encodingMode,
+                                                     m_state.displayWidth,
+                                                     m_state.displayHeight,
+                                                     m_state.lastResult.monoBits,
+                                                     m_state.lastResult.monoBuffer,
+                                                     m_state.lastResult.grayscale8,
+                                                     m_state.lastResult.rgb565,
+                                                     m_state.lastResult.rgb888,
+                                                     m_state.lastResult.rgb233,
+                                                     m_state.lastResult.rgb24,
+                                                     m_state.monoLayout,
+                                                     m_state.codeGenOptions,
+                                                     m_state.lastResult.indexedPalette);
 }
 
 QString DisplayConverter::colorModeName() const
 {
-    return m_colorMode == DisplayProfile::Rgb565
+    return m_state.colorMode == DisplayProfile::Rgb565
         ? AppLocale::tr("Color")
         : AppLocale::tr("B&W");
 }
@@ -293,7 +294,7 @@ QString DisplayConverter::encodingModeName() const
     const QVariantList modes = availableEncodingModes();
     for (const QVariant &v : modes) {
         const QVariantMap m = v.toMap();
-        if (m.value(QStringLiteral("mode")).toInt() == static_cast<int>(m_encodingMode))
+        if (m.value(QStringLiteral("mode")).toInt() == static_cast<int>(m_state.encodingMode))
             return m.value(QStringLiteral("name")).toString();
     }
     return AppLocale::tr("Unknown");
@@ -301,35 +302,35 @@ QString DisplayConverter::encodingModeName() const
 
 bool DisplayConverter::encodingIsMono1Bit() const
 {
-    return encodingIsMonoMode(static_cast<int>(m_encodingMode));
+    return encodingIsMonoMode(static_cast<int>(m_state.encodingMode));
 }
 
 bool DisplayConverter::encodingIsGrayscale() const
 {
-    return PixelFormatCatalog::isGrayscale(m_encodingMode);
+    return PixelFormatCatalog::isGrayscale(m_state.encodingMode);
 }
 
 bool DisplayConverter::encodingIsColor() const
 {
-    return encodingIsColorMode(static_cast<int>(m_encodingMode));
+    return encodingIsColorMode(static_cast<int>(m_state.encodingMode));
 }
 
 QString DisplayConverter::monoLayoutName() const
 {
     using Layout = DisplayCodeGenerator::MonoLayout;
-    if (m_monoLayout == Layout::Ssd1306Page)
+    if (m_state.monoLayout == Layout::Ssd1306Page)
         return QCoreApplication::translate("PixelStudio", "Vertical page buffer");
-    if (m_monoLayout == Layout::VerticalColumn)
+    if (m_state.monoLayout == Layout::VerticalColumn)
         return QCoreApplication::translate("PixelStudio", "Vertical column");
     return QCoreApplication::translate("PixelStudio", "Row-packed");
 }
 
 QVariantList DisplayConverter::previewPalette() const
 {
-    if (!m_lastResult.indexedPalette.isEmpty())
-        return paletteFromRgbList(m_lastResult.indexedPalette);
-    if (!m_lastResult.preview.isNull())
-        return paletteFromPreviewImage(m_lastResult.preview);
+    if (!m_state.lastResult.indexedPalette.isEmpty())
+        return paletteFromRgbList(m_state.lastResult.indexedPalette);
+    if (!m_state.lastResult.preview.isNull())
+        return paletteFromPreviewImage(m_state.lastResult.preview);
     return {};
 }
 
@@ -342,7 +343,7 @@ QString DisplayConverter::imageFormatName() const
 {
     if (!hasImage())
         return QString();
-    const QString path = m_sourcePath.toLocalFile();
+    const QString path = m_state.sourceFilePath;
     const int dot = path.lastIndexOf(QLatin1Char('.'));
     if (dot >= 0 && dot < path.size() - 1)
         return path.mid(dot + 1).toUpper();
@@ -366,9 +367,9 @@ void DisplayConverter::setRotation(int degrees)
     degrees = ((degrees % 360) + 360) % 360;
     if (degrees != 0 && degrees != 90 && degrees != 180 && degrees != 270)
         degrees = 0;
-    if (m_rotation == degrees)
+    if (m_state.rotation == degrees)
         return;
-    m_rotation = degrees;
+    m_state.rotation = degrees;
     markOrientedDirty();
     emit rotationChanged();
     if (hasImage()) {
@@ -381,26 +382,26 @@ void DisplayConverter::setRotation(int degrees)
 
 void DisplayConverter::rotateClockwise()
 {
-    setRotation((m_rotation + 90) % 360);
+    setRotation((m_state.rotation + 90) % 360);
 }
 
 QImage DisplayConverter::orientedSource() const
 {
-    if (m_sourceImage.isNull())
+    if (m_state.sourceImage.isNull())
         return {};
-    if (!m_orientedDirty && !m_orientedCache.isNull())
-        return m_orientedCache;
+    if (!m_state.orientedDirty && !m_state.orientedCache.isNull())
+        return m_state.orientedCache;
 
-    m_orientedCache = ConvertPipeline::applyOrientation(m_sourceImage, pipelineParams());
-    m_orientedDirty = false;
-    return m_orientedCache;
+    m_state.orientedCache = ConvertPipeline::applyOrientation(m_state.sourceImage, pipelineParams());
+    m_state.orientedDirty = false;
+    return m_state.orientedCache;
 }
 
 void DisplayConverter::setFlipHorizontal(bool on)
 {
-    if (m_flipHorizontal == on)
+    if (m_state.flipHorizontal == on)
         return;
-    m_flipHorizontal = on;
+    m_state.flipHorizontal = on;
     markOrientedDirty();
     emit flipHorizontalChanged();
     if (hasImage()) {
@@ -413,9 +414,9 @@ void DisplayConverter::setFlipHorizontal(bool on)
 
 void DisplayConverter::setFlipVertical(bool on)
 {
-    if (m_flipVertical == on)
+    if (m_state.flipVertical == on)
         return;
-    m_flipVertical = on;
+    m_state.flipVertical = on;
     markOrientedDirty();
     emit flipVerticalChanged();
     if (hasImage()) {
@@ -428,9 +429,9 @@ void DisplayConverter::setFlipVertical(bool on)
 
 void DisplayConverter::setInvertMono(bool on)
 {
-    if (m_invertMono == on)
+    if (m_state.invertMono == on)
         return;
-    m_invertMono = on;
+    m_state.invertMono = on;
     emit invertMonoChanged();
     if (hasImage())
         scheduleRebuild();
@@ -438,9 +439,9 @@ void DisplayConverter::setInvertMono(bool on)
 
 void DisplayConverter::setFilterInvert(bool on)
 {
-    if (m_filterParams.invert == on)
+    if (m_state.filterParams.invert == on)
         return;
-    m_filterParams.invert = on;
+    m_state.filterParams.invert = on;
     emit filterInvertChanged();
     if (hasImage())
         scheduleRebuild();
@@ -449,9 +450,9 @@ void DisplayConverter::setFilterInvert(bool on)
 void DisplayConverter::setMonoLayout(int mode)
 {
     const auto next = static_cast<DisplayCodeGenerator::MonoLayout>(qBound(0, mode, 2));
-    if (m_monoLayout == next)
+    if (m_state.monoLayout == next)
         return;
-    m_monoLayout = next;
+    m_state.monoLayout = next;
     emit monoLayoutChanged();
     if (hasImage() && encodingIsMono1Bit())
         scheduleRebuild();
@@ -461,20 +462,20 @@ void DisplayConverter::setEncodingMode(int mode)
 {
     const auto next = static_cast<DisplayCodeGenerator::EncodingMode>(
         qBound(0, mode, static_cast<int>(DisplayCodeGenerator::EncodingMode::Count) - 1));
-    if (m_encodingMode == next)
+    if (m_state.encodingMode == next)
         return;
-    m_encodingMode = next;
+    m_state.encodingMode = next;
 
     const auto nextColor = encodingIsColorMode(static_cast<int>(next))
                                ? DisplayProfile::Rgb565
                                : DisplayProfile::Mono1Bit;
-    if (m_colorMode != nextColor) {
-        m_colorMode = nextColor;
+    if (m_state.colorMode != nextColor) {
+        m_state.colorMode = nextColor;
         emit colorModeChanged();
     }
-    if (m_colorMode != DisplayProfile::Mono1Bit
-        && m_monoLayout != DisplayCodeGenerator::MonoLayout::RowPacked) {
-        m_monoLayout = DisplayCodeGenerator::MonoLayout::RowPacked;
+    if (m_state.colorMode != DisplayProfile::Mono1Bit
+        && m_state.monoLayout != DisplayCodeGenerator::MonoLayout::RowPacked) {
+        m_state.monoLayout = DisplayCodeGenerator::MonoLayout::RowPacked;
         emit monoLayoutChanged();
     }
 
@@ -485,12 +486,12 @@ void DisplayConverter::setEncodingMode(int mode)
 
 void DisplayConverter::swapDisplayDimensions()
 {
-    const int w = m_displayWidth;
-    const int h = m_displayHeight;
+    const int w = m_state.displayWidth;
+    const int h = m_state.displayHeight;
     if (w == h)
         return;
-    m_displayWidth = h;
-    m_displayHeight = w;
+    m_state.displayWidth = h;
+    m_state.displayHeight = w;
     emit displayWidthChanged();
     emit displayHeightChanged();
     syncProfileIdFromDimensions();
@@ -499,19 +500,19 @@ void DisplayConverter::swapDisplayDimensions()
 
 void DisplayConverter::refreshSourcePreview()
 {
-    if (m_sourceImage.isNull())
+    if (m_state.sourceImage.isNull())
         return;
-    m_sourcePath = writeTempPreview(QStringLiteral("source"), orientedSource());
+    m_state.sourcePath = publishPreview(QStringLiteral("source"), orientedSource());
     emit sourcePathChanged();
 }
 
 void DisplayConverter::setMonoThreshold(int value)
 {
     value = qBound(0, value, 255);
-    if (m_monoThreshold == value)
+    if (m_state.monoThreshold == value)
         return;
-    m_monoThreshold = value;
-    m_filterParams.threshold = value;
+    m_state.monoThreshold = value;
+    m_state.filterParams.threshold = value;
     emit monoThresholdChanged();
     if (hasImage() && encodingIsMono1Bit())
         scheduleRebuild();
@@ -519,9 +520,9 @@ void DisplayConverter::setMonoThreshold(int value)
 
 void DisplayConverter::setBlackBackground(bool on)
 {
-    if (m_filterParams.blackBackground == on)
+    if (m_state.filterParams.blackBackground == on)
         return;
-    m_filterParams.blackBackground = on;
+    m_state.filterParams.blackBackground = on;
     emit blackBackgroundChanged();
     scheduleRebuild();
 }
@@ -529,9 +530,9 @@ void DisplayConverter::setBlackBackground(bool on)
 void DisplayConverter::setBrightness(int value)
 {
     value = qBound(0, value, 200);
-    if (m_filterParams.brightness == value)
+    if (m_state.filterParams.brightness == value)
         return;
-    m_filterParams.brightness = value;
+    m_state.filterParams.brightness = value;
     markToneCustom();
     emit brightnessChanged();
     scheduleRebuild();
@@ -540,9 +541,9 @@ void DisplayConverter::setBrightness(int value)
 void DisplayConverter::setContrast(int value)
 {
     value = qBound(0, value, 200);
-    if (m_filterParams.contrast == value)
+    if (m_state.filterParams.contrast == value)
         return;
-    m_filterParams.contrast = value;
+    m_state.filterParams.contrast = value;
     markToneCustom();
     emit contrastChanged();
     scheduleRebuild();
@@ -551,9 +552,9 @@ void DisplayConverter::setContrast(int value)
 void DisplayConverter::setSaturation(int value)
 {
     value = qBound(0, value, 200);
-    if (m_filterParams.saturation == value)
+    if (m_state.filterParams.saturation == value)
         return;
-    m_filterParams.saturation = value;
+    m_state.filterParams.saturation = value;
     markToneCustom();
     emit saturationChanged();
     scheduleRebuild();
@@ -562,9 +563,9 @@ void DisplayConverter::setSaturation(int value)
 void DisplayConverter::setExposure(int value)
 {
     value = qBound(50, value, 200);
-    if (m_filterParams.exposure == value)
+    if (m_state.filterParams.exposure == value)
         return;
-    m_filterParams.exposure = value;
+    m_state.filterParams.exposure = value;
     markToneCustom();
     emit exposureChanged();
     scheduleRebuild();
@@ -573,9 +574,9 @@ void DisplayConverter::setExposure(int value)
 void DisplayConverter::setGamma(int value)
 {
     value = qBound(50, value, 200);
-    if (m_filterParams.gamma == value)
+    if (m_state.filterParams.gamma == value)
         return;
-    m_filterParams.gamma = value;
+    m_state.filterParams.gamma = value;
     markToneCustom();
     emit gammaChanged();
     scheduleRebuild();
@@ -584,9 +585,9 @@ void DisplayConverter::setGamma(int value)
 void DisplayConverter::setBlur(int value)
 {
     value = qBound(0, value, 6);
-    if (m_filterParams.blur == value)
+    if (m_state.filterParams.blur == value)
         return;
-    m_filterParams.blur = value;
+    m_state.filterParams.blur = value;
     emit blurChanged();
     scheduleRebuild();
 }
@@ -594,18 +595,18 @@ void DisplayConverter::setBlur(int value)
 void DisplayConverter::setPosterizeRgb(int value)
 {
     value = qBound(0, value, 30);
-    if (m_filterParams.posterizeRgb == value)
+    if (m_state.filterParams.posterizeRgb == value)
         return;
-    m_filterParams.posterizeRgb = value;
+    m_state.filterParams.posterizeRgb = value;
     emit posterizeRgbChanged();
     scheduleRebuild();
 }
 
 void DisplayConverter::setColorMaskEnabled(bool on)
 {
-    if (m_filterParams.colorMaskEnabled == on)
+    if (m_state.filterParams.colorMaskEnabled == on)
         return;
-    m_filterParams.colorMaskEnabled = on;
+    m_state.filterParams.colorMaskEnabled = on;
     emit colorMaskEnabledChanged();
     scheduleRebuild();
 }
@@ -613,9 +614,9 @@ void DisplayConverter::setColorMaskEnabled(bool on)
 void DisplayConverter::setMaskColor(const QColor &color)
 {
     const QColor safe = color.isValid() ? color : QColor(Qt::black);
-    if (m_filterParams.maskColor == safe)
+    if (m_state.filterParams.maskColor == safe)
         return;
-    m_filterParams.maskColor = safe;
+    m_state.filterParams.maskColor = safe;
     emit maskColorChanged();
     scheduleRebuild();
 }
@@ -623,9 +624,9 @@ void DisplayConverter::setMaskColor(const QColor &color)
 void DisplayConverter::setMaskTolerance(int value)
 {
     value = qBound(0, value, 255);
-    if (m_filterParams.maskTolerance == value)
+    if (m_state.filterParams.maskTolerance == value)
         return;
-    m_filterParams.maskTolerance = value;
+    m_state.filterParams.maskTolerance = value;
     emit maskToleranceChanged();
     scheduleRebuild();
 }
@@ -633,18 +634,18 @@ void DisplayConverter::setMaskTolerance(int value)
 void DisplayConverter::setMaskAmplify(int value)
 {
     value = qBound(1, value, 10);
-    if (m_filterParams.maskAmplify == value)
+    if (m_state.filterParams.maskAmplify == value)
         return;
-    m_filterParams.maskAmplify = value;
+    m_state.filterParams.maskAmplify = value;
     emit maskAmplifyChanged();
     scheduleRebuild();
 }
 
 void DisplayConverter::setSharpen(bool on)
 {
-    if (m_filterParams.sharpen == on)
+    if (m_state.filterParams.sharpen == on)
         return;
-    m_filterParams.sharpen = on;
+    m_state.filterParams.sharpen = on;
     emit sharpenChanged();
     scheduleRebuild();
 }
@@ -652,9 +653,9 @@ void DisplayConverter::setSharpen(bool on)
 void DisplayConverter::setSobelEdges(int value)
 {
     value = qBound(0, value, 100);
-    if (m_filterParams.sobelEdges == value)
+    if (m_state.filterParams.sobelEdges == value)
         return;
-    m_filterParams.sobelEdges = value;
+    m_state.filterParams.sobelEdges = value;
     emit sobelEdgesChanged();
     scheduleRebuild();
 }
@@ -662,9 +663,9 @@ void DisplayConverter::setSobelEdges(int value)
 void DisplayConverter::setPosterizeGray(int value)
 {
     value = qBound(0, value, 30);
-    if (m_filterParams.posterizeGray == value)
+    if (m_state.filterParams.posterizeGray == value)
         return;
-    m_filterParams.posterizeGray = value;
+    m_state.filterParams.posterizeGray = value;
     emit posterizeGrayChanged();
     scheduleRebuild();
 }
@@ -678,10 +679,10 @@ void DisplayConverter::setDitherMode(int mode)
             : (mode == static_cast<int>(ImageFiltersPipeline::DitherMode::Bayer)
                 ? ImageFiltersPipeline::DitherMode::Bayer
                 : ImageFiltersPipeline::DitherMode::None));
-    if (m_filterParams.ditherMode == next)
+    if (m_state.filterParams.ditherMode == next)
         return;
-    m_filterParams.ditherMode = next;
-    m_dithering = (next == ImageFiltersPipeline::DitherMode::FloydSteinberg);
+    m_state.filterParams.ditherMode = next;
+    m_state.dithering = (next == ImageFiltersPipeline::DitherMode::FloydSteinberg);
     emit ditherModeChanged();
     emit ditheringChanged();
     scheduleRebuild();
@@ -694,9 +695,9 @@ void DisplayConverter::setContourMode(int mode)
         : (mode == static_cast<int>(ImageFiltersPipeline::ContourMode::EightDir)
             ? ImageFiltersPipeline::ContourMode::EightDir
             : ImageFiltersPipeline::ContourMode::None);
-    if (m_filterParams.contourMode == next)
+    if (m_state.filterParams.contourMode == next)
         return;
-    m_filterParams.contourMode = next;
+    m_state.filterParams.contourMode = next;
     emit contourModeChanged();
     scheduleRebuild();
 }
@@ -723,9 +724,9 @@ QSize fittedContentSize(const QImage &oriented, int tw, int th, DisplayProfile::
 
 void DisplayConverter::markToneCustom()
 {
-    if (m_filterParams.tonePreset == ImageFiltersPipeline::TonePreset::Custom)
+    if (m_state.filterParams.tonePreset == ImageFiltersPipeline::TonePreset::Custom)
         return;
-    m_filterParams.tonePreset = ImageFiltersPipeline::TonePreset::Custom;
+    m_state.filterParams.tonePreset = ImageFiltersPipeline::TonePreset::Custom;
     emit tonePresetChanged();
 }
 
@@ -754,21 +755,21 @@ void DisplayConverter::emitAllFilterSignals()
 
 DisplayCodeGenerator::CodeGenOptions DisplayConverter::codeGenOptions() const
 {
-    return m_codeGenOptions;
+    return m_state.codeGenOptions;
 }
 
 void DisplayConverter::setTonePreset(int preset)
 {
     const auto next = static_cast<ImageFiltersPipeline::TonePreset>(qBound(0, preset, 2));
     const ImageFiltersPipeline::Params tone = ImageFiltersPipeline::paramsForTonePreset(next);
-    m_filterParams.tonePreset = next;
+    m_state.filterParams.tonePreset = next;
     if (next != ImageFiltersPipeline::TonePreset::Custom) {
-        m_filterParams.brightness = tone.brightness;
-        m_filterParams.contrast = tone.contrast;
-        m_filterParams.saturation = tone.saturation;
-        m_filterParams.exposure = tone.exposure;
-        m_filterParams.gamma = tone.gamma;
-        m_filterParams.posterizeGray = tone.posterizeGray;
+        m_state.filterParams.brightness = tone.brightness;
+        m_state.filterParams.contrast = tone.contrast;
+        m_state.filterParams.saturation = tone.saturation;
+        m_state.filterParams.exposure = tone.exposure;
+        m_state.filterParams.gamma = tone.gamma;
+        m_state.filterParams.posterizeGray = tone.posterizeGray;
     }
     emit brightnessChanged();
     emit contrastChanged();
@@ -782,14 +783,14 @@ void DisplayConverter::setTonePreset(int preset)
 
 void DisplayConverter::resetFilters()
 {
-    const int threshold = m_monoThreshold;
-    const bool invert = m_invertMono;
-    m_filterParams = ImageFiltersPipeline::Params{};
-    m_filterParams.threshold = threshold;
-    m_dithering = true;
-    m_filterParams.ditherMode = ImageFiltersPipeline::DitherMode::FloydSteinberg;
-    m_invertMono = invert;
-    m_filterParams.invert = false;
+    const int threshold = m_state.monoThreshold;
+    const bool invert = m_state.invertMono;
+    m_state.filterParams = ImageFiltersPipeline::Params{};
+    m_state.filterParams.threshold = threshold;
+    m_state.dithering = true;
+    m_state.filterParams.ditherMode = ImageFiltersPipeline::DitherMode::FloydSteinberg;
+    m_state.invertMono = invert;
+    m_state.filterParams.invert = false;
     emit ditheringChanged();
     emit invertMonoChanged();
     emitAllFilterSignals();
@@ -798,12 +799,12 @@ void DisplayConverter::resetFilters()
 
 void DisplayConverter::resetTransform()
 {
-    m_rotation = 0;
-    m_flipHorizontal = false;
-    m_flipVertical = false;
-    m_scaleMode = DisplayProfile::Fit;
-    m_offsetX = 0;
-    m_offsetY = 0;
+    m_state.rotation = 0;
+    m_state.flipHorizontal = false;
+    m_state.flipVertical = false;
+    m_state.scaleMode = DisplayProfile::Fit;
+    m_state.offsetX = 0;
+    m_state.offsetY = 0;
     emit rotationChanged();
     emit flipHorizontalChanged();
     emit flipVerticalChanged();
@@ -818,52 +819,52 @@ void DisplayConverter::centerOffsetOnDisplay()
     if (!hasImage())
         return;
     const QSize content = fittedContentSize(orientedSource(),
-                                            m_displayWidth,
-                                            m_displayHeight,
-                                            m_scaleMode);
+                                            m_state.displayWidth,
+                                            m_state.displayHeight,
+                                            m_state.scaleMode);
     if (content.isEmpty())
         return;
-    setOffsetX((m_displayWidth - content.width()) / 2);
-    setOffsetY((m_displayHeight - content.height()) / 2);
+    setOffsetX((m_state.displayWidth - content.width()) / 2);
+    setOffsetY((m_state.displayHeight - content.height()) / 2);
 }
 
 void DisplayConverter::copyGeneratedArray()
 {
-    copyToClipboard(DisplayCodeGenerator::extractArrayBody(m_generatedCode));
+    copyToClipboard(DisplayCodeGenerator::extractArrayBody(m_state.generatedCode));
 }
 
 void DisplayConverter::setCodeIncludeComments(bool on)
 {
-    if (m_codeGenOptions.includeHeaderComments == on)
+    if (m_state.codeGenOptions.includeHeaderComments == on)
         return;
-    m_codeGenOptions.includeHeaderComments = on;
+    m_state.codeGenOptions.includeHeaderComments = on;
     emit codeGenOptionsChanged();
     scheduleRebuild(true);
 }
 
 void DisplayConverter::setCodeUseProgmem(bool on)
 {
-    if (m_codeGenOptions.useProgmem == on)
+    if (m_state.codeGenOptions.useProgmem == on)
         return;
-    m_codeGenOptions.useProgmem = on;
+    m_state.codeGenOptions.useProgmem = on;
     emit codeGenOptionsChanged();
     scheduleRebuild(true);
 }
 
 void DisplayConverter::setCodeStaticStorage(bool on)
 {
-    if (m_codeGenOptions.staticStorage == on)
+    if (m_state.codeGenOptions.staticStorage == on)
         return;
-    m_codeGenOptions.staticStorage = on;
+    m_state.codeGenOptions.staticStorage = on;
     emit codeGenOptionsChanged();
     scheduleRebuild(true);
 }
 
 void DisplayConverter::setRgb565BigEndian(bool on)
 {
-    if (m_codeGenOptions.rgb565BigEndian == on)
+    if (m_state.codeGenOptions.rgb565BigEndian == on)
         return;
-    m_codeGenOptions.rgb565BigEndian = on;
+    m_state.codeGenOptions.rgb565BigEndian = on;
     emit rgb565BigEndianChanged();
     emit codeGenOptionsChanged();
     scheduleRebuild(true);
@@ -872,9 +873,9 @@ void DisplayConverter::setRgb565BigEndian(bool on)
 void DisplayConverter::setCodeDmaAlign(int align)
 {
     align = align == 8 ? 8 : (align == 4 ? 4 : 0);
-    if (m_codeGenOptions.dmaPaddingAlign == align)
+    if (m_state.codeGenOptions.dmaPaddingAlign == align)
         return;
-    m_codeGenOptions.dmaPaddingAlign = align;
+    m_state.codeGenOptions.dmaPaddingAlign = align;
     emit codeDmaAlignChanged();
     emit codeGenOptionsChanged();
     scheduleRebuild(true);
@@ -882,9 +883,9 @@ void DisplayConverter::setCodeDmaAlign(int align)
 
 void DisplayConverter::setLinearColorSpace(bool on)
 {
-    if (m_linearColorSpace == on)
+    if (m_state.linearColorSpace == on)
         return;
-    m_linearColorSpace = on;
+    m_state.linearColorSpace = on;
     emit linearColorSpaceChanged();
     if (hasImage())
         scheduleRebuild();
@@ -892,18 +893,18 @@ void DisplayConverter::setLinearColorSpace(bool on)
 
 void DisplayConverter::setShowGrid(bool on)
 {
-    if (m_showGrid == on)
+    if (m_state.showGrid == on)
         return;
-    m_showGrid = on;
+    m_state.showGrid = on;
     emit showGridChanged();
 }
 
 void DisplayConverter::setGridThresholdZoom(int value)
 {
     value = qBound(1, value, 64);
-    if (m_gridThresholdZoom == value)
+    if (m_state.gridThresholdZoom == value)
         return;
-    m_gridThresholdZoom = value;
+    m_state.gridThresholdZoom = value;
     emit gridThresholdZoomChanged();
 }
 
@@ -912,16 +913,16 @@ void DisplayConverter::syncProfileIdFromDimensions()
     for (const DisplayProfile &p : DisplayProfile::presets()) {
         if (p.id == QStringLiteral("custom"))
             continue;
-        if (p.width == m_displayWidth && p.height == m_displayHeight) {
-            if (m_profileId != p.id) {
-                m_profileId = p.id;
+        if (p.width == m_state.displayWidth && p.height == m_state.displayHeight) {
+            if (m_state.profileId != p.id) {
+                m_state.profileId = p.id;
                 emit profileIdChanged();
             }
             return;
         }
     }
-    if (m_profileId != QStringLiteral("custom")) {
-        m_profileId = QStringLiteral("custom");
+    if (m_state.profileId != QStringLiteral("custom")) {
+        m_state.profileId = QStringLiteral("custom");
         emit profileIdChanged();
     }
 }
@@ -931,8 +932,8 @@ void DisplayConverter::applyProfile(const DisplayProfile &profile)
     if (profile.id == QStringLiteral("custom"))
         return;
 
-    m_displayWidth = profile.width;
-    m_displayHeight = profile.height;
+    m_state.displayWidth = profile.width;
+    m_state.displayHeight = profile.height;
     emit displayWidthChanged();
     emit displayHeightChanged();
 }
@@ -974,27 +975,29 @@ void DisplayConverter::loadFromUrl(const QString &urlString)
 void DisplayConverter::clear()
 {
     m_rebuildDebounceTimer.stop();
-    m_rebuildPending = false;
-    m_lastAppliedGeneration = ++m_nextGeneration;
+    m_state.rebuildPending = false;
+    m_state.lastAppliedGeneration = ++m_state.nextGeneration;
     m_batchService.reset();
-    m_sourceImage = QImage();
-    m_sourceFilePath.clear();
-    m_sourcePath.clear();
-    m_previewPath.clear();
-    m_processPreviewPath.clear();
-    m_generatedCode.clear();
-    m_flashReport.clear();
-    m_lastResult = {};
-    m_rotation = 0;
-    m_flipHorizontal = false;
-    m_flipVertical = false;
-    m_invertMono = false;
-    m_filterParams = ImageFiltersPipeline::Params{};
-    m_filterParams.threshold = m_monoThreshold;
-    m_filterParams.ditherMode = m_dithering
+    m_state.sourceImage = QImage();
+    m_state.sourceFilePath.clear();
+    m_state.sourcePath.clear();
+    m_state.previewPath.clear();
+    m_state.processPreviewPath.clear();
+    m_state.generatedCode.clear();
+    m_state.flashReport.clear();
+    m_state.lastResult = {};
+    m_state.rotation = 0;
+    m_state.flipHorizontal = false;
+    m_state.flipVertical = false;
+    m_state.invertMono = false;
+    m_state.filterParams = ImageFiltersPipeline::Params{};
+    m_state.filterParams.threshold = m_state.monoThreshold;
+    m_state.filterParams.ditherMode = m_state.dithering
         ? ImageFiltersPipeline::DitherMode::FloydSteinberg
         : ImageFiltersPipeline::DitherMode::None;
     markOrientedDirty();
+    if (m_previewProvider)
+        m_previewProvider->clearAll();
     emit sourcePathChanged();
     emit previewPathChanged();
     emit processPreviewPathChanged();
@@ -1029,7 +1032,7 @@ void DisplayConverter::clear()
     emit codeGenOptionsChanged();
     emit batchRunningChanged();
     emit batchProgressChanged();
-    updateCodePreview();
+    ImagePipelineController::updateCodePreview(m_state, *this);
 }
 
 void DisplayConverter::refresh()
@@ -1074,7 +1077,7 @@ QVariantList DisplayConverter::availableBasicEncodingModes() const
     using Mode = DisplayCodeGenerator::EncodingMode;
     using Layout = DisplayCodeGenerator::MonoLayout;
     QVariantList list;
-    if (m_colorMode == DisplayProfile::Rgb565) {
+    if (m_state.colorMode == DisplayProfile::Rgb565) {
         list.append(QVariantMap{
             {QStringLiteral("name"), AppLocale::tr("RGB565")},
             {QStringLiteral("mode"), static_cast<int>(Mode::Rgb565)},
@@ -1137,22 +1140,22 @@ void DisplayConverter::applyWorkflowPreset(const QString &id)
     if (id == QStringLiteral("icon")) {
         setProfileId(QStringLiteral("128x64"));
         setColorMode(static_cast<int>(DisplayProfile::Mono1Bit));
-        m_scaleMode = DisplayProfile::Crop;
-        m_encodingMode = DisplayCodeGenerator::EncodingMode::Mono1Bit;
+        m_state.scaleMode = DisplayProfile::Crop;
+        m_state.encodingMode = DisplayCodeGenerator::EncodingMode::Mono1Bit;
     } else if (id == QStringLiteral("splash")) {
         setProfileId(QStringLiteral("240x240"));
         setColorMode(static_cast<int>(DisplayProfile::Rgb565));
-        m_scaleMode = DisplayProfile::Crop;
+        m_state.scaleMode = DisplayProfile::Crop;
     } else if (id == QStringLiteral("epaper")) {
         setProfileId(QStringLiteral("250x122"));
         setColorMode(static_cast<int>(DisplayProfile::Mono1Bit));
-        m_filterParams.contrast = 140;
-        m_filterParams.ditherMode = ImageFiltersPipeline::DitherMode::FloydSteinberg;
+        m_state.filterParams.contrast = 140;
+        m_state.filterParams.ditherMode = ImageFiltersPipeline::DitherMode::FloydSteinberg;
     } else if (id == QStringLiteral("indexed")) {
         setProfileId(QStringLiteral("240x240"));
         setColorMode(static_cast<int>(DisplayProfile::Rgb565));
-        m_encodingMode = DisplayCodeGenerator::EncodingMode::Indexed8;
-        m_filterParams.posterizeRgb = 6;
+        m_state.encodingMode = DisplayCodeGenerator::EncodingMode::Indexed8;
+        m_state.filterParams.posterizeRgb = 6;
     } else {
         return;
     }
@@ -1191,13 +1194,13 @@ bool DisplayConverter::importHeader(const QUrl &url)
         emit errorOccurred(result.errorMessage);
         return false;
     }
-    m_sourceImage = result.preview;
-    m_arrayName = result.arrayName;
-    m_displayWidth = result.width;
-    m_displayHeight = result.height;
-    m_colorMode = result.colorMode;
-    m_encodingMode = result.encodingMode;
-    m_profileId = QStringLiteral("custom");
+    m_state.sourceImage = result.preview;
+    m_state.arrayName = result.arrayName;
+    m_state.displayWidth = result.width;
+    m_state.displayHeight = result.height;
+    m_state.colorMode = result.colorMode;
+    m_state.encodingMode = result.encodingMode;
+    m_state.profileId = QStringLiteral("custom");
     markOrientedDirty();
     refreshSourcePreview();
     emit hasImageChanged();
@@ -1257,16 +1260,16 @@ void DisplayConverter::cancelBatchExport()
 
 void DisplayConverter::onImageLoaded(const QImage &image, const QUrl &sourceUrl)
 {
-    m_sourceImage = image;
-    m_rotation = 0;
-    m_flipHorizontal = false;
-    m_flipVertical = false;
+    m_state.sourceImage = image;
+    m_state.rotation = 0;
+    m_state.flipHorizontal = false;
+    m_state.flipVertical = false;
     markOrientedDirty();
     if (sourceUrl.isLocalFile()) {
         const QString local = sourceUrl.toLocalFile();
-        m_sourceFilePath = local.isEmpty() ? sourceUrl.path() : local;
+        m_state.sourceFilePath = local.isEmpty() ? sourceUrl.path() : local;
     } else {
-        m_sourceFilePath.clear();
+        m_state.sourceFilePath.clear();
     }
     refreshSourcePreview();
     emit hasImageChanged();
@@ -1298,29 +1301,43 @@ void DisplayConverter::scheduleRebuild(bool immediate)
     ImagePipelineController::scheduleRebuild(*this, immediate);
 }
 
-void DisplayConverter::startAsyncRebuild()
+void DisplayConverter::setPreviewProvider(PreviewImageProvider *provider)
 {
-    ImagePipelineController::startAsyncRebuild(*this);
+    m_previewProvider = provider;
 }
 
-void DisplayConverter::onAsyncRebuildFinished()
+void DisplayConverter::applyPipelineResult(const ConverterAsyncBuildResult &result)
 {
-    ImagePipelineController::onAsyncRebuildFinished(*this);
-}
+    if (result.generation < m_state.lastAppliedGeneration)
+        return;
 
-void DisplayConverter::updateCodePreview()
-{
-    ImagePipelineController::updateCodePreview(*this);
-}
+    m_state.lastAppliedGeneration = result.generation;
+    m_state.lastResult = result.result;
+    if (m_state.lastResult.preview.isNull()) {
+        m_state.previewPath.clear();
+        m_state.processPreviewPath.clear();
+        m_state.generatedCode.clear();
+        emit previewPathChanged();
+        emit processPreviewPathChanged();
+        emit generatedCodeChanged();
+        ImagePipelineController::updateCodePreview(m_state, *this);
+        ImagePipelineController::updateFlashReport(m_state, *this);
+        return;
+    }
 
-void DisplayConverter::updateFlashReport()
-{
-    ImagePipelineController::updateFlashReport(*this);
+    m_state.processPreviewPath = publishPreview(QStringLiteral("process"), m_state.lastResult.processPreview);
+    emit processPreviewPathChanged();
+    m_state.previewPath = publishPreview(QStringLiteral("preview"), m_state.lastResult.preview);
+    emit previewPathChanged();
+    m_state.generatedCode = result.generatedCode;
+    emit generatedCodeChanged();
+    ImagePipelineController::updateCodePreview(m_state, *this);
+    ImagePipelineController::updateFlashReport(m_state, *this);
 }
 
 StudioProject DisplayConverter::projectSnapshot() const
 {
-    return ProjectSessionController::projectSnapshot(*this);
+    return captureTabState().project;
 }
 
 void DisplayConverter::applyProject(const StudioProject &project)
@@ -1330,115 +1347,204 @@ void DisplayConverter::applyProject(const StudioProject &project)
 
 void DisplayConverter::markOrientedDirty()
 {
-    m_orientedDirty = true;
-    m_orientedCache = QImage();
+    m_state.orientedDirty = true;
+    m_state.orientedCache = QImage();
 }
 
-QUrl DisplayConverter::writeTempPreview(const QString &slotName, const QImage &img)
+QUrl DisplayConverter::publishPreview(const QString &slotName, const QImage &img)
 {
-    if (img.isNull() || slotName.isEmpty())
+    if (img.isNull() || slotName.isEmpty() || !m_previewProvider)
         return {};
+    m_previewProvider->setImage(slotName, img);
+    return m_previewProvider->imageUrl(slotName);
+}
 
-    const QString dir = AppPaths::runtimePreviewsDir();
-    QDir().mkpath(dir);
-    const QString path = dir + QLatin1Char('/') + slotName + QStringLiteral(".png");
-    QSaveFile file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
-        return {};
-    if (!img.save(&file, "PNG") || !file.commit())
-        return {};
+ConverterTabSnapshot DisplayConverter::captureTabState() const
+{
+    ConverterTabSnapshot snapshot;
+    snapshot.project = ProjectService::fromSession(m_state.project.name,
+                                                     sessionSnapshot(),
+                                                     m_state.offsetX,
+                                                     m_state.offsetY);
+    snapshot.project.assets.clear();
+    snapshot.project.sourceImagePng.clear();
+    snapshot.project.resultPreviewPng.clear();
 
-    // Fixed filenames are reused on disk; bump URL so QML Image reloads updated PNG.
-    QUrl url = QUrl::fromLocalFile(path);
-    url.setQuery(QString::number(++m_previewEpoch));
-    return url;
+    const bool hasSourceFile = !m_state.sourceFilePath.isEmpty()
+        && QFileInfo::exists(m_state.sourceFilePath);
+    if (hasSourceFile) {
+        snapshot.project.assets.append(ProjectAsset{
+            m_state.sourceFilePath,
+            QFileInfo(m_state.sourceFilePath).fileName(),
+            0,
+            0,
+        });
+    }
+
+    snapshot.sourceImage = m_state.sourceImage;
+    snapshot.sourceFilePath = m_state.sourceFilePath;
+    snapshot.projectFileUrl = m_state.projectFile;
+    snapshot.lastResult = m_state.lastResult;
+    snapshot.generatedCode = m_state.generatedCode;
+    snapshot.hasPipelineResult = !m_state.lastResult.preview.isNull();
+    return snapshot;
+}
+
+void DisplayConverter::restoreTabState(const ConverterTabSnapshot &snapshot)
+{
+    m_rebuildDebounceTimer.stop();
+    m_state.rebuildPending = false;
+
+    m_state.project = snapshot.project;
+    m_state.offsetX = snapshot.project.offsetX;
+    m_state.offsetY = snapshot.project.offsetY;
+    m_state.sourceFilePath = snapshot.sourceFilePath;
+    m_state.projectFile = snapshot.projectFileUrl;
+    applySessionSnapshot(snapshot.project.session);
+
+    m_state.sourceImage = snapshot.sourceImage;
+    if (m_state.sourceImage.isNull() && !snapshot.project.sourceImagePng.isEmpty())
+        m_state.sourceImage.loadFromData(snapshot.project.sourceImagePng, "PNG");
+
+    if (!m_state.sourceImage.isNull()) {
+        markOrientedDirty();
+        refreshSourcePreview();
+        emit hasImageChanged();
+        emit sourceWidthChanged();
+        emit sourceHeightChanged();
+    } else {
+        m_state.sourcePath.clear();
+        if (m_previewProvider)
+            m_previewProvider->clearSlot(QStringLiteral("source"));
+        emit hasImageChanged();
+        emit sourcePathChanged();
+        emit sourceWidthChanged();
+        emit sourceHeightChanged();
+    }
+
+    if (snapshot.hasPipelineResult) {
+        m_state.lastResult = snapshot.lastResult;
+        m_state.generatedCode = snapshot.generatedCode;
+        m_state.processPreviewPath = publishPreview(QStringLiteral("process"), m_state.lastResult.processPreview);
+        m_state.previewPath = publishPreview(QStringLiteral("preview"), m_state.lastResult.preview);
+        emit processPreviewPathChanged();
+        emit previewPathChanged();
+        emit generatedCodeChanged();
+        ImagePipelineController::updateCodePreview(m_state, *this);
+        ImagePipelineController::updateFlashReport(m_state, *this);
+    } else if (!m_state.sourceImage.isNull()) {
+        ImagePipelineController::scheduleRebuild(*this, true);
+    } else {
+        m_state.previewPath.clear();
+        m_state.processPreviewPath.clear();
+        m_state.generatedCode.clear();
+        m_state.lastResult = {};
+        if (m_previewProvider) {
+            m_previewProvider->clearSlot(QStringLiteral("preview"));
+            m_previewProvider->clearSlot(QStringLiteral("process"));
+        }
+        emit previewPathChanged();
+        emit processPreviewPathChanged();
+        emit generatedCodeChanged();
+        ImagePipelineController::updateCodePreview(m_state, *this);
+        ImagePipelineController::updateFlashReport(m_state, *this);
+    }
+
+    emit offsetChanged();
+    updateWatchExportPrefix();
+    emit projectChanged();
+}
+
+StudioProject DisplayConverter::projectSnapshotForDisk() const
+{
+    return ProjectSessionController::projectSnapshotForDisk(*this);
 }
 
 ConvertPipelineParams DisplayConverter::pipelineParams() const
 {
     ConvertPipelineParams p;
-    p.displayWidth = m_displayWidth;
-    p.displayHeight = m_displayHeight;
-    p.colorMode = m_colorMode;
-    p.scaleMode = m_scaleMode;
-    p.monoThreshold = m_monoThreshold;
-    p.invertMono = m_invertMono;
-    p.rotation = m_rotation;
-    p.flipHorizontal = m_flipHorizontal;
-    p.flipVertical = m_flipVertical;
-    p.filterParams = m_filterParams;
-    p.encodingMode = m_encodingMode;
-    p.linearColorSpace = m_linearColorSpace;
+    p.displayWidth = m_state.displayWidth;
+    p.displayHeight = m_state.displayHeight;
+    p.colorMode = m_state.colorMode;
+    p.scaleMode = m_state.scaleMode;
+    p.monoThreshold = m_state.monoThreshold;
+    p.invertMono = m_state.invertMono;
+    p.rotation = m_state.rotation;
+    p.flipHorizontal = m_state.flipHorizontal;
+    p.flipVertical = m_state.flipVertical;
+    p.filterParams = m_state.filterParams;
+    p.encodingMode = m_state.encodingMode;
+    p.linearColorSpace = m_state.linearColorSpace;
     return p;
 }
 
 SessionSnapshot DisplayConverter::sessionSnapshot() const
 {
     SessionSnapshot s;
-    s.profileId = m_profileId;
-    s.displayWidth = m_displayWidth;
-    s.displayHeight = m_displayHeight;
-    s.scaleMode = static_cast<int>(m_scaleMode);
-    s.dithering = m_dithering;
-    s.monoThreshold = m_monoThreshold;
-    s.arrayName = m_arrayName;
-    s.encodingMode = static_cast<int>(m_encodingMode);
-    s.monoLayout = static_cast<int>(m_monoLayout);
-    s.rotation = m_rotation;
-    s.flipHorizontal = m_flipHorizontal;
-    s.flipVertical = m_flipVertical;
-    s.invertMono = m_invertMono;
-    s.showGrid = m_showGrid;
-    s.gridThresholdZoom = m_gridThresholdZoom;
-    s.filterParams = m_filterParams;
-    s.codeIncludeComments = m_codeGenOptions.includeHeaderComments;
-    s.codeUseProgmem = m_codeGenOptions.useProgmem;
-    s.codeStaticStorage = m_codeGenOptions.staticStorage;
-    s.rgb565BigEndian = m_codeGenOptions.rgb565BigEndian;
-    s.codeDmaAlign = m_codeGenOptions.dmaPaddingAlign;
-    s.linearColorSpace = m_linearColorSpace;
+    s.profileId = m_state.profileId;
+    s.displayWidth = m_state.displayWidth;
+    s.displayHeight = m_state.displayHeight;
+    s.scaleMode = static_cast<int>(m_state.scaleMode);
+    s.dithering = m_state.dithering;
+    s.monoThreshold = m_state.monoThreshold;
+    s.arrayName = m_state.arrayName;
+    s.encodingMode = static_cast<int>(m_state.encodingMode);
+    s.monoLayout = static_cast<int>(m_state.monoLayout);
+    s.rotation = m_state.rotation;
+    s.flipHorizontal = m_state.flipHorizontal;
+    s.flipVertical = m_state.flipVertical;
+    s.invertMono = m_state.invertMono;
+    s.showGrid = m_state.showGrid;
+    s.gridThresholdZoom = m_state.gridThresholdZoom;
+    s.filterParams = m_state.filterParams;
+    s.codeIncludeComments = m_state.codeGenOptions.includeHeaderComments;
+    s.codeUseProgmem = m_state.codeGenOptions.useProgmem;
+    s.codeStaticStorage = m_state.codeGenOptions.staticStorage;
+    s.rgb565BigEndian = m_state.codeGenOptions.rgb565BigEndian;
+    s.codeDmaAlign = m_state.codeGenOptions.dmaPaddingAlign;
+    s.linearColorSpace = m_state.linearColorSpace;
     return s;
 }
 
 void DisplayConverter::applySessionSnapshot(const SessionSnapshot &snapshot)
 {
-    m_profileId = snapshot.profileId;
-    m_displayWidth = snapshot.displayWidth;
-    m_displayHeight = snapshot.displayHeight;
-    m_scaleMode = static_cast<DisplayProfile::ScaleMode>(qBound(0, snapshot.scaleMode, 2));
-    m_dithering = snapshot.dithering;
-    m_monoThreshold = snapshot.monoThreshold;
-    m_arrayName = snapshot.arrayName;
+    m_state.profileId = snapshot.profileId;
+    m_state.displayWidth = snapshot.displayWidth;
+    m_state.displayHeight = snapshot.displayHeight;
+    m_state.scaleMode = static_cast<DisplayProfile::ScaleMode>(qBound(0, snapshot.scaleMode, 2));
+    m_state.dithering = snapshot.dithering;
+    m_state.monoThreshold = snapshot.monoThreshold;
+    m_state.arrayName = snapshot.arrayName;
     const int storedEncoding = snapshot.encodingMode;
     if (storedEncoding >= 0
         && storedEncoding < static_cast<int>(DisplayCodeGenerator::EncodingMode::Count)) {
-        m_encodingMode = static_cast<DisplayCodeGenerator::EncodingMode>(storedEncoding);
+        m_state.encodingMode = static_cast<DisplayCodeGenerator::EncodingMode>(storedEncoding);
     } else {
-        m_encodingMode = PixelFormatCatalog::migrateLegacy(storedEncoding);
+        m_state.encodingMode = PixelFormatCatalog::migrateLegacy(storedEncoding);
     }
-    m_monoLayout = static_cast<DisplayCodeGenerator::MonoLayout>(qBound(0, snapshot.monoLayout, 2));
-    m_rotation = snapshot.rotation;
-    m_flipHorizontal = snapshot.flipHorizontal;
-    m_flipVertical = snapshot.flipVertical;
-    m_invertMono = snapshot.invertMono;
-    m_showGrid = snapshot.showGrid;
-    m_gridThresholdZoom = snapshot.gridThresholdZoom;
-    m_filterParams = snapshot.filterParams;
-    m_filterParams.threshold = m_monoThreshold;
-    m_codeGenOptions.includeHeaderComments = snapshot.codeIncludeComments;
-    m_codeGenOptions.useProgmem = snapshot.codeUseProgmem;
-    m_codeGenOptions.staticStorage = snapshot.codeStaticStorage;
-    m_codeGenOptions.rgb565BigEndian = snapshot.rgb565BigEndian;
-    m_codeGenOptions.dmaPaddingAlign = qBound(0, snapshot.codeDmaAlign, 8);
-    if (m_codeGenOptions.dmaPaddingAlign != 4 && m_codeGenOptions.dmaPaddingAlign != 8)
-        m_codeGenOptions.dmaPaddingAlign = 0;
-    m_linearColorSpace = snapshot.linearColorSpace;
-    if (m_filterParams.ditherMode == ImageFiltersPipeline::DitherMode::FloydSteinberg)
-        m_dithering = true;
-    else if (m_filterParams.ditherMode == ImageFiltersPipeline::DitherMode::None)
-        m_dithering = false;
+    m_state.monoLayout = static_cast<DisplayCodeGenerator::MonoLayout>(qBound(0, snapshot.monoLayout, 2));
+    m_state.rotation = snapshot.rotation;
+    m_state.flipHorizontal = snapshot.flipHorizontal;
+    m_state.flipVertical = snapshot.flipVertical;
+    m_state.invertMono = snapshot.invertMono;
+    m_state.showGrid = snapshot.showGrid;
+    m_state.gridThresholdZoom = snapshot.gridThresholdZoom;
+    m_state.filterParams = snapshot.filterParams;
+    m_state.filterParams.threshold = m_state.monoThreshold;
+    m_state.codeGenOptions.includeHeaderComments = snapshot.codeIncludeComments;
+    m_state.codeGenOptions.useProgmem = snapshot.codeUseProgmem;
+    m_state.codeGenOptions.staticStorage = snapshot.codeStaticStorage;
+    m_state.codeGenOptions.rgb565BigEndian = snapshot.rgb565BigEndian;
+    m_state.codeGenOptions.dmaPaddingAlign = qBound(0, snapshot.codeDmaAlign, 8);
+    if (m_state.codeGenOptions.dmaPaddingAlign != 4 && m_state.codeGenOptions.dmaPaddingAlign != 8)
+        m_state.codeGenOptions.dmaPaddingAlign = 0;
+    m_state.linearColorSpace = snapshot.linearColorSpace;
+    if (m_state.filterParams.ditherMode == ImageFiltersPipeline::DitherMode::FloydSteinberg)
+        m_state.dithering = true;
+    else if (m_state.filterParams.ditherMode == ImageFiltersPipeline::DitherMode::None)
+        m_state.dithering = false;
     syncProfileIdFromDimensions();
-    m_colorMode = encodingIsColorMode(static_cast<int>(m_encodingMode))
+    m_state.colorMode = encodingIsColorMode(static_cast<int>(m_state.encodingMode))
         ? DisplayProfile::Rgb565
         : DisplayProfile::Mono1Bit;
     emit codeGenOptionsChanged();
@@ -1481,34 +1587,34 @@ void DisplayConverter::persistUiState()
 {
     if (!m_session)
         return;
-    if (!m_projectFile.isEmpty())
-        m_uiState.lastProjectFile = m_projectFile.toLocalFile();
-    m_session->saveUiState(m_uiState);
+    if (!m_state.projectFile.isEmpty())
+        m_state.uiState.lastProjectFile = m_state.projectFile.toLocalFile();
+    m_session->saveUiState(m_state.uiState);
     emit uiFoldersChanged();
 }
 
 QString DisplayConverter::lastOpenImageDir() const
 {
-    if (!m_uiState.lastOpenImageDir.isEmpty())
-        return m_uiState.lastOpenImageDir;
+    if (!m_state.uiState.lastOpenImageDir.isEmpty())
+        return m_state.uiState.lastOpenImageDir;
     return AppPaths::userDocumentsRoot();
 }
 
 QString DisplayConverter::lastExportDir() const
 {
-    if (!m_uiState.lastExportDir.isEmpty())
-        return m_uiState.lastExportDir;
+    if (!m_state.uiState.lastExportDir.isEmpty())
+        return m_state.uiState.lastExportDir;
     return AppPaths::exportsDir();
 }
 
 void DisplayConverter::applyStoredUiState()
 {
-    const QString watchOut = m_uiState.watchOutputFolder.isEmpty()
+    const QString watchOut = m_state.uiState.watchOutputFolder.isEmpty()
         ? AppPaths::watchDir()
-        : m_uiState.watchOutputFolder;
-    if (!m_uiState.watchInputFolder.isEmpty() || !watchOut.isEmpty())
-        m_watchService.configure(m_uiState.watchInputFolder, watchOut);
-    if (m_uiState.watchActive)
+        : m_state.uiState.watchOutputFolder;
+    if (!m_state.uiState.watchInputFolder.isEmpty() || !watchOut.isEmpty())
+        m_watchService.configure(m_state.uiState.watchInputFolder, watchOut);
+    if (m_state.uiState.watchActive)
         m_watchService.setActive(true);
 
     emit uiFoldersChanged();
@@ -1516,9 +1622,9 @@ void DisplayConverter::applyStoredUiState()
 
 QString DisplayConverter::lastProjectPath() const
 {
-    if (AppPaths::isInternalDataPath(m_uiState.lastProjectFile))
+    if (AppPaths::isInternalDataPath(m_state.uiState.lastProjectFile))
         return {};
-    return m_uiState.lastProjectFile;
+    return m_state.uiState.lastProjectFile;
 }
 
 bool DisplayConverter::hasRestorableProject() const
@@ -1544,7 +1650,7 @@ void DisplayConverter::openUserDocumentsFolder()
 
 QString DisplayConverter::suggestedCodeFilePath() const
 {
-    QString base = DisplayCodeGenerator::sanitizeIdentifier(m_arrayName);
+    QString base = DisplayCodeGenerator::sanitizeIdentifier(m_state.arrayName);
     if (base.isEmpty())
         base = QStringLiteral("image_data");
     const QString dir = lastExportDir();
@@ -1561,7 +1667,7 @@ void DisplayConverter::rememberOpenImageDir(const QString &dir)
     const QString path = QFileInfo(dir).isDir() ? dir : QFileInfo(dir).absolutePath();
     if (path.isEmpty())
         return;
-    m_uiState.lastOpenImageDir = path;
+    m_state.uiState.lastOpenImageDir = path;
     schedulePersistSession();
 }
 
@@ -1570,13 +1676,13 @@ void DisplayConverter::rememberExportDir(const QString &dir)
     const QString path = QFileInfo(dir).isDir() ? dir : QFileInfo(dir).absolutePath();
     if (path.isEmpty())
         return;
-    m_uiState.lastExportDir = path;
+    m_state.uiState.lastExportDir = path;
     schedulePersistSession();
 }
 
 void DisplayConverter::refreshLocalization()
 {
-    ++m_localizationRevision;
+    ++m_state.localizationRevision;
     emit localizationRevisionChanged();
     emit colorModeChanged();
     emit encodingModeChanged();
@@ -1591,11 +1697,11 @@ QVariantList DisplayConverter::recentFiles() const
 
 void DisplayConverter::rememberOpenSourceInRecent()
 {
-    if (!m_session || !hasImage() || m_sourceFilePath.isEmpty())
+    if (!m_session || !hasImage() || m_state.sourceFilePath.isEmpty())
         return;
-    if (!QFileInfo::exists(m_sourceFilePath))
+    if (!QFileInfo::exists(m_state.sourceFilePath))
         return;
-    m_session->addRecentFile(QUrl::fromLocalFile(m_sourceFilePath));
+    m_session->addRecentFile(QUrl::fromLocalFile(m_state.sourceFilePath));
 }
 
 QVariantList DisplayConverter::recentExports() const
@@ -1620,9 +1726,9 @@ void DisplayConverter::resetSession()
         return;
     m_session->resetToDefaults();
     applySessionSnapshot(SessionSettings::defaultSnapshot());
-    m_uiState = SessionUiState{};
-    m_uiState.watchOutputFolder = AppPaths::watchDir();
-    m_watchService.configure(QString(), m_uiState.watchOutputFolder);
+    m_state.uiState = SessionUiState{};
+    m_state.uiState.watchOutputFolder = AppPaths::watchDir();
+    m_watchService.configure(QString(), m_state.uiState.watchOutputFolder);
     m_watchService.setActive(false);
     schedulePersistSession();
     emit recentFilesChanged();
@@ -1678,7 +1784,7 @@ bool DisplayConverter::importSettingsFrom(const QUrl &folderUrl)
 
 void DisplayConverter::updateWatchExportPrefix()
 {
-    QString stem = DisplayCodeGenerator::sanitizeIdentifier(m_project.name);
+    QString stem = DisplayCodeGenerator::sanitizeIdentifier(m_state.project.name);
     if (stem.isEmpty())
         stem = QStringLiteral("project");
     m_watchService.setExportNamePrefix(stem);
@@ -1697,36 +1803,36 @@ void DisplayConverter::onAutosaveTimeout()
 {
     if (!m_appSettings || !m_appSettings->projectAutosave())
         return;
-    if (m_projectFile.isEmpty() || !hasImage())
+    if (m_state.projectFile.isEmpty() || !hasImage())
         return;
     saveProject();
 }
 
 void DisplayConverter::setOffsetX(int value)
 {
-    if (m_offsetX == value)
+    if (m_state.offsetX == value)
         return;
-    m_offsetX = value;
+    m_state.offsetX = value;
     emit offsetChanged();
     schedulePersistSession();
 }
 
 void DisplayConverter::setOffsetY(int value)
 {
-    if (m_offsetY == value)
+    if (m_state.offsetY == value)
         return;
-    m_offsetY = value;
+    m_state.offsetY = value;
     emit offsetChanged();
     schedulePersistSession();
 }
 
 void DisplayConverter::setShowFullGeneratedCode(bool on)
 {
-    if (m_showFullGeneratedCode == on)
+    if (m_state.showFullGeneratedCode == on)
         return;
-    m_showFullGeneratedCode = on;
+    m_state.showFullGeneratedCode = on;
     emit showFullGeneratedCodeChanged();
-    updateCodePreview();
+    ImagePipelineController::updateCodePreview(m_state, *this);
 }
 
 void DisplayConverter::onWatchExportRequested(const QVariantList &files, const QUrl &targetFile)

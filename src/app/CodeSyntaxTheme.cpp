@@ -1,5 +1,7 @@
 #include "app/CodeSyntaxTheme.h"
 
+#include <QMutexLocker>
+
 #include <QChar>
 #include <QColor>
 #include <QRegularExpression>
@@ -366,6 +368,7 @@ QVariantMap CodeSyntaxTheme::asMap() const
 
 void CodeSyntaxTheme::clearHighlightCache()
 {
+    QMutexLocker lock(&m_highlightMutex);
     m_highlightCache.clear();
 }
 
@@ -375,8 +378,11 @@ QString CodeSyntaxTheme::highlight(const QString &code) const
         return QString();
 
     const quint64 cacheKey = qHash(code) ^ (quint64(m_revision) << 32);
-    if (const auto it = m_highlightCache.constFind(cacheKey); it != m_highlightCache.constEnd())
-        return it.value();
+    {
+        QMutexLocker lock(&m_highlightMutex);
+        if (const auto it = m_highlightCache.constFind(cacheKey); it != m_highlightCache.constEnd())
+            return it.value();
+    }
 
     const QVariantMap colors = asMap();
     QString html;
@@ -399,9 +405,12 @@ QString CodeSyntaxTheme::highlight(const QString &code) const
             html += QStringLiteral("<br>");
     }
 
-    if (m_highlightCache.size() >= 32)
-        m_highlightCache.clear();
-    m_highlightCache.insert(cacheKey, html);
+    {
+        QMutexLocker lock(&m_highlightMutex);
+        if (m_highlightCache.size() >= 32)
+            m_highlightCache.clear();
+        m_highlightCache.insert(cacheKey, html);
+    }
     return html;
 }
 

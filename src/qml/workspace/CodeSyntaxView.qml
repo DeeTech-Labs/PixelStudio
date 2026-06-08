@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import PixelStudio
 
 pragma Translator: PixelStudio
 
@@ -11,11 +12,15 @@ Item {
     property bool wrap: false
     property string placeholderText: ""
 
-    readonly property string highlightedHtml: {
-        const theme = appSettings.codeSyntax
-        const revision = theme.revision
-        void revision
-        return theme.highlight(sourceText)
+    CodeSyntaxHighlighter {
+        id: syntaxHighlighter
+        sourceText: root.sourceText
+        Component.onCompleted: setTheme(appSettings.codeSyntax)
+    }
+
+    Connections {
+        target: appSettings.codeSyntax
+        function onChanged() { syntaxHighlighter.setTheme(appSettings.codeSyntax) }
     }
 
     readonly property real lineHeight: studio.fontSizeSm * 1.5
@@ -61,7 +66,7 @@ Item {
             width: root.documentWidth
             visible: root.sourceText.length > 0
             textFormat: Text.RichText
-            text: root.highlightedHtml
+            text: syntaxHighlighter.highlightedHtml
             font.family: studio.fontFamilyMono
             font.pixelSize: studio.fontSizeSm
             wrapMode: root.wrap ? Text.Wrap : Text.NoWrap

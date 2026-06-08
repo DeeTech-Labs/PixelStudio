@@ -23,7 +23,7 @@ PixelPanel {
             required property int index
             width: list.width
             height: 22
-            highlighted: modelData.path === converter.sourcePath.toString().replace("file:///", "").replace("file://", "")
+            highlighted: modelData.path === converter.sourceFilePath
             background: Rectangle {
                 color: parent.highlighted ? studio.accentSoft
                     : (parent.hovered ? studio.railHover : "transparent")

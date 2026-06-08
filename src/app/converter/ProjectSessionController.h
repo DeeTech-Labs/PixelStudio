@@ -10,7 +10,7 @@ class DisplayConverter;
 class ProjectSessionController
 {
 public:
-    static StudioProject projectSnapshot(const DisplayConverter &converter);
+    static StudioProject projectSnapshotForDisk(const DisplayConverter &converter);
     static void applyProject(DisplayConverter &converter, const StudioProject &project);
     static bool openProject(DisplayConverter &converter, const QUrl &url);
     static bool saveProject(DisplayConverter &converter);

@@ -21,7 +21,9 @@
 #endif
 #include "app/AppTranslations.h"
 #include "app/AppVersion.h"
+#include "app/CodeSyntaxHighlighter.h"
 #include "app/DisplayConverter.h"
+#include "app/PreviewImageProvider.h"
 #include "app/StudioTabController.h"
 #include "app/WinTaskbarRecent.h"
 #include "persistence/AppPaths.h"
@@ -48,11 +50,15 @@ int main(int argc, char *argv[])
     AppSettings appSettings;
     AppTranslations::install(app, appSettings.languageCode());
     SessionSettings session;
+    auto *previewProvider = new PreviewImageProvider;
     DisplayConverter converter(&session, &appSettings);
     StudioTabController tabController(&converter);
     WinTaskbarRecent winTaskbarRecent;
 
     QQmlApplicationEngine engine;
+    engine.addImageProvider(QLatin1String(PreviewImageProvider::kProviderId), previewProvider);
+    converter.setPreviewProvider(previewProvider);
+    qmlRegisterType<CodeSyntaxHighlighter>("PixelStudio", 1, 0, "CodeSyntaxHighlighter");
     engine.setUiLanguage(AppTranslations::effectiveLanguageCode(appSettings.languageCode()));
     engine.rootContext()->setContextProperty("applicationVersion", appVersion);
     engine.rootContext()->setContextProperty("qtRuntimeVersion",

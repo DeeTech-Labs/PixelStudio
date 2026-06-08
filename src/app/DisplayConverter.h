@@ -10,6 +10,8 @@
 #include <QTimer>
 #include <QColor>
 
+#include "app/converter/ConverterState.h"
+#include "app/converter/ConverterTabSnapshot.h"
 #include "processing/DisplayProfile.h"
 #include "processing/DisplayRasterizer.h"
 #include "processing/DisplayCodeGenerator.h"
@@ -23,15 +25,10 @@
 
 class AppSettings;
 class ImageLoader;
-class ImagePipelineController;
-class ProjectSessionController;
-class ExportController;
+class PreviewImageProvider;
 
 class DisplayConverter : public QObject
 {
-    friend class ImagePipelineController;
-    friend class ProjectSessionController;
-    friend class ExportController;
     Q_OBJECT
     Q_PROPERTY(QUrl sourcePath READ sourcePath NOTIFY sourcePathChanged)
     Q_PROPERTY(QUrl previewPath READ previewPath NOTIFY previewPathChanged)
@@ -54,7 +51,7 @@ class DisplayConverter : public QObject
     Q_PROPERTY(QString arrayName READ arrayName WRITE setArrayName NOTIFY arrayNameChanged)
     Q_PROPERTY(int dataByteCount READ dataByteCount NOTIFY generatedCodeChanged)
     Q_PROPERTY(QString colorModeName READ colorModeName NOTIFY colorModeChanged)
-    Q_PROPERTY(    int encodingMode READ encodingMode WRITE setEncodingMode NOTIFY encodingModeChanged)
+    Q_PROPERTY(int encodingMode READ encodingMode WRITE setEncodingMode NOTIFY encodingModeChanged)
     Q_PROPERTY(QString encodingModeName READ encodingModeName NOTIFY encodingModeChanged)
     Q_PROPERTY(bool encodingIsMono1Bit READ encodingIsMono1Bit NOTIFY encodingModeChanged)
     Q_PROPERTY(bool encodingIsGrayscale READ encodingIsGrayscale NOTIFY encodingModeChanged)
@@ -114,26 +111,32 @@ class DisplayConverter : public QObject
     Q_PROPERTY(QVariantList previewPalette READ previewPalette NOTIFY previewPathChanged)
     Q_PROPERTY(int previewColorCount READ previewColorCount NOTIFY previewPathChanged)
     Q_PROPERTY(QString imageFormatName READ imageFormatName NOTIFY hasImageChanged)
+    Q_PROPERTY(QString sourceFilePath READ sourceFilePath NOTIFY sourcePathChanged)
 
 public:
     explicit DisplayConverter(SessionSettings *session, AppSettings *appSettings = nullptr, QObject *parent = nullptr);
 
-    QUrl sourcePath() const { return m_sourcePath; }
-    QUrl previewPath() const { return m_previewPath; }
-    QUrl processPreviewPath() const { return m_processPreviewPath; }
-    bool hasImage() const { return !m_sourceImage.isNull(); }
-    bool imageLoading() const { return m_imageLoading; }
-    bool hasPreview() const { return !m_previewPath.isEmpty(); }
+    void setPreviewProvider(PreviewImageProvider *provider);
+    ConverterState &converterState() { return m_state; }
+    const ConverterState &converterState() const { return m_state; }
+
+    QUrl sourcePath() const { return m_state.sourcePath; }
+    QUrl previewPath() const { return m_state.previewPath; }
+    QUrl processPreviewPath() const { return m_state.processPreviewPath; }
+    bool hasImage() const { return !m_state.sourceImage.isNull(); }
+    bool imageLoading() const { return m_state.imageLoading; }
+    bool hasPreview() const { return !m_state.previewPath.isEmpty(); }
     bool batchRunning() const { return m_batchService.running(); }
     int batchProgress() const { return m_batchService.progress(); }
-    bool showGrid() const { return m_showGrid; }
-    int gridThresholdZoom() const { return m_gridThresholdZoom; }
-    QString projectName() const { return m_project.name; }
-    QUrl projectFile() const { return m_projectFile; }
-    int offsetX() const { return m_offsetX; }
-    int offsetY() const { return m_offsetY; }
-    QVariantList flashReport() const { return m_flashReport; }
-    QVariantList projectAssets() const { return ProjectService::assetsToVariantList(m_project.assets); }
+    bool showGrid() const { return m_state.showGrid; }
+    int gridThresholdZoom() const { return m_state.gridThresholdZoom; }
+    QString projectName() const { return m_state.project.name; }
+    QUrl projectFile() const { return m_state.projectFile; }
+    QString sourceFilePath() const { return m_state.sourceFilePath; }
+    int offsetX() const { return m_state.offsetX; }
+    int offsetY() const { return m_state.offsetY; }
+    QVariantList flashReport() const { return m_state.flashReport; }
+    QVariantList projectAssets() const { return ProjectService::assetsToVariantList(m_state.project.assets); }
     bool watchFolderActive() const { return m_watchService.active(); }
     QString watchInputFolder() const { return m_watchService.inputFolder(); }
     QString watchOutputFolder() const { return m_watchService.outputFolder(); }
@@ -143,61 +146,61 @@ public:
     bool hasRestorableProject() const;
     QString lastOpenImageDir() const;
     QString lastExportDir() const;
-    bool showFullGeneratedCode() const { return m_showFullGeneratedCode; }
-    QString generatedCodePreview() const { return m_generatedCodePreview; }
-    bool generatedCodeTruncated() const { return m_generatedCodeTruncated; }
+    bool showFullGeneratedCode() const { return m_state.showFullGeneratedCode; }
+    QString generatedCodePreview() const { return m_state.generatedCodePreview; }
+    bool generatedCodeTruncated() const { return m_state.generatedCodeTruncated; }
     int sourceWidth() const;
     int sourceHeight() const;
-    int rotation() const { return m_rotation; }
-    bool flipHorizontal() const { return m_flipHorizontal; }
-    bool flipVertical() const { return m_flipVertical; }
-    bool invertMono() const { return m_invertMono; }
-    bool filterInvert() const { return m_filterParams.invert; }
-    int displayWidth() const { return m_displayWidth; }
-    int displayHeight() const { return m_displayHeight; }
-    QString profileId() const { return m_profileId; }
-    int colorMode() const { return static_cast<int>(m_colorMode); }
-    int scaleMode() const { return static_cast<int>(m_scaleMode); }
-    bool dithering() const { return m_dithering; }
-    int monoThreshold() const { return m_monoThreshold; }
-    QString generatedCode() const { return m_generatedCode; }
-    QString arrayName() const { return m_arrayName; }
+    int rotation() const { return m_state.rotation; }
+    bool flipHorizontal() const { return m_state.flipHorizontal; }
+    bool flipVertical() const { return m_state.flipVertical; }
+    bool invertMono() const { return m_state.invertMono; }
+    bool filterInvert() const { return m_state.filterParams.invert; }
+    int displayWidth() const { return m_state.displayWidth; }
+    int displayHeight() const { return m_state.displayHeight; }
+    QString profileId() const { return m_state.profileId; }
+    int colorMode() const { return static_cast<int>(m_state.colorMode); }
+    int scaleMode() const { return static_cast<int>(m_state.scaleMode); }
+    bool dithering() const { return m_state.dithering; }
+    int monoThreshold() const { return m_state.monoThreshold; }
+    QString generatedCode() const { return m_state.generatedCode; }
+    QString arrayName() const { return m_state.arrayName; }
     int dataByteCount() const;
     QString colorModeName() const;
-    int encodingMode() const { return static_cast<int>(m_encodingMode); }
+    int encodingMode() const { return static_cast<int>(m_state.encodingMode); }
     QString encodingModeName() const;
     bool encodingIsMono1Bit() const;
     bool encodingIsGrayscale() const;
     bool encodingIsColor() const;
-    int monoLayout() const { return static_cast<int>(m_monoLayout); }
+    int monoLayout() const { return static_cast<int>(m_state.monoLayout); }
     QString monoLayoutName() const;
-    bool blackBackground() const { return m_filterParams.blackBackground; }
-    int brightness() const { return m_filterParams.brightness; }
-    int contrast() const { return m_filterParams.contrast; }
-    int saturation() const { return m_filterParams.saturation; }
-    int exposure() const { return m_filterParams.exposure; }
-    int gamma() const { return m_filterParams.gamma; }
-    int blur() const { return m_filterParams.blur; }
-    int posterizeRgb() const { return m_filterParams.posterizeRgb; }
-    bool colorMaskEnabled() const { return m_filterParams.colorMaskEnabled; }
-    QColor maskColor() const { return m_filterParams.maskColor; }
-    int maskTolerance() const { return m_filterParams.maskTolerance; }
-    int maskAmplify() const { return m_filterParams.maskAmplify; }
-    bool sharpen() const { return m_filterParams.sharpen; }
-    int sobelEdges() const { return m_filterParams.sobelEdges; }
-    int posterizeGray() const { return m_filterParams.posterizeGray; }
-    int ditherMode() const { return static_cast<int>(m_filterParams.ditherMode); }
-    int contourMode() const { return static_cast<int>(m_filterParams.contourMode); }
-    int tonePreset() const { return static_cast<int>(m_filterParams.tonePreset); }
-    bool codeIncludeComments() const { return m_codeGenOptions.includeHeaderComments; }
-    bool codeUseProgmem() const { return m_codeGenOptions.useProgmem; }
-    bool codeStaticStorage() const { return m_codeGenOptions.staticStorage; }
-    bool rgb565BigEndian() const { return m_codeGenOptions.rgb565BigEndian; }
-    int codeDmaAlign() const { return m_codeGenOptions.dmaPaddingAlign; }
+    bool blackBackground() const { return m_state.filterParams.blackBackground; }
+    int brightness() const { return m_state.filterParams.brightness; }
+    int contrast() const { return m_state.filterParams.contrast; }
+    int saturation() const { return m_state.filterParams.saturation; }
+    int exposure() const { return m_state.filterParams.exposure; }
+    int gamma() const { return m_state.filterParams.gamma; }
+    int blur() const { return m_state.filterParams.blur; }
+    int posterizeRgb() const { return m_state.filterParams.posterizeRgb; }
+    bool colorMaskEnabled() const { return m_state.filterParams.colorMaskEnabled; }
+    QColor maskColor() const { return m_state.filterParams.maskColor; }
+    int maskTolerance() const { return m_state.filterParams.maskTolerance; }
+    int maskAmplify() const { return m_state.filterParams.maskAmplify; }
+    bool sharpen() const { return m_state.filterParams.sharpen; }
+    int sobelEdges() const { return m_state.filterParams.sobelEdges; }
+    int posterizeGray() const { return m_state.filterParams.posterizeGray; }
+    int ditherMode() const { return static_cast<int>(m_state.filterParams.ditherMode); }
+    int contourMode() const { return static_cast<int>(m_state.filterParams.contourMode); }
+    int tonePreset() const { return static_cast<int>(m_state.filterParams.tonePreset); }
+    bool codeIncludeComments() const { return m_state.codeGenOptions.includeHeaderComments; }
+    bool codeUseProgmem() const { return m_state.codeGenOptions.useProgmem; }
+    bool codeStaticStorage() const { return m_state.codeGenOptions.staticStorage; }
+    bool rgb565BigEndian() const { return m_state.codeGenOptions.rgb565BigEndian; }
+    int codeDmaAlign() const { return m_state.codeGenOptions.dmaPaddingAlign; }
     QVariantList previewPalette() const;
     int previewColorCount() const;
     QString imageFormatName() const;
-    bool linearColorSpace() const { return m_linearColorSpace; }
+    bool linearColorSpace() const { return m_state.linearColorSpace; }
 
     Q_INVOKABLE void setArrayName(const QString &name);
     Q_INVOKABLE void setDisplayWidth(int w);
@@ -291,8 +294,28 @@ public:
     Q_INVOKABLE void refreshLocalization();
     void applyProject(const StudioProject &project);
     StudioProject projectSnapshot() const;
+    StudioProject projectSnapshotForDisk() const;
+    void applySessionSnapshot(const SessionSnapshot &snapshot);
+    void markOrientedDirty();
+    void refreshSourcePreview();
+    void updateWatchExportPrefix();
+    void restartAutosaveTimer();
+    ConverterTabSnapshot captureTabState() const;
+    void restoreTabState(const ConverterTabSnapshot &snapshot);
 
-    int localizationRevision() const { return m_localizationRevision; }
+    QTimer *rebuildDebounceTimer() { return &m_rebuildDebounceTimer; }
+    QFutureWatcher<ConverterAsyncBuildResult> *rebuildWatcher() { return &m_rebuildWatcher; }
+    ImageLoader *loader() const { return m_loader; }
+    SessionSettings *session() const { return m_session; }
+    WatchFolderService *watchService() { return &m_watchService; }
+    BatchExportService *batchService() { return &m_batchService; }
+    QImage orientedSource() const;
+    void schedulePersistSession();
+    void applyPipelineResult(const ConverterAsyncBuildResult &result);
+    ConvertPipelineParams pipelineParams() const;
+    SessionSnapshot sessionSnapshot() const;
+
+    int localizationRevision() const { return m_state.localizationRevision; }
 
 signals:
     void localizationRevisionChanged();
@@ -363,12 +386,6 @@ private Q_SLOTS:
     void persistSession();
 
 private:
-    struct AsyncBuildResult {
-        quint64 generation = 0;
-        DisplayRasterizer::Result result;
-        QString generatedCode;
-    };
-
     void applyProfile(const DisplayProfile &profile);
     void syncProfileIdFromDimensions();
     void markToneCustom();
@@ -376,78 +393,22 @@ private:
     DisplayCodeGenerator::CodeGenOptions codeGenOptions() const;
     void rebuild();
     void scheduleRebuild(bool immediate = false);
-    void startAsyncRebuild();
-    void onAsyncRebuildFinished();
-    QImage orientedSource() const;
-    void markOrientedDirty();
-    void refreshSourcePreview();
-    QUrl writeTempPreview(const QString &slotName, const QImage &img);
-    ConvertPipelineParams pipelineParams() const;
-    SessionSnapshot sessionSnapshot() const;
-    void applySessionSnapshot(const SessionSnapshot &snapshot);
-    void schedulePersistSession();
-    void updateCodePreview();
-    void updateFlashReport();
+    QUrl publishPreview(const QString &slotName, const QImage &img);
     void applyStoredUiState();
     void persistUiState();
-    void updateWatchExportPrefix();
-    void restartAutosaveTimer();
     void onAutosaveTimeout();
 
     ImageLoader *m_loader;
+    PreviewImageProvider *m_previewProvider = nullptr;
     SessionSettings *m_session = nullptr;
     AppSettings *m_appSettings = nullptr;
     BatchExportService m_batchService;
     WatchFolderService m_watchService;
-    QImage m_sourceImage;
-    QUrl m_sourcePath;
-    QUrl m_previewPath;
-    QUrl m_processPreviewPath;
-    quint64 m_previewEpoch = 0;
-    QString m_generatedCode;
-    QString m_generatedCodePreview;
-    bool m_generatedCodeTruncated = false;
-    bool m_showFullGeneratedCode = false;
-    DisplayRasterizer::Result m_lastResult;
-
-    QString m_profileId = QStringLiteral("128x64");
-    int m_displayWidth = 128;
-    int m_displayHeight = 64;
-    DisplayProfile::ColorMode m_colorMode = DisplayProfile::Mono1Bit;
-    DisplayProfile::ScaleMode m_scaleMode = DisplayProfile::Fit;
-    bool m_dithering = true;
-    int m_monoThreshold = 128;
-    QString m_arrayName = QStringLiteral("image_data");
-    DisplayCodeGenerator::MonoLayout m_monoLayout = DisplayCodeGenerator::MonoLayout::RowPacked;
-    DisplayCodeGenerator::EncodingMode m_encodingMode = DisplayCodeGenerator::EncodingMode::Mono1Bit;
-    int m_rotation = 0;
-    bool m_flipHorizontal = false;
-    bool m_flipVertical = false;
-    bool m_invertMono = false;
-    ImageFiltersPipeline::Params m_filterParams;
-    DisplayCodeGenerator::CodeGenOptions m_codeGenOptions;
-    bool m_linearColorSpace = true;
-    mutable QImage m_orientedCache;
-    mutable bool m_orientedDirty = true;
-
+    ConverterState m_state;
     QTimer m_rebuildDebounceTimer;
     QTimer m_sessionSaveTimer;
     QTimer m_autosaveTimer;
-    QFutureWatcher<AsyncBuildResult> m_rebuildWatcher;
-    quint64 m_nextGeneration = 0;
-    quint64 m_lastAppliedGeneration = 0;
-    bool m_rebuildPending = false;
-    bool m_showGrid = false;
-    int m_gridThresholdZoom = 8;
-    StudioProject m_project;
-    QString m_sourceFilePath;
-    QUrl m_projectFile;
-    int m_offsetX = 0;
-    int m_offsetY = 0;
-    QVariantList m_flashReport;
-    SessionUiState m_uiState;
-    int m_localizationRevision = 0;
-    bool m_imageLoading = false;
+    QFutureWatcher<ConverterAsyncBuildResult> m_rebuildWatcher;
 };
 
 #endif // DISPLAYCONVERTER_H

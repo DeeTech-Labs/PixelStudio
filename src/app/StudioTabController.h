@@ -8,6 +8,7 @@
 
 #include <optional>
 
+#include "app/converter/ConverterTabSnapshot.h"
 #include "persistence/ProjectService.h"
 
 class DisplayConverter;
@@ -72,7 +73,7 @@ private:
         QString projectPath;
         QString cachePath;
         int viewMode = 0;
-        std::optional<StudioProject> memorySnapshot;
+        std::optional<ConverterTabSnapshot> tabSnapshot;
     };
 
     void flushTabCachesToDisk();

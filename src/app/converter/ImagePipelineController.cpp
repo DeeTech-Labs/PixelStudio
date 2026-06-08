@@ -1,4 +1,5 @@
 #include "app/converter/ImagePipelineController.h"
+#include "app/converter/ConverterState.h"
 #include "app/DisplayConverter.h"
 
 #include "processing/DisplayCodeGenerator.h"
@@ -13,24 +14,25 @@ void ImagePipelineController::scheduleRebuild(DisplayConverter &converter, bool 
 {
     converter.schedulePersistSession();
     if (immediate) {
-        converter.m_rebuildDebounceTimer.stop();
+        converter.rebuildDebounceTimer()->stop();
         startAsyncRebuild(converter);
         return;
     }
-    converter.m_rebuildDebounceTimer.start();
+    converter.rebuildDebounceTimer()->start();
 }
 
 void ImagePipelineController::startAsyncRebuild(DisplayConverter &converter)
 {
-    if (converter.m_rebuildWatcher.isRunning()) {
-        converter.m_rebuildPending = true;
+    ConverterState &state = converter.converterState();
+    if (converter.rebuildWatcher()->isRunning()) {
+        state.rebuildPending = true;
         return;
     }
 
-    if (converter.m_sourceImage.isNull()) {
-        converter.m_previewPath.clear();
-        converter.m_processPreviewPath.clear();
-        converter.m_generatedCode.clear();
+    if (state.sourceImage.isNull()) {
+        state.previewPath.clear();
+        state.processPreviewPath.clear();
+        state.generatedCode.clear();
         emit converter.previewPathChanged();
         emit converter.processPreviewPathChanged();
         emit converter.generatedCodeChanged();
@@ -38,20 +40,20 @@ void ImagePipelineController::startAsyncRebuild(DisplayConverter &converter)
     }
 
     const QImage source = converter.orientedSource();
-    const int width = converter.m_displayWidth;
-    const int height = converter.m_displayHeight;
-    const auto colorMode = converter.m_colorMode;
-    const auto scaleMode = converter.m_scaleMode;
-    const int monoThreshold = converter.m_monoThreshold;
-    const bool invertMono = converter.m_invertMono;
-    const ImageFiltersPipeline::Params filterParams = converter.m_filterParams;
-    const QString profileId = converter.m_profileId;
-    const QString arrayName = converter.m_arrayName;
-    const auto encodingMode = converter.m_encodingMode;
-    const auto monoLayout = converter.m_monoLayout;
-    const DisplayCodeGenerator::CodeGenOptions codeOptions = converter.m_codeGenOptions;
-    const bool linearColorSpace = converter.m_linearColorSpace;
-    const quint64 generation = ++converter.m_nextGeneration;
+    const int width = state.displayWidth;
+    const int height = state.displayHeight;
+    const auto colorMode = state.colorMode;
+    const auto scaleMode = state.scaleMode;
+    const int monoThreshold = state.monoThreshold;
+    const bool invertMono = state.invertMono;
+    const ImageFiltersPipeline::Params filterParams = state.filterParams;
+    const QString profileId = state.profileId;
+    const QString arrayName = state.arrayName;
+    const auto encodingMode = state.encodingMode;
+    const auto monoLayout = state.monoLayout;
+    const DisplayCodeGenerator::CodeGenOptions codeOptions = state.codeGenOptions;
+    const bool linearColorSpace = state.linearColorSpace;
+    const quint64 generation = ++state.nextGeneration;
 
     auto future = QtConcurrent::run([source,
                                      width,
@@ -67,8 +69,8 @@ void ImagePipelineController::startAsyncRebuild(DisplayConverter &converter)
                                      monoLayout,
                                      codeOptions,
                                      linearColorSpace,
-                                     generation]() -> DisplayConverter::AsyncBuildResult {
-        DisplayConverter::AsyncBuildResult output;
+                                     generation]() -> ConverterAsyncBuildResult {
+        ConverterAsyncBuildResult output;
         output.generation = generation;
         output.result = DisplayRasterizer::convert(source,
                                                    width,
@@ -109,74 +111,52 @@ void ImagePipelineController::startAsyncRebuild(DisplayConverter &converter)
                                                               output.result.indexedPalette);
         return output;
     });
-    converter.m_rebuildWatcher.setFuture(future);
+    converter.rebuildWatcher()->setFuture(future);
 }
 
 void ImagePipelineController::onAsyncRebuildFinished(DisplayConverter &converter)
 {
-    const DisplayConverter::AsyncBuildResult result = converter.m_rebuildWatcher.result();
-    if (result.generation >= converter.m_lastAppliedGeneration) {
-        converter.m_lastAppliedGeneration = result.generation;
-        converter.m_lastResult = result.result;
-
-        if (converter.m_lastResult.preview.isNull()) {
-            converter.m_previewPath.clear();
-            converter.m_processPreviewPath.clear();
-            converter.m_generatedCode.clear();
-            emit converter.previewPathChanged();
-            emit converter.processPreviewPathChanged();
-            emit converter.generatedCodeChanged();
-            updateCodePreview(converter);
-            updateFlashReport(converter);
-        } else {
-            converter.m_processPreviewPath =
-                converter.writeTempPreview(QStringLiteral("process"), converter.m_lastResult.processPreview);
-            emit converter.processPreviewPathChanged();
-            converter.m_previewPath =
-                converter.writeTempPreview(QStringLiteral("preview"), converter.m_lastResult.preview);
-            emit converter.previewPathChanged();
-            converter.m_generatedCode = result.generatedCode;
-            emit converter.generatedCodeChanged();
-            updateCodePreview(converter);
-            updateFlashReport(converter);
-        }
+    ConverterState &state = converter.converterState();
+    const ConverterAsyncBuildResult result = converter.rebuildWatcher()->result();
+    if (result.generation >= state.lastAppliedGeneration) {
+        converter.applyPipelineResult(result);
     }
 
-    if (converter.m_rebuildPending) {
-        converter.m_rebuildPending = false;
+    if (state.rebuildPending) {
+        state.rebuildPending = false;
         startAsyncRebuild(converter);
     }
 }
 
-void ImagePipelineController::updateCodePreview(DisplayConverter &converter)
+void ImagePipelineController::updateCodePreview(ConverterState &state, DisplayConverter &converter)
 {
-    if (converter.m_showFullGeneratedCode || converter.m_generatedCode.isEmpty()) {
-        converter.m_generatedCodePreview = converter.m_generatedCode;
-        converter.m_generatedCodeTruncated = false;
+    if (state.showFullGeneratedCode || state.generatedCode.isEmpty()) {
+        state.generatedCodePreview = state.generatedCode;
+        state.generatedCodeTruncated = false;
     } else {
         constexpr int kMaxLines = 80;
         constexpr int kMaxChars = 12000;
-        QStringList lines = converter.m_generatedCode.split(QLatin1Char('\n'));
-        converter.m_generatedCodeTruncated = lines.size() > kMaxLines
-            || converter.m_generatedCode.size() > kMaxChars;
+        QStringList lines = state.generatedCode.split(QLatin1Char('\n'));
+        state.generatedCodeTruncated = lines.size() > kMaxLines
+            || state.generatedCode.size() > kMaxChars;
         if (lines.size() > kMaxLines)
             lines = lines.mid(0, kMaxLines);
-        converter.m_generatedCodePreview = lines.join(QLatin1Char('\n'));
-        if (converter.m_generatedCodePreview.size() > kMaxChars)
-            converter.m_generatedCodePreview = converter.m_generatedCodePreview.left(kMaxChars);
-        if (converter.m_generatedCodeTruncated)
-            converter.m_generatedCodePreview += QStringLiteral("\n\n// … %1 bytes omitted — use Copy for full output\n")
-                                                     .arg(converter.m_generatedCode.size());
+        state.generatedCodePreview = lines.join(QLatin1Char('\n'));
+        if (state.generatedCodePreview.size() > kMaxChars)
+            state.generatedCodePreview = state.generatedCodePreview.left(kMaxChars);
+        if (state.generatedCodeTruncated)
+            state.generatedCodePreview += QStringLiteral("\n\n// … %1 bytes omitted — use Copy for full output\n")
+                                                     .arg(state.generatedCode.size());
     }
     emit converter.generatedCodePreviewChanged();
 }
 
-void ImagePipelineController::updateFlashReport(DisplayConverter &converter)
+void ImagePipelineController::updateFlashReport(ConverterState &state, DisplayConverter &converter)
 {
-    converter.m_flashReport = EncodingAnalyzer::analyze(converter.m_lastResult,
-                                                        converter.m_colorMode,
-                                                        converter.m_monoLayout,
-                                                        converter.m_encodingMode,
-                                                        converter.m_codeGenOptions);
+    state.flashReport = EncodingAnalyzer::analyze(state.lastResult,
+                                                  state.colorMode,
+                                                  state.monoLayout,
+                                                  state.encodingMode,
+                                                  state.codeGenOptions);
     emit converter.flashReportChanged();
 }
