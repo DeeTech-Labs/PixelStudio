@@ -3,7 +3,7 @@
 
 Set-StrictMode -Version Latest
 
-$script:AppExeName = 'appPixelStudio.exe'
+$script:AppExeName = 'PixelStudio.exe'
 
 function Get-DeployBuildArtifactGlobs {
     return @(
@@ -39,7 +39,7 @@ function Get-DeployBuildArtifactDirs {
     return @(
         'CMakeFiles'
         '.qt'
-        'appPixelStudio_autogen'
+        'PixelStudio_autogen'
         'pixelstudio_core_autogen'
         'Testing'
         '.cmake'
@@ -151,8 +151,8 @@ function Get-DeployPruneGroups {
         @{
             Name = 'Build-only QML module metadata'
             Paths = @(
-                'PixelStudio\appPixelStudio.qmltypes'
-                'PixelStudio\appPixelStudio_qml_module_dir_map.qrc'
+                'PixelStudio\PixelStudio.qmltypes'
+                'PixelStudio\PixelStudio_qml_module_dir_map.qrc'
             )
         }
         @{

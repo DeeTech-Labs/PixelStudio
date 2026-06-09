@@ -122,13 +122,13 @@ set(APP_SOURCES
     src/app/panels/InspectorDisplayPresenter.h
 )
 
-qt_add_executable(appPixelStudio ${APP_SOURCES})
+qt_add_executable(PixelStudio ${APP_SOURCES})
 
 if(WIN32)
-    target_sources(appPixelStudio PRIVATE resources/ico/PixelStudio.rc)
+    target_sources(PixelStudio PRIVATE resources/ico/PixelStudio.rc)
 endif()
 
-target_include_directories(appPixelStudio PRIVATE
+target_include_directories(PixelStudio PRIVATE
     ${PIXELSTUDIO_SRC_DIR}
     ${PS_GENERATED_INCLUDE_DIR}
 )
@@ -208,7 +208,7 @@ set(PIXELSTUDIO_QML_FILES
     src/qml/controls/StudioScroll.qml
 )
 
-qt_add_resources(appPixelStudio "app_translations"
+qt_add_resources(PixelStudio "app_translations"
     PREFIX /translations
     BASE translations
     FILES ${PS_TRANSLATION_BUNDLES}
@@ -220,13 +220,13 @@ set_source_files_properties(src/qml/shell/StudioCommands.qml
 
 file(GLOB PIXELSTUDIO_ICON_PNGS CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.png)
-qt_add_resources(appPixelStudio "app_icons"
+qt_add_resources(PixelStudio "app_icons"
     PREFIX /icons
     BASE resources/icons
     FILES ${PIXELSTUDIO_ICON_PNGS}
 )
 
-qt_add_resources(appPixelStudio "app_welcome_assets"
+qt_add_resources(PixelStudio "app_welcome_assets"
     PREFIX /
     BASE resources
     FILES
@@ -235,31 +235,31 @@ qt_add_resources(appPixelStudio "app_welcome_assets"
         resources/ico/PixelStudio.png
 )
 
-qt_add_qml_module(appPixelStudio
+qt_add_qml_module(PixelStudio
     URI PixelStudio
     VERSION 1.0
     QML_FILES ${PIXELSTUDIO_QML_FILES}
     RESOURCE_PREFIX /
 )
 
-set_target_properties(appPixelStudio PROPERTIES
+set_target_properties(PixelStudio PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION ${PS_VERSION_DISPLAY}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PS_VERSION_DISPLAY}
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
 )
 
-target_link_libraries(appPixelStudio
+target_link_libraries(PixelStudio
     PRIVATE pixelstudio_core Qt6::Quick Qt6::QuickControls2 Qt6::Gui Qt6::Network Qt6::Concurrent Qt6::Svg
 )
 if(WIN32)
-    target_link_libraries(appPixelStudio PRIVATE dwmapi shell32 ole32 propsys shlwapi)
+    target_link_libraries(PixelStudio PRIVATE dwmapi shell32 ole32 propsys shlwapi)
 endif()
 
-pixelstudio_apply_warnings(appPixelStudio)
+pixelstudio_apply_warnings(PixelStudio)
 
 include(GNUInstallDirs)
-install(TARGETS appPixelStudio
+install(TARGETS PixelStudio
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

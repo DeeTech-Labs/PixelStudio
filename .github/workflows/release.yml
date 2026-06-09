@@ -39,9 +39,15 @@ jobs:
             '${{ github.ref_name }}'
           }
           if ($t -notmatch '^v\d+(\.\d+){2}([a-zA-Z])?$') {
-            throw "Invalid tag: $t (expected vG.M.m or vG.M.mfix, e.g. v1.2.3b)"
+            throw "Invalid tag: $t (expected vMajor.Minor.Patch or vMajor.Minor.Patchfix, e.g. v1.2.3b)"
           }
           "name=$t" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Verify tag matches cmake version
+        shell: pwsh
+        run: |
+          . ./cmake/ReadPixelStudioVersion.ps1
+          Test-PixelStudioReleaseTag -Tag '${{ steps.tag.outputs.name }}' -RepoRoot $PWD
 
       - name: Setup build environment
         uses: ./.github/actions/setup-windows-qt

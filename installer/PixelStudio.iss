@@ -1,11 +1,9 @@
 ; Self-contained PixelStudio installer. Build: installer\build-installer.ps1
 ; Installs the pruned staging folder (windeployqt + verified runtime files only).
 
+; MyAppVersion / MyAppVersionInfo — из cmake/PixelStudioVersion.cmake через generated/version.iss
 #ifndef MyAppVersion
-  #define MyAppVersion "0.1.0"
-#endif
-#ifndef MyAppVersionInfo
-  #define MyAppVersionInfo "0.1.0.0"
+  #include "generated\version.iss"
 #endif
 #ifndef StageDir
   #define StageDir "staging"
@@ -13,7 +11,7 @@
 
 #define MyAppName "PixelStudio"
 #define MyAppPublisher "DeeTech"
-#define MyAppExeName "appPixelStudio.exe"
+#define MyAppExeName "PixelStudio.exe"
 ; Qt AppDataLocation + default Documents (see AppPaths.cpp)
 #define MyAppUserDataRoaming "{userappdata}\DeeTech\PixelStudio"
 #define MyAppUserDataLocal "{localappdata}\DeeTech\PixelStudio"

@@ -27,7 +27,7 @@ template: |
 
   $CHANGES
 
-  **Версия (черновик):** v$RESOLVED_VERSION — формат `G.M.m` (см. [docs/versioning.md](https://github.com/DeeTech-Labs/PixelStudio/blob/main/docs/versioning.md)).
+  **Версия (черновик):** v$RESOLVED_VERSION — формат `Major.Minor.Patch` (см. [docs/versioning.md](https://github.com/DeeTech-Labs/PixelStudio/blob/main/docs/versioning.md)).
 
   **Суффикс fix** (`0.1.0b`, `1.2.3b`): Release Drafter не добавляет букву автоматически. Перед публикацией:
   1. Обновите `PS_VERSION_FIX` в `cmake/PixelStudioVersion.cmake`

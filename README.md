@@ -68,7 +68,7 @@ cmake -S . -B build\Release -G Ninja `
 cmake --build build\Release
 ```
 
-Запуск: `build\Release\appPixelStudio.exe` (перед распространением — `windeployqt`, см. [сборку](docs/building.md)).
+Запуск: `build\Release\PixelStudio.exe` (перед распространением — `windeployqt`, см. [сборку](docs/building.md)).
 
 ## Установщик
 

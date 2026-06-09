@@ -14,7 +14,7 @@ body:
     attributes:
       label: Версия PixelStudio
       description: Из «О программе», установщика или тега GitHub
-      placeholder: "0.1.0 / v0.1.0 / commit abc1234"
+      placeholder: "из «О программе» или cmake/PixelStudioVersion.cmake"
     validations:
       required: true
 

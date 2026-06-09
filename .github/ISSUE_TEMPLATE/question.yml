@@ -12,7 +12,7 @@ body:
     id: version
     attributes:
       label: Версия PixelStudio
-      placeholder: "0.1.0"
+      placeholder: "из «О программе» (About)"
     validations:
       required: true
 

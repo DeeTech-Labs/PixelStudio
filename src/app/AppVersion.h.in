@@ -5,18 +5,18 @@
 
 namespace AppVersion {
 
-inline constexpr int kGlobal = @PS_VERSION_GLOBAL@;
 inline constexpr int kMajor = @PS_VERSION_MAJOR@;
 inline constexpr int kMinor = @PS_VERSION_MINOR@;
+inline constexpr int kPatch = @PS_VERSION_PATCH@;
 
 // Пустая строка в cmake → kFix = 0 (без суффикса)
 inline constexpr char kFix = @PS_VERSION_FIX_LITERAL@;
 
 inline QString display()
 {
-    QString v = QString::number(kGlobal) + QLatin1Char('.')
-              + QString::number(kMajor) + QLatin1Char('.')
-              + QString::number(kMinor);
+    QString v = QString::number(kMajor) + QLatin1Char('.')
+              + QString::number(kMinor) + QLatin1Char('.')
+              + QString::number(kPatch);
     if (kFix != 0)
         v += QLatin1Char(kFix);
     return v;

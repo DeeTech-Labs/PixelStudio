@@ -82,6 +82,7 @@ CMakeLists.txt.user*
 .uic/
 /build*/
 /installer/staging/
+/installer/generated/
 /installer/output/
 .cursor/
 aqtinstall.log

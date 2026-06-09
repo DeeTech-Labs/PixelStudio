@@ -70,7 +70,7 @@ cmake -S . -B build\Release -G Ninja `
 cmake --build build\Release
 ```
 
-Run `build\Release\appPixelStudio.exe` — use `windeployqt` before redistribution ([building guide](building.md)).
+Run `build\Release\PixelStudio.exe` — use `windeployqt` before redistribution ([building guide](building.md)).
 
 ## Installer
 

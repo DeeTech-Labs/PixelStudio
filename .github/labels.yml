@@ -36,15 +36,15 @@
 
 - name: major
   color: "b60205"
-  description: "Версия: +1 Global (G.M.m → (G+1).0.0), сброс fix"
+  description: "Версия: +1 Major (M.m.p → (M+1).0.0), сброс fix"
 
 - name: minor
   color: "0e8a16"
-  description: "Версия: +1 Major (G.M.m → G.(M+1).0), сброс fix"
+  description: "Версия: +1 Minor (M.m.p → M.(m+1).0), сброс fix"
 
 - name: patch
   color: "1d76db"
-  description: "Версия: +1 Minor (G.M.m → G.M.(m+1)), сброс fix — по умолчанию"
+  description: "Версия: +1 Patch (M.m.p → M.m.(p+1)), сброс fix — по умолчанию"
 
 - name: version-fix
   color: "c5def5"

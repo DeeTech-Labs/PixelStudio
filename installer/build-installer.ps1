@@ -17,23 +17,8 @@ $OutputDir = Join-Path $PSScriptRoot "output"
 $Iss = Join-Path $PSScriptRoot "PixelStudio.iss"
 $QmlDir = Join-Path $Root "src\qml"
 
+. (Join-Path $Root "cmake\ReadPixelStudioVersion.ps1")
 . (Join-Path $PSScriptRoot "deploy-prune.ps1")
-
-function Get-AppVersion {
-    $cmake = Join-Path $Root "cmake\PixelStudioVersion.cmake"
-    $t = Get-Content $cmake -Raw
-    if ($t -notmatch 'set\(PS_VERSION_GLOBAL\s+(\d+)\)') { throw "PS_VERSION_GLOBAL not found in $cmake" }
-    $g = [int]$Matches[1]
-    if ($t -notmatch 'set\(PS_VERSION_MAJOR\s+(\d+)\)') { throw "PS_VERSION_MAJOR not found in $cmake" }
-    $mj = [int]$Matches[1]
-    if ($t -notmatch 'set\(PS_VERSION_MINOR\s+(\d+)\)') { throw "PS_VERSION_MINOR not found in $cmake" }
-    $mn = [int]$Matches[1]
-    if ($t -notmatch 'set\(PS_VERSION_FIX\s+"([^"]*)"\)') { throw "PS_VERSION_FIX not found in $cmake" }
-    $fx = $Matches[1]
-    $display = if ($fx) { "$g.$mj.$mn$fx" } else { "$g.$mj.$mn" }
-    $info = "$g.$mj.$mn.0"
-    return @{ Display = $display; Info = $info }
-}
 
 function Invoke-VcVars {
     $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -76,8 +61,8 @@ function Invoke-WinDeployQt {
     if ($LASTEXITCODE -ne 0) { throw "windeployqt failed with exit code $LASTEXITCODE" }
 }
 
-$ver = Get-AppVersion
-Write-Host "Version: $($ver.Display)"
+$ver = Read-PixelStudioVersion -RepoRoot $Root
+Write-Host "Version: $($ver.Display) (tag $($ver.Tag))"
 
 if (-not $SkipBuild) {
     Invoke-VcVars
@@ -91,7 +76,7 @@ if (-not $SkipBuild) {
     if ($LASTEXITCODE -ne 0) { throw "cmake build failed" }
 }
 
-$exe = Join-Path $BuildDir "appPixelStudio.exe"
+$exe = Join-Path $BuildDir "PixelStudio.exe"
 if (-not (Test-Path $exe)) { throw "Missing $exe" }
 
 if (-not $SkipDeploy) {
@@ -107,9 +92,12 @@ $staged = (Get-ChildItem $StageDir -Recurse -File).Count
 $stagedMb = [math]::Round(((Get-ChildItem $StageDir -Recurse -File | Measure-Object Length -Sum).Sum / 1MB), 2)
 Write-Host "Installer payload: $staged file(s), $stagedMb MB"
 
+$versionIss = Join-Path $PSScriptRoot "generated\version.iss"
+Write-PixelStudioInnoVersionInclude -OutputPath $versionIss -Version $ver
+
 $iscc = Resolve-Iscc $IsccPath
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
-& $iscc "/DStageDir=$StageDir" "/DMyAppVersion=$($ver.Display)" "/DMyAppVersionInfo=$($ver.Info)" $Iss
+& $iscc "/DStageDir=$StageDir" $Iss
 if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
 
 $setup = Get-ChildItem $OutputDir -Filter "PixelStudio-Setup-*.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1

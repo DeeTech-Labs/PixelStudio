@@ -23,7 +23,7 @@ cmake -S . -B build\Release -G Ninja `
 cmake --build build\Release
 ```
 
-Output: `build\Release\appPixelStudio.exe`.
+Output: `build\Release\PixelStudio.exe`.
 
 If configure fails to find Qt, set `CMAKE_PREFIX_PATH` to the kit root (folder containing `bin\qmake.exe`).
 
@@ -34,14 +34,14 @@ Qt DLLs and QML plugins are not copied automatically after build. Use the Qt kit
 ```powershell
 $qt = "C:\Qt6\6.8.2\msvc2022_64"
 $env:PATH = "$qt\bin;$env:PATH"
-& ".\build\Release\appPixelStudio.exe"
+& ".\build\Release\PixelStudio.exe"
 ```
 
 ## Deploy runtime (redistribution)
 
 ```powershell
 $qt = "C:\Qt6\6.8.2\msvc2022_64"
-& "$qt\bin\windeployqt.exe" --release --compiler-runtime --qmldir ".\src\qml" ".\build\Release\appPixelStudio.exe"
+& "$qt\bin\windeployqt.exe" --release --compiler-runtime --qmldir ".\src\qml" ".\build\Release\PixelStudio.exe"
 ```
 
 ## Full installer pipeline
@@ -65,7 +65,7 @@ Output: `installer\output\PixelStudio-Setup-<version>.exe`. Version: [`cmake/Pix
 
 | Workflow | Trigger | Result |
 |----------|---------|--------|
-| [`build.yml`](../../.github/workflows/build.yml) | push/PR → `main` | `appPixelStudio.exe` artifact |
+| [`build.yml`](../../.github/workflows/build.yml) | push/PR → `main` | `PixelStudio.exe` artifact |
 | [`release.yml`](../../.github/workflows/release.yml) | tag `v*.*.*` or manual | Installer + GitHub Release |
 | [`labels.yml`](../../.github/workflows/labels.yml) | `.github/labels.yml` changed | Label sync |
 
@@ -80,6 +80,6 @@ Uses [`.github/actions/setup-windows-qt`](../../.github/actions/setup-windows-qt
 | `windeployqt` missing QML | `--qmldir` → `src\qml` |
 | `windeployqt` / `Qt6ShaderTools.dll` missing | Install **qtshadertools** module (see setup-windows-qt) |
 | `windeployqt` / `Qt5Compat/…` missing | Install Qt module **qt5compat** |
-| App won't start after install | Test `installer\staging\appPixelStudio.exe`; try `-SkipPrune` if needed |
+| App won't start after install | Test `installer\staging\PixelStudio.exe`; try `-SkipPrune` if needed |
 | SmartScreen on setup.exe | Unsigned installer — expected; use Authenticode signing for production |
-| App won't start after install | Check `qml/Qt5Compat/GraphicalEffects` next to `appPixelStudio.exe` |
+| App won't start after install | Check `qml/Qt5Compat/GraphicalEffects` next to `PixelStudio.exe` |

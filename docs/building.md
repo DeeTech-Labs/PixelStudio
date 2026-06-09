@@ -26,7 +26,7 @@ cmake -S . -B build\Release -G Ninja `
 cmake --build build\Release
 ```
 
-Исполняемый файл: `build\Release\appPixelStudio.exe`.
+Исполняемый файл: `build\Release\PixelStudio.exe`.
 
 Если CMake не находит Qt, проверьте, что `CMAKE_PREFIX_PATH` указывает на корень kit (каталог с `bin\qmake.exe`).
 
@@ -40,14 +40,14 @@ cmake --build build\Release
 $qt = "C:\Qt6\6.8.2\msvc2022_64"
 $env:PATH = "$qt\bin;$env:PATH"
 
-& ".\build\Release\appPixelStudio.exe"
+& ".\build\Release\PixelStudio.exe"
 ```
 
 ## Развёртывание runtime (для распространения)
 
 ```powershell
 $qt = "C:\Qt6\6.8.2\msvc2022_64"
-$exe = ".\build\Release\appPixelStudio.exe"
+$exe = ".\build\Release\PixelStudio.exe"
 $qml = ".\src\qml"
 
 & "$qt\bin\windeployqt.exe" --release --compiler-runtime --qmldir $qml $exe
@@ -80,7 +80,7 @@ $qml = ".\src\qml"
 
 | Workflow | Триггер | Результат |
 |----------|---------|-----------|
-| [`.github/workflows/build.yml`](../.github/workflows/build.yml) | push/PR → `main` | `appPixelStudio.exe` (artifact) |
+| [`.github/workflows/build.yml`](../.github/workflows/build.yml) | push/PR → `main` | `PixelStudio.exe` (artifact) |
 | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*.*.*` или вручную | Установщик + GitHub Release |
 | [`.github/workflows/labels.yml`](../.github/workflows/labels.yml) | изменение `.github/labels.yml` | Синхронизация меток |
 
@@ -95,6 +95,6 @@ $qml = ".\src\qml"
 | `windeployqt` не подхватывает QML | `--qmldir` → `src\qml` |
 | `windeployqt` / `Qt6ShaderTools.dll` not found | В CI установить модуль **qtshadertools** (см. setup-windows-qt) |
 | `windeployqt` / `qml/Qt5Compat/…` not found | В CI/local Qt должен быть модуль **qt5compat** |
-| Приложение не стартует после установки | Проверить `installer\staging\appPixelStudio.exe`; при необходимости `-SkipPrune` |
+| Приложение не стартует после установки | Проверить `installer\staging\PixelStudio.exe`; при необходимости `-SkipPrune` |
 | SmartScreen при запуске установщика | Неподписанный `.exe` — нормально; для продакшена нужна подпись Authenticode (сертификат) |
 | Приложение не стартует после установки | Запуск из `Program Files\PixelStudio`, проверить наличие `qml\Qt5Compat\GraphicalEffects` рядом с exe |

@@ -34,11 +34,11 @@ cmake -S . -B build\Release -G Ninja `
 cmake --build build\Release
 ```
 
-Запуск: `build\Release\appPixelStudio.exe`. Для redistributable — `windeployqt` или `installer\build-installer.ps1`.
+Запуск: `build\Release\PixelStudio.exe`. Для redistributable — `windeployqt` или `installer\build-installer.ps1`.
 
 ## Версии
 
-Схема **`G.M.m`** + опциональный **fix** (`0.1.0b`, `1.2.3b`): [docs/versioning.md](docs/versioning.md).
+Схема **`Major.Minor.Patch`** + опциональный **fix** (`0.1.0b`, `1.2.3b`): [docs/versioning.md](docs/versioning.md).
 
 Правки в [`cmake/PixelStudioVersion.cmake`](cmake/PixelStudioVersion.cmake) и [`CHANGELOG.md`](CHANGELOG.md) (`[Unreleased]`).  
 На PR — метки `major` / `minor` / `patch` / `version-fix` для Release Drafter.
