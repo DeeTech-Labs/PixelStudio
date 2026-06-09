@@ -57,6 +57,7 @@ $qt = "C:\Qt6\6.8.2\msvc2022_64"
 | `-IsccPath` | auto | Path to `ISCC.exe` |
 | `-SkipBuild` | — | Deploy/stage/installer only |
 | `-SkipDeploy` | — | Skip `windeployqt` |
+| `-SkipPrune` | — | Skip optional runtime pruning (build artifacts still removed) |
 
 Output: `installer\output\PixelStudio-Setup-<version>.exe`. Version: [`cmake/PixelStudioVersion.cmake`](../../cmake/PixelStudioVersion.cmake).
 
@@ -78,6 +79,7 @@ Uses [`.github/actions/setup-windows-qt`](../../.github/actions/setup-windows-qt
 | Ninja / compiler missing | x64 Native Tools or VS Developer PowerShell |
 | `windeployqt` missing QML | `--qmldir` → `src\qml` |
 | `windeployqt` / `Qt6ShaderTools.dll` missing | Install **qtshadertools** module (see setup-windows-qt) |
-| Installer staging (`Missing … Qt5Compat/…`) | Install Qt module **qt5compat**, rerun `windeployqt` |
+| `windeployqt` / `Qt5Compat/…` missing | Install Qt module **qt5compat** |
+| App won't start after install | Test `installer\staging\appPixelStudio.exe`; try `-SkipPrune` if needed |
 | SmartScreen on setup.exe | Unsigned installer — expected; use Authenticode signing for production |
 | App won't start after install | Check `qml/Qt5Compat/GraphicalEffects` next to `appPixelStudio.exe` |

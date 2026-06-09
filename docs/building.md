@@ -57,7 +57,7 @@ $qml = ".\src\qml"
 
 ## Полный пайплайн установщика
 
-Скрипт при необходимости конфигурирует и собирает проект, запускает `windeployqt`, копирует фиксированный список файлов и вызывает Inno Setup:
+Скрипт при необходимости конфигурирует и собирает проект, запускает `windeployqt`, формирует staging (без артефактов сборки и лишних runtime-файлов), затем вызывает Inno Setup:
 
 ```powershell
 .\installer\build-installer.ps1 -QtDir "C:\Qt6\6.8.2\msvc2022_64"
@@ -70,6 +70,7 @@ $qml = ".\src\qml"
 | `-IsccPath` | авто | Путь к `ISCC.exe` |
 | `-SkipBuild` | — | Только deploy / stage / installer |
 | `-SkipDeploy` | — | Пропустить `windeployqt` |
+| `-SkipPrune` | — | Не удалять лишние runtime-файлы (только артефакты сборки) |
 
 Результат: `installer\output\PixelStudio-Setup-<версия>.exe`.
 
@@ -93,7 +94,7 @@ $qml = ".\src\qml"
 | Ninja / компилятор не найден | «x64 Native Tools» или Developer PowerShell |
 | `windeployqt` не подхватывает QML | `--qmldir` → `src\qml` |
 | `windeployqt` / `Qt6ShaderTools.dll` not found | В CI установить модуль **qtshadertools** (см. setup-windows-qt) |
-| Ошибка staging (`Missing … qml/Qt5Compat/…`) | В CI/local Qt должен быть модуль **qt5compat**; пересобрать с `windeployqt` |
-| Ошибка staging (`imageformats/qicns.dll` и др.) | В списке только нужные плагины (jpeg/gif/ico/svg); лишние форматы не требуются |
+| `windeployqt` / `qml/Qt5Compat/…` not found | В CI/local Qt должен быть модуль **qt5compat** |
+| Приложение не стартует после установки | Проверить `installer\staging\appPixelStudio.exe`; при необходимости `-SkipPrune` |
 | SmartScreen при запуске установщика | Неподписанный `.exe` — нормально; для продакшена нужна подпись Authenticode (сертификат) |
 | Приложение не стартует после установки | Запуск из `Program Files\PixelStudio`, проверить наличие `qml\Qt5Compat\GraphicalEffects` рядом с exe |
