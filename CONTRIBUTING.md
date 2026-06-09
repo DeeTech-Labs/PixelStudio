@@ -38,8 +38,7 @@ cmake --build build\Release
 
 Схема **`Major.Minor.Patch`** + опциональный **fix** (`0.1.0b`, `1.2.3b`): [docs/versioning.md](docs/versioning.md).
 
-Правки в [`cmake/PixelStudioVersion.cmake`](cmake/PixelStudioVersion.cmake) и [`CHANGELOG.md`](CHANGELOG.md) (`[Unreleased]`).  
-На PR — метки `major` / `minor` / `patch` / `version-fix` для планирования semver (см. [docs/versioning.md](docs/versioning.md)).
+Правки в [`cmake/PixelStudioVersion.cmake`](cmake/PixelStudioVersion.cmake) и [`CHANGELOG.md`](CHANGELOG.md) (`[Unreleased]`). Схема bump — [docs/versioning.md](docs/versioning.md).
 
 ## Стиль кода
 
@@ -86,7 +85,7 @@ cmake --build build\Release
 | Событие | Workflow |
 |---------|----------|
 | PR / push в `main` (код) | `build.yml` |
-| Tag `v0.1.0` | `release.yml` — установщик + Release |
+| Tag `v0.2.0` | `release.yml` — установщик + Release |
 | Вручную | Actions → Release → Run workflow |
 
 Метки: [`.github/labels.yml`](.github/labels.yml). Шаблоны issues: [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/) (русский).

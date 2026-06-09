@@ -20,18 +20,16 @@
 
 PowerShell: `.\cmake\ReadPixelStudioVersion.ps1`
 
-## Метки PR
+## Изменение версии
 
-На PR вешайте **одну** метку уровня версии (если релиз планируется):
+Перед релизом обновите [`cmake/PixelStudioVersion.cmake`](../cmake/PixelStudioVersion.cmake) вручную:
 
-| Метка | Semver | CMake |
-|-------|--------|--------|
-| `patch` | +0.0.1 (по умолчанию) | `PS_VERSION_PATCH++`, `FIX=""` |
-| `minor` | +0.1.0 | `PS_VERSION_MINOR++`, `PATCH=0`, `FIX=""` |
-| `major` | +1.0.0 | `PS_VERSION_MAJOR++`, `MINOR=0`, `PATCH=0`, `FIX=""` |
-| `version-fix` | только суффикс | только `PS_VERSION_FIX` (например `"b"`) |
-
-Перед релизом обновите cmake вручную по таблице выше.
+| Тип релиза | Semver | CMake |
+|------------|--------|--------|
+| Patch (по умолчанию) | +0.0.1 | `PS_VERSION_PATCH++`, `FIX=""` |
+| Minor | +0.1.0 | `PS_VERSION_MINOR++`, `PATCH=0`, `FIX=""` |
+| Major | +1.0.0 | `PS_VERSION_MAJOR++`, `MINOR=0`, `PATCH=0`, `FIX=""` |
+| Только суффикс fix | `1.2.3` → `1.2.3b` | только `PS_VERSION_FIX` (например `"b"`) |
 
 ### Только fix (`1.2.3` → `1.2.3b`)
 
