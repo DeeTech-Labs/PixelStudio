@@ -1,7 +1,7 @@
 # Единый источник версии PixelStudio: Major.Minor.Patch[+fix]
 # Пример с фиксом: PS_VERSION_FIX "b" → 1.2.3b
 set(PS_VERSION_MAJOR 0)
-set(PS_VERSION_MINOR 1)
+set(PS_VERSION_MINOR 2)
 set(PS_VERSION_PATCH 0)
 set(PS_VERSION_FIX "")
 
