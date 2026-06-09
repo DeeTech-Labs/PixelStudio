@@ -12,6 +12,7 @@ struct StudioTabEntry
     QString title;
     bool pinned = false;
     bool isWelcome = false;
+    bool isSettings = false;
     bool recovered = false;
     QString projectPath;
     QString cachePath;

@@ -10,6 +10,7 @@ public:
     static float srgbChannelToLinear(float channel);
     static quint8 linearChannelToSrgb8(float linear);
     static quint8 quantizeLinearToGray8(float linear);
+    static quint16 quantizeSrgbToRgb565(quint8 r, quint8 g, quint8 b);
     static quint16 quantizeLinearToRgb565(float rLin, float gLin, float bLin);
     static quint16 swapRgb565ToBgr565(quint16 rgb565);
 

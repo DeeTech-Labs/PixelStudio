@@ -18,6 +18,7 @@ void DisplayOutputController::attach(DisplayConverter *host, ConverterState *sta
 {
     m_host = host;
     m_state = state;
+    rebuildUiModels();
 }
 
 int DisplayOutputController::displayWidth() const
@@ -357,8 +358,23 @@ QVariantList DisplayOutputController::availableEncodingModesForUi() const
     return availableEncodingModes();
 }
 
+void DisplayOutputController::rebuildUiModels()
+{
+    const QVariantList presets = displayPresets();
+    const QVariantList encodings = availableEncodingModesForUi();
+    if (m_displayPresetsModel != presets) {
+        m_displayPresetsModel = presets;
+        emit displayPresetsModelChanged();
+    }
+    if (m_encodingModesModel != encodings) {
+        m_encodingModesModel = encodings;
+        emit encodingModesModelChanged();
+    }
+}
+
 void DisplayOutputController::notifyAllChanged()
 {
+    rebuildUiModels();
     emit displayWidthChanged();
     emit displayHeightChanged();
     emit profileIdChanged();

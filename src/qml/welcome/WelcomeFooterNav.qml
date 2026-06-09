@@ -33,7 +33,7 @@ RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: Math.max(root.iconSize + 8, 52)
 
-            readonly property string languageTag: appSettings.languageCode
+            readonly property string languageTag: workspace.settings.languageCode
 
             Rectangle {
                 visible: index > 0

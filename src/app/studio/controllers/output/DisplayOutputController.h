@@ -27,6 +27,8 @@ class DisplayOutputController : public QObject
     Q_PROPERTY(int monoThreshold READ monoThreshold WRITE setMonoThreshold NOTIFY monoThresholdChanged)
     Q_PROPERTY(int dataByteCount READ dataByteCount NOTIFY generatedFootprintChanged)
     Q_PROPERTY(bool linearColorSpace READ linearColorSpace WRITE setLinearColorSpace NOTIFY linearColorSpaceChanged)
+    Q_PROPERTY(QVariantList displayPresetsModel READ displayPresetsModel NOTIFY displayPresetsModelChanged)
+    Q_PROPERTY(QVariantList encodingModesModel READ encodingModesModel NOTIFY encodingModesModelChanged)
 
 public:
     explicit DisplayOutputController(QObject *parent = nullptr);
@@ -48,6 +50,8 @@ public:
     int monoThreshold() const;
     int dataByteCount() const;
     bool linearColorSpace() const;
+    QVariantList displayPresetsModel() const { return m_displayPresetsModel; }
+    QVariantList encodingModesModel() const { return m_encodingModesModel; }
 
     Q_INVOKABLE void setDisplayWidth(int w);
     Q_INVOKABLE void setDisplayHeight(int h);
@@ -76,13 +80,18 @@ signals:
     void monoThresholdChanged();
     void linearColorSpaceChanged();
     void generatedFootprintChanged();
+    void displayPresetsModelChanged();
+    void encodingModesModelChanged();
 
 private:
     void applyProfile(const DisplayProfile &profile);
     void requestRebuild(bool immediate = false);
+    void rebuildUiModels();
 
     DisplayConverter *m_host = nullptr;
     ConverterState *m_state = nullptr;
+    QVariantList m_displayPresetsModel;
+    QVariantList m_encodingModesModel;
 };
 
 #endif // PIXELSTUDIO_APP_CONVERTER_DISPLAYOUTPUTCONTROLLER_H

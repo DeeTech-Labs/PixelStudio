@@ -25,6 +25,7 @@
 class AppSettings;
 class ImageLoader;
 class PreviewImageProvider;
+class SessionPersistenceService;
 class DisplayConverter : public QObject
 {
     Q_OBJECT
@@ -105,6 +106,7 @@ public:
     void notifySourceGeometryChanged();
     void notifyAllToolsChanged();
     void updateWatchExportPrefix();
+    void schedulePersistSession();
     void restartAutosaveTimer();
     ConverterTabSnapshot captureTabState(const QString &tabId = QString()) const;
     void restoreTabState(const ConverterTabSnapshot &snapshot);
@@ -114,7 +116,6 @@ public:
     ImageLoader *loader() const { return m_loader; }
     SessionSettings *session() const { return m_session; }
     QImage orientedSource() const;
-    void schedulePersistSession();
     void applyPipelineResult(const ConverterAsyncBuildResult &result);
     ConvertPipelineParams pipelineParams() const;
     SessionSnapshot sessionSnapshot() const;
@@ -135,14 +136,10 @@ signals:
 
 private Q_SLOTS:
     void onImageLoaded(const QImage &image, const QUrl &sourceUrl);
-    void persistSession();
 
 private:
     void rebuild();
     void scheduleRebuild(bool immediate = false);
-    void persistUiState();
-    void loadPersistedSession();
-    void onAutosaveTimeout();
 
     ImageLoader *m_loader;
     PreviewImageProvider *m_previewProvider = nullptr;
@@ -157,9 +154,8 @@ private:
     ViewportController m_viewport;
     ProjectController m_project;
     ExportController m_export;
+    SessionPersistenceService *m_persistence = nullptr;
     QTimer m_rebuildDebounceTimer;
-    QTimer m_sessionSaveTimer;
-    QTimer m_autosaveTimer;
     QFutureWatcher<ConverterAsyncBuildResult> m_rebuildWatcher;
 };
 

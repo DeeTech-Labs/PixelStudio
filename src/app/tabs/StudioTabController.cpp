@@ -5,7 +5,7 @@
 #include "app/tabs/TabPersistence.h"
 #include "app/tabs/TabProjectSync.h"
 #include "app/preview/PreviewImageProvider.h"
-#include "app/tabs/TabPreloadService.h"
+#include "app/tabs/TabPersistence.h"
 #include "app/tabs/TabRestoreService.h"
 #include "app/tabs/TabWelcomeService.h"
 #include "LogCategories.h"
@@ -55,8 +55,13 @@ int normalizeViewMode(int mode)
 StudioTabController::StudioTabController(DisplayConverter *converter, QObject *parent)
     : QObject(parent)
     , m_converter(converter)
+    , m_preload(this)
     , m_tabStore(AppPaths::appSettingsFile())
 {
+    connect(&m_preload, &TabPreloadService::warmFinished, this, [this]() {
+        saveTabsToSettings();
+        emit tabsChanged();
+    });
     setConverter(converter);
 }
 
@@ -87,6 +92,7 @@ QVariantList StudioTabController::tabsToVariant() const
             {QStringLiteral("title"), formatTabTitle(t)},
             {QStringLiteral("pinned"), t.pinned},
             {QStringLiteral("isWelcome"), t.isWelcome},
+            {QStringLiteral("isSettings"), t.isSettings},
             {QStringLiteral("closable"), !t.isWelcome},
             {QStringLiteral("projectPath"), t.projectPath},
         });
@@ -127,6 +133,12 @@ bool StudioTabController::activeIsWelcome() const
 {
     const StudioTabEntry *t = findTab(m_activeTabId);
     return !t || t->isWelcome;
+}
+
+bool StudioTabController::activeIsSettings() const
+{
+    const StudioTabEntry *t = findTab(m_activeTabId);
+    return t && t->isSettings;
 }
 
 QString StudioTabController::activeTabTitle() const
@@ -178,9 +190,15 @@ QString StudioTabController::stripRecoveredPrefix(const QString &title)
 QString StudioTabController::formatTabTitle(const StudioTabEntry &entry) const
 {
     QString title = entry.title;
-    if (title.isEmpty())
-        title = entry.isWelcome ? AppLocale::tr("Home") : AppLocale::tr("Untitled");
-    if (!entry.recovered || entry.isWelcome)
+    if (title.isEmpty()) {
+        if (entry.isWelcome)
+            title = AppLocale::tr("Home");
+        else if (entry.isSettings)
+            title = AppLocale::tr("Settings");
+        else
+            title = AppLocale::tr("Untitled");
+    }
+    if (!entry.recovered || entry.isWelcome || entry.isSettings)
         return title;
     const QString prefix = AppLocale::tr("[Recovered]");
     if (title.startsWith(prefix))
@@ -204,7 +222,7 @@ void StudioTabController::setActiveViewMode(int mode)
         return;
     t->viewMode = clamped;
     emit activeViewModeChanged();
-    if (!t->isWelcome)
+    if (!t->isWelcome && !t->isSettings)
         saveTabsToSettings();
 }
 
@@ -254,7 +272,7 @@ void StudioTabController::stashTab(const QString &tabId)
     if (!m_converter)
         return;
     StudioTabEntry *tab = findTab(tabId);
-    if (!tab || tab->isWelcome)
+    if (!tab || tab->isWelcome || tab->isSettings)
         return;
 
     tab->title = TabProjectSync::displayTitle(m_converter);
@@ -270,6 +288,8 @@ void StudioTabController::stashTab(const QString &tabId)
     }
 
     tab->tabSnapshot = m_converter->captureTabState(tab->id);
+    if (tab->id != m_activeTabId)
+        TabPersistence::slimInactiveSnapshot(&(*tab->tabSnapshot), tab->cachePath);
     m_converter->rememberOpenSourceInRecent();
     TabProjectSync::stashProjectPaths(m_converter, tab);
     invalidateWelcomeRecent();
@@ -283,7 +303,12 @@ void StudioTabController::stashActiveTab()
 void StudioTabController::loadTabsFromSettings()
 {
     m_tabStore.load(&m_tabs, &m_activeTabId);
-    for (StudioTabEntry &tab : m_tabs) {
+    for (qsizetype i = m_tabs.size() - 1; i >= 0; --i) {
+        StudioTabEntry &tab = m_tabs[i];
+        if (tab.isSettings) {
+            m_tabs.removeAt(i);
+            continue;
+        }
         if (tab.isWelcome)
             tab.id = QString::fromLatin1(kWelcomeTabId);
         tab.title = sanitizeTabTitle(tab.title);
@@ -291,6 +316,8 @@ void StudioTabController::loadTabsFromSettings()
             tab.title = tab.isWelcome ? AppLocale::tr("Home") : AppLocale::tr("Untitled");
         tab.viewMode = normalizeViewMode(tab.viewMode);
     }
+    if (m_activeTabId == QString::fromLatin1(kSettingsTabId))
+        m_activeTabId.clear();
     ensureWelcomeTab();
     if (!findTab(m_activeTabId))
         m_activeTabId = QString::fromLatin1(kWelcomeTabId);
@@ -298,7 +325,17 @@ void StudioTabController::loadTabsFromSettings()
 
 void StudioTabController::saveTabsToSettings()
 {
-    m_tabStore.save(m_tabs, m_activeTabId);
+    QString activeId = m_activeTabId;
+    if (const StudioTabEntry *active = findTab(activeId); active && active->isSettings)
+        activeId = QString::fromLatin1(kWelcomeTabId);
+
+    QList<StudioTabEntry> persisted;
+    persisted.reserve(m_tabs.size());
+    for (const StudioTabEntry &tab : m_tabs) {
+        if (!tab.isSettings)
+            persisted.append(tab);
+    }
+    m_tabStore.save(persisted, activeId);
 }
 
 bool StudioTabController::setActiveTabIdInternal(const QString &id, bool persistNow)
@@ -312,7 +349,7 @@ bool StudioTabController::setActiveTabIdInternal(const QString &id, bool persist
     }
 
     const StudioTabEntry *entry = findTab(id);
-    if (entry && entry->isWelcome) {
+    if (entry && (entry->isWelcome || entry->isSettings)) {
         const QString leavingId = m_activeTabId;
         m_activeTabId = id;
         emit activeTabIdChanged();
@@ -320,7 +357,8 @@ bool StudioTabController::setActiveTabIdInternal(const QString &id, bool persist
         stashTab(leavingId);
         if (m_converter)
             m_converter->detachActiveTab();
-        scheduleWelcomeRecentRefresh();
+        if (entry->isWelcome)
+            scheduleWelcomeRecentRefresh();
         if (persistNow)
             saveTabsToSettings();
         return true;
@@ -329,7 +367,7 @@ bool StudioTabController::setActiveTabIdInternal(const QString &id, bool persist
     stashActiveTab();
     m_activeTabId = id;
 
-    if (entry && !entry->isWelcome && m_converter) {
+    if (entry && !entry->isWelcome && !entry->isSettings && m_converter) {
         m_converter->setActiveTabId(id);
         TabRestoreService::restoreTab(m_converter, *entry);
     }
@@ -350,21 +388,22 @@ void StudioTabController::initialize(bool restoreLastProject)
 
     loadTabsFromSettings();
     TabRestoreService::applyStartupTabPolicy(&m_tabs, &m_activeTabId, wasCleanExit);
-    if (m_converter)
-        TabPreloadService::warmAll(&m_tabs, m_converter->previewProvider());
-    saveTabsToSettings();
-    emit tabsChanged();
 
     const StudioTabEntry *active = findTab(m_activeTabId);
-    if (active && !active->isWelcome && m_converter) {
+    if (active && !active->isWelcome && !active->isSettings && m_converter) {
         m_converter->setActiveTabId(m_activeTabId);
         TabRestoreService::restoreTab(m_converter, *active);
-    }
-    else
+    } else {
         m_activeTabId = QString::fromLatin1(kWelcomeTabId);
+    }
 
+    saveTabsToSettings();
+    emit tabsChanged();
     emit activeTabIdChanged();
     emit activeViewModeChanged();
+
+    if (m_converter)
+        m_preload.startWarm(&m_tabs, m_converter->previewProvider());
 
     const bool onlyWelcome = m_tabs.size() <= 1;
     if (!wasCleanExit && onlyWelcome && restoreLastProject && m_converter
@@ -390,6 +429,27 @@ QString StudioTabController::activateWelcome()
     return m_activeTabId;
 }
 
+QString StudioTabController::openSettingsTab()
+{
+    for (StudioTabEntry &t : m_tabs) {
+        if (t.isSettings) {
+            t.title = AppLocale::tr("Settings");
+            setActiveTabIdInternal(t.id, true);
+            emit tabsChanged();
+            return t.id;
+        }
+    }
+
+    StudioTabEntry tab;
+    tab.id = QString::fromLatin1(kSettingsTabId);
+    tab.title = AppLocale::tr("Settings");
+    tab.isSettings = true;
+    m_tabs.append(tab);
+    emit tabsChanged();
+    setActiveTabIdInternal(tab.id, true);
+    return tab.id;
+}
+
 QString StudioTabController::openProjectTab(const QUrl &url)
 {
     if (!m_converter || url.isEmpty())
@@ -398,7 +458,7 @@ QString StudioTabController::openProjectTab(const QUrl &url)
     const QString path = url.toLocalFile();
     const QString pathKey = tabPathKey(path);
     for (const StudioTabEntry &t : m_tabs) {
-        if (t.isWelcome)
+        if (t.isWelcome || t.isSettings)
             continue;
         if (!t.projectPath.isEmpty() && tabPathKey(t.projectPath) == pathKey) {
             setActiveTabIdInternal(t.id, true);
@@ -471,7 +531,8 @@ QString StudioTabController::openFileTab(const QString &localPath)
     if (isProjectPath(localPath))
         return openProjectTab(QUrl::fromLocalFile(localPath));
 
-    const bool reuseActiveTab = !activeIsWelcome() && m_converter && !m_converter->hasImage();
+    const bool reuseActiveTab = !activeIsWelcome() && !activeIsSettings() && m_converter
+                                && !m_converter->hasImage();
     const QString id = reuseActiveTab ? m_activeTabId : newProjectTab(QString());
     if (id.isEmpty())
         return {};
@@ -592,7 +653,7 @@ void StudioTabController::closeOtherTabs(const QString &id)
 void StudioTabController::syncActiveTabTitle()
 {
     StudioTabEntry *active = findTab(m_activeTabId);
-    if (!active || active->isWelcome)
+    if (!active || active->isWelcome || active->isSettings)
         return;
     active->title = TabProjectSync::displayTitle(m_converter);
     emit tabsChanged();
@@ -606,8 +667,14 @@ void StudioTabController::relocalizeTabTitles()
         QString::fromUtf8("Без названия"),
     };
     for (StudioTabEntry &t : m_tabs) {
-        if (t.isWelcome)
+        if (t.isWelcome) {
+            t.title = AppLocale::tr("Home");
             continue;
+        }
+        if (t.isSettings) {
+            t.title = AppLocale::tr("Settings");
+            continue;
+        }
         t.title = stripRecoveredPrefix(t.title);
         if (untitledKeys.contains(t.title))
             t.title = AppLocale::tr("Untitled");
@@ -620,7 +687,7 @@ void StudioTabController::onProjectChanged()
 {
     syncActiveTabTitle();
     StudioTabEntry *active = findTab(m_activeTabId);
-    if (!active || active->isWelcome || !m_converter)
+    if (!active || active->isWelcome || active->isSettings || !m_converter)
         return;
     if (!m_converter->project()->projectFile().isEmpty()) {
         const QString path = m_converter->project()->projectFile().toLocalFile();

@@ -8,8 +8,8 @@ pragma Translator: Inspector
 
 Item {
     id: root
+
     required property var studio
-    required property var win
     signal notify(string message)
 
     implicitHeight: column.implicitHeight
@@ -26,13 +26,13 @@ Item {
             studio: root.studio
             compact: true
             onNotify: (m) => root.notify(m)
-            onSaveProjectRequested: root.win.saveProject()
-            onSaveProjectAsRequested: root.win.saveProjectAs()
-            onSaveCodeRequested: root.win.saveCode()
-            onSaveBinRequested: root.win.saveBin()
+            onSaveProjectRequested: WorkflowRouter.saveProject()
+            onSaveProjectAsRequested: WorkflowRouter.saveProjectAs()
+            onSaveCodeRequested: WorkflowRouter.saveCode()
+            onSaveBinRequested: WorkflowRouter.saveBin()
         }
 
-        StudioSection {
+        InspectorSection {
             studio: root.studio
             title: qsTr("Import and automation")
             hint: qsTr("Load an existing C array or watch a folder for automatic export.")
@@ -40,38 +40,33 @@ Item {
             StudioButton {
                 Layout.fillWidth: true
                 studio: root.studio
-                compact: true
                 text: qsTr("Import C header…")
-                onClicked: root.win.importHeader()
+                onClicked: WorkflowRouter.importHeader()
             }
             StudioButton {
                 Layout.fillWidth: true
                 studio: root.studio
-                compact: true
-                text: exporter.watchFolderActive
-                       ? qsTr("Watch folder: on")
-                       : qsTr("Configure watch folder…")
-                onClicked: root.win.configureWatchFolder()
+                text: qsTr("Configure watch folder…")
+                onClicked: WorkflowRouter.configureWatchFolder()
             }
         }
 
-        StudioSection {
+        InspectorSection {
             studio: root.studio
-            title: qsTr("Batch output")
+            title: qsTr("Batch tools")
+            hint: qsTr("Export multiple images or build a sprite atlas.")
 
             StudioButton {
                 Layout.fillWidth: true
                 studio: root.studio
-                compact: true
                 text: qsTr("Batch export .h…")
-                onClicked: root.win.batchExport()
+                onClicked: WorkflowRouter.batchExport()
             }
             StudioButton {
                 Layout.fillWidth: true
                 studio: root.studio
-                compact: true
                 text: qsTr("Build sprite atlas…")
-                onClicked: root.win.buildAtlas()
+                onClicked: WorkflowRouter.buildAtlas()
             }
         }
     }

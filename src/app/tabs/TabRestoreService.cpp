@@ -12,7 +12,7 @@
 
 bool TabRestoreService::restoreTab(DisplayConverter *converter, const StudioTabEntry &entry)
 {
-    if (!converter || entry.isWelcome)
+    if (!converter || entry.isWelcome || entry.isSettings)
         return true;
 
     converter->setActiveTabId(entry.id);
@@ -67,6 +67,8 @@ void TabRestoreService::applyStartupTabPolicy(QList<StudioTabEntry> *tabs,
     QList<StudioTabEntry> kept;
     kept.reserve(tabs->size());
     for (const StudioTabEntry &tab : *tabs) {
+        if (tab.isSettings)
+            continue;
         if (tab.isWelcome) {
             kept.append(tab);
             continue;

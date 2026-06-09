@@ -60,7 +60,6 @@ StudioDialog {
 
     title: qsTr("About PixelStudio")
     modal: true
-    anchors.centerIn: parent
     standardButtons: Dialog.NoButton
     width: bodyWidth + 2 * padding
 

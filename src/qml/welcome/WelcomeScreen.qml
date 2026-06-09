@@ -45,7 +45,7 @@ DropArea {
     readonly property int recentCardThumb: 80
     readonly property int recentCardHeight: recentCardThumb + 24
     readonly property int recentGridGap: 16
-    readonly property var recentWelcomeItems: tabController.welcomeRecentItems
+    readonly property var recentWelcomeItems: workspace.tabs.welcomeRecentItems
     readonly property int recentCount: Math.min(recentMax, recentWelcomeItems.length)
     readonly property int recentRowCount: recentCount > 0 ? Math.ceil(recentCount / recentColumns) : 0
     readonly property int recentGridHeight: recentCount > 0

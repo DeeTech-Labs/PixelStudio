@@ -17,14 +17,14 @@ PixelPanel {
         anchors.bottomMargin: 22
         clip: true
         spacing: 1
-        model: project.projectAssets
+        model: workspace.project.projectAssets
 
         delegate: ItemDelegate {
             required property var modelData
             required property int index
             width: list.width
             height: 22
-            highlighted: modelData.path === converter.sourceFilePath
+            highlighted: modelData.path === workspace.image.sourceFilePath
             background: Rectangle {
                 color: parent.highlighted ? studio.accentSoft
                     : (parent.hovered ? studio.railHover : "transparent")
@@ -51,8 +51,8 @@ PixelPanel {
         anchors.bottom: parent.bottom
         height: 20
         padding: studio.spacingXs
-        text: project.projectFile.toString().length > 0
-            ? project.projectName + ".pspx"
+        text: workspace.project.projectFile.toString().length > 0
+            ? workspace.project.projectName + ".pspx"
             : qsTr("No project")
         font.family: studio.fontFamilyMono
         font.pixelSize: studio.fontSizeXs

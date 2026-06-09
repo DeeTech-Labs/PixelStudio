@@ -303,6 +303,14 @@ bool isInternalDataPath(const QString &absolutePath)
     return isTabCachePath(absolutePath) || isTransientCachePath(absolutePath);
 }
 
+void ensureStorageDirs()
+{
+    ensureDir(userDocumentsRoot());
+    ensureDir(projectsDir());
+    ensureDir(exportsDir());
+    ensureDir(watchDir());
+}
+
 void ensureLayout()
 {
     ensureDir(dataRoot());
@@ -310,10 +318,7 @@ void ensureLayout()
     ensureDir(tabCacheDir());
     ensureDir(recentThumbnailsDir());
     ensureDir(runtimePreviewsDir());
-    ensureDir(userDocumentsRoot());
-    ensureDir(projectsDir());
-    ensureDir(exportsDir());
-    ensureDir(watchDir());
+    ensureStorageDirs();
     migrateLegacyTranslationsDir();
     ensureDir(userTranslationsDir());
 

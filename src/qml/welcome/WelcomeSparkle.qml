@@ -15,6 +15,7 @@ Item {
 
     Canvas {
         anchors.fill: parent
+        Component.onCompleted: requestPaint()
         onPaint: {
             const ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)

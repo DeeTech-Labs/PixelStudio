@@ -20,6 +20,29 @@ Dialog {
     padding: studio.spacingXl
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
+    function centerInOverlay() {
+        if (!parent || width <= 0 || height <= 0)
+            return
+        x = Math.max(0, Math.round((parent.width - width) / 2))
+        y = Math.max(0, Math.round((parent.height - height) / 2))
+    }
+
+    onOpened: centerInOverlay()
+    onWidthChanged: if (visible) Qt.callLater(centerInOverlay)
+    onHeightChanged: if (visible) Qt.callLater(centerInOverlay)
+
+    Connections {
+        target: root.parent
+        function onWidthChanged() {
+            if (root.visible)
+                root.centerInOverlay()
+        }
+        function onHeightChanged() {
+            if (root.visible)
+                root.centerInOverlay()
+        }
+    }
+
     background: Item {
         clip: true
 

@@ -11,7 +11,7 @@ Item {
     required property var studio
     property bool showFlash: false
 
-    readonly property bool monoEncoding: displayOutput.encodingIsMono1Bit
+    readonly property bool monoEncoding: inspectorDisplay.monoEncoding
 
     implicitHeight: column.implicitHeight
     Layout.fillWidth: true
@@ -27,10 +27,10 @@ Item {
             font.family: studio.fontFamilyMono
             font.pixelSize: studio.fontSizeSm
             color: studio.textMuted
-            text: displayOutput.displayWidth + " × " + displayOutput.displayHeight
-                  + " · " + displayOutput.encodingModeName
-                  + " · " + displayOutput.dataByteCount + " " + qsTr("B")
-                  + (codeGen.codeUseProgmem ? " · PROGMEM" : "")
+            text: workspace.output.displayWidth + " × " + workspace.output.displayHeight
+                  + " · " + workspace.output.encodingModeName
+                  + " · " + workspace.output.dataByteCount + " " + qsTr("B")
+                  + (workspace.code.codeUseProgmem ? " · PROGMEM" : "")
         }
 
         StudioSection {
@@ -39,19 +39,15 @@ Item {
             hint: qsTr("Width and height define the firmware buffer.")
 
             StudioField { studio: root.studio; labelText: qsTr("Resolution preset") }
-            StudioCombo {
+            StudioBoundCombo {
                 id: presetCombo
                 Layout.fillWidth: true
                 studio: root.studio
-                readonly property int _localeRev: converter.localizationRevision
-                model: _localeRev >= 0 ? displayOutput.displayPresets() : []
+                boundModel: workspace.output.displayPresetsModel
                 textRole: "name"
-                Component.onCompleted: syncPreset()
-                onActivated: {
-                    const item = model[currentIndex]
-                    if (item && item.id)
-                        displayOutput.setProfileId(item.id)
-                }
+                valueRole: "id"
+                boundValue: workspace.output.profileId
+                onValueSelected: (id) => workspace.output.setProfileId(id)
             }
 
             RowLayout {
@@ -63,10 +59,10 @@ Item {
                     from: 8
                     to: 2048
                     stepSize: 1
-                    value: displayOutput.displayWidth
+                    value: workspace.output.displayWidth
                     onValueCommitted: (v) => {
-                        if (v !== displayOutput.displayWidth)
-                            displayOutput.setDisplayWidth(v)
+                        if (v !== workspace.output.displayWidth)
+                            workspace.output.setDisplayWidth(v)
                     }
                 }
                 StudioSpin {
@@ -75,10 +71,10 @@ Item {
                     label: qsTr("Height")
                     from: 8
                     to: 2048
-                    value: displayOutput.displayHeight
+                    value: workspace.output.displayHeight
                     onValueCommitted: (v) => {
-                        if (v !== displayOutput.displayHeight)
-                            displayOutput.setDisplayHeight(v)
+                        if (v !== workspace.output.displayHeight)
+                            workspace.output.setDisplayHeight(v)
                     }
                 }
             }
@@ -87,7 +83,7 @@ Item {
                 Layout.fillWidth: true
                 studio: root.studio
                 text: qsTr("Swap width ↔ height")
-                onClicked: displayOutput.swapDisplayDimensions()
+                onClicked: workspace.output.swapDisplayDimensions()
             }
         }
 
@@ -96,19 +92,15 @@ Item {
             title: qsTr("Color encoding")
             hint: qsTr("RGB565, RGB888, ARGB8888, monochrome, grayscale, indexed, YUV and other pixel formats for TFT and OLED.")
 
-            StudioCombo {
+            StudioBoundCombo {
                 id: encCombo
                 Layout.fillWidth: true
                 studio: root.studio
-                readonly property int _localeRev: converter.localizationRevision
-                model: _localeRev >= 0 ? displayOutput.availableEncodingModesForUi() : []
+                boundModel: workspace.output.encodingModesModel
                 textRole: "name"
-                Component.onCompleted: syncEnc()
-                onActivated: {
-                    const item = model[currentIndex]
-                    if (item && item.mode !== undefined)
-                        displayOutput.setEncodingMode(item.mode)
-                }
+                valueRole: "mode"
+                boundValue: workspace.output.encodingMode
+                onValueSelected: (mode) => workspace.output.setEncodingMode(mode)
             }
         }
 
@@ -127,8 +119,8 @@ Item {
                     qsTr("Vertical page buffer"),
                     qsTr("Vertical column")
                 ]
-                Component.onCompleted: currentIndex = displayOutput.monoLayout
-                onActivated: displayOutput.setMonoLayout(currentIndex)
+                Component.onCompleted: currentIndex = workspace.output.monoLayout
+                onActivated: workspace.output.setMonoLayout(currentIndex)
             }
         }
 
@@ -142,40 +134,40 @@ Item {
                 id: arrayField
                 Layout.fillWidth: true
                 studio: root.studio
-                text: codeGen.arrayName
-                onEditingFinished: codeGen.setArrayName(text)
+                text: workspace.code.arrayName
+                onEditingFinished: workspace.code.setArrayName(text)
             }
 
             StudioCheck {
                 studio: root.studio
                 text: qsTr("Include header comments")
-                checked: codeGen.codeIncludeComments
-                onToggled: codeGen.setCodeIncludeComments(checked)
+                checked: workspace.code.codeIncludeComments
+                onToggled: workspace.code.setCodeIncludeComments(checked)
             }
             StudioCheck {
                 studio: root.studio
                 text: qsTr("PROGMEM (Arduino)")
-                checked: codeGen.codeUseProgmem
-                onToggled: codeGen.setCodeUseProgmem(checked)
+                checked: workspace.code.codeUseProgmem
+                onToggled: workspace.code.setCodeUseProgmem(checked)
             }
             StudioCheck {
                 studio: root.studio
                 text: qsTr("static storage")
-                checked: codeGen.codeStaticStorage
-                onToggled: codeGen.setCodeStaticStorage(checked)
+                checked: workspace.code.codeStaticStorage
+                onToggled: workspace.code.setCodeStaticStorage(checked)
             }
             StudioCheck {
-                visible: displayOutput.encodingMode === 4 || displayOutput.encodingMode === 8
+                visible: workspace.output.encodingMode === 4 || workspace.output.encodingMode === 8
                 studio: root.studio
                 text: qsTr("RGB565 big-endian (SPI)")
-                checked: codeGen.rgb565BigEndian
-                onToggled: codeGen.setRgb565BigEndian(checked)
+                checked: workspace.code.rgb565BigEndian
+                onToggled: workspace.code.setRgb565BigEndian(checked)
             }
             StudioCheck {
                 studio: root.studio
                 text: qsTr("sRGB → linear quantization")
-                checked: displayOutput.linearColorSpace
-                onToggled: displayOutput.setLinearColorSpace(checked)
+                checked: workspace.output.linearColorSpace
+                onToggled: workspace.output.setLinearColorSpace(checked)
             }
             StudioField { studio: root.studio; labelText: qsTr("DMA buffer alignment") }
             StudioCombo {
@@ -189,7 +181,7 @@ Item {
                 ]
                 textRole: "label"
                 Component.onCompleted: syncDmaAlign()
-                onActivated: codeGen.setCodeDmaAlign(model[currentIndex].value)
+                onActivated: workspace.code.setCodeDmaAlign(model[currentIndex].value)
             }
         }
 
@@ -202,7 +194,7 @@ Item {
                 Layout.fillWidth: true
                 studio: root.studio
                 text: showFlash ? qsTr("Hide flash size advisor") : qsTr("Flash size advisor")
-                enabled: converter.flashReport.length > 0
+                enabled: workspace.image.flashReport.length > 0
                 onClicked: showFlash = !showFlash
             }
             StudioButton {
@@ -210,11 +202,11 @@ Item {
                 visible: showFlash
                 studio: root.studio
                 text: qsTr("Use smallest encoding")
-                enabled: converter.flashReport.length > 0
-                onClicked: applySmallestEncoding()
+                enabled: workspace.image.flashReport.length > 0
+                onClicked: inspectorDisplay.applySmallestEncoding()
             }
             Repeater {
-                model: showFlash ? converter.flashReport : []
+                model: showFlash ? workspace.image.flashReport : []
                 delegate: Label {
                     required property var modelData
                     Layout.fillWidth: true
@@ -232,61 +224,28 @@ Item {
         }
     }
 
-    function syncPreset() {
-        for (let i = 0; i < presetCombo.model.length; ++i) {
-            if (presetCombo.model[i].id === displayOutput.profileId) {
-                presetCombo.currentIndex = i
-                return
-            }
-        }
-    }
-
     function syncDmaAlign() {
         for (let i = 0; i < dmaAlignCombo.model.length; ++i) {
-            if (dmaAlignCombo.model[i].value === codeGen.codeDmaAlign) {
+            if (dmaAlignCombo.model[i].value === workspace.code.codeDmaAlign) {
                 dmaAlignCombo.currentIndex = i
                 return
             }
         }
     }
 
-    function syncEnc() {
-        for (let i = 0; i < encCombo.model.length; ++i) {
-            if (encCombo.model[i].mode === displayOutput.encodingMode) {
-                encCombo.currentIndex = i
-                return
-            }
-        }
-    }
-
-    function applySmallestEncoding() {
-        for (let i = 0; i < converter.flashReport.length; ++i) {
-            const row = converter.flashReport[i]
-            if (row.recommended && row.mode !== undefined) {
-                displayOutput.setEncodingMode(row.mode)
-                return
-            }
-        }
-    }
-
     Connections {
-        target: displayOutput
-        function onProfileIdChanged() { syncPreset() }
-        function onDisplayWidthChanged() { syncPreset() }
-        function onDisplayHeightChanged() { syncPreset() }
-        function onColorModeChanged() { syncEnc() }
-        function onEncodingModeChanged() { syncEnc() }
+        target: workspace.output
         function onMonoLayoutChanged() {
-            monoLayoutCombo.currentIndex = displayOutput.monoLayout
+            monoLayoutCombo.currentIndex = workspace.output.monoLayout
         }
     }
 
     Connections {
-        target: codeGen
+        target: workspace.code
         function onCodeDmaAlignChanged() { syncDmaAlign() }
         function onArrayNameChanged() {
-            if (arrayField.text !== codeGen.arrayName)
-                arrayField.text = codeGen.arrayName
+            if (arrayField.text !== workspace.code.arrayName)
+                arrayField.text = workspace.code.arrayName
         }
     }
 }

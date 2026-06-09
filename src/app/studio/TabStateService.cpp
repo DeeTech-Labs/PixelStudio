@@ -191,7 +191,19 @@ void TabStateService::restore(DisplayConverter &converter, const ConverterTabSna
         ImagePipelineController::updateCodePreview(state, converter);
         ImagePipelineController::updateFlashReport(state, converter);
     } else if (!state.sourceImage.isNull()) {
-        ImagePipelineController::scheduleRebuild(converter, true);
+        const bool hasCachedPreviews = provider
+            && provider->hasSlot(previewSlot)
+            && provider->hasSlot(processSlot);
+        if (hasCachedPreviews) {
+            state.previewPath = provider->imageUrl(previewSlot);
+            state.processPreviewPath = provider->imageUrl(processSlot);
+            emit converter.previewPathChanged();
+            emit converter.processPreviewPathChanged();
+            ImagePipelineController::updateCodePreview(state, converter);
+            ImagePipelineController::updateFlashReport(state, converter);
+        } else {
+            ImagePipelineController::scheduleRebuild(converter, true);
+        }
     } else {
         state.previewPath.clear();
         state.processPreviewPath.clear();

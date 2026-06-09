@@ -30,6 +30,8 @@ Item {
     readonly property int effectiveGridThreshold: effectiveShowGrid && autoPixelGrid && !showGrid
         ? autoGridThresholdZoom
         : gridThresholdZoom
+    readonly property bool gridVisible: effectiveShowGrid
+        && (showGrid || zoomLevel >= effectiveGridThreshold)
 
     readonly property var _zoomSteps: [0.125, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 8, 16]
 
@@ -37,6 +39,7 @@ Item {
     property real imgH: img.status === Image.Ready ? img.sourceSize.height : 1
     property real displayW: imgW * zoomLevel
     property real displayH: imgH * zoomLevel
+    property real _cachedFitZoom: 1
 
     function maxZoom() { return allowUpscale ? 16 : Math.max(1, fitZoom()) }
 
@@ -46,6 +49,16 @@ Item {
         const sx = viewport.width / imgW
         const sy = viewport.height / imgH
         return Math.min(sx, sy, allowUpscale ? 16 : 1)
+    }
+
+    function updateCachedFitZoom() {
+        _cachedFitZoom = fitZoom()
+    }
+
+    function scheduleGridPaint() {
+        if (!pixelGridCanvas.visible)
+            return
+        gridPaintTimer.restart()
     }
 
     function panMarginX() {
@@ -142,6 +155,7 @@ Item {
                 || viewport.width < 1 || viewport.height < 1)
             return
         zoomLevel = fitZoom()
+        updateCachedFitZoom()
         centerContent()
     }
 
@@ -153,9 +167,16 @@ Item {
 
     readonly property string zoomLabel: {
         const pct = Math.round(zoomLevel * 100)
-        if (!allowUpscale && Math.abs(zoomLevel - fitZoom()) < 0.02)
+        if (!allowUpscale && Math.abs(zoomLevel - _cachedFitZoom) < 0.02)
             return qsTr("Fit")
         return pct + "%"
+    }
+
+    Timer {
+        id: gridPaintTimer
+        interval: 16
+        repeat: false
+        onTriggered: pixelGridCanvas.requestPaint()
     }
 
     FocusScope {
@@ -233,23 +254,29 @@ Item {
                 smooth: false
                 cache: false
                 onStatusChanged: {
-                    if (status === Image.Ready && root.imageSource.toString().length > 0)
-                        Qt.callLater(root.fitToView)
+                    if (status === Image.Ready) {
+                        if (root.imageSource.toString().length > 0)
+                            Qt.callLater(root.fitToView)
+                        else
+                            root.updateCachedFitZoom()
+                    }
                 }
             }
 
             Canvas {
                 id: pixelGridCanvas
                 anchors.fill: parent
-                visible: root.effectiveShowGrid
-                onWidthChanged: requestPaint()
-                onHeightChanged: requestPaint()
-                onVisibleChanged: if (visible) requestPaint()
+                visible: root.gridVisible
+                onWidthChanged: root.scheduleGridPaint()
+                onHeightChanged: root.scheduleGridPaint()
+                onVisibleChanged: if (visible) root.scheduleGridPaint()
                 Connections {
                     target: root
-                    function onDisplayWChanged() { pixelGridCanvas.requestPaint() }
-                    function onDisplayHChanged() { pixelGridCanvas.requestPaint() }
-                    function onEffectiveShowGridChanged() { pixelGridCanvas.requestPaint() }
+                    function onDisplayWChanged() { root.scheduleGridPaint() }
+                    function onDisplayHChanged() { root.scheduleGridPaint() }
+                    function onGridVisibleChanged() { root.scheduleGridPaint() }
+                    function onImgWChanged() { root.scheduleGridPaint() }
+                    function onImgHChanged() { root.scheduleGridPaint() }
                 }
                 onPaint: {
                     const ctx = getContext("2d")
@@ -403,6 +430,8 @@ Item {
                     studio: root.studio
                     small: true
                     iconText: "−"
+                    objectName: "viewportZoomOut"
+                    accessibleName: qsTr("Zoom out")
                     onClicked: root.zoomOut()
                 }
                 Label {
@@ -417,6 +446,8 @@ Item {
                     studio: root.studio
                     small: true
                     iconText: "+"
+                    objectName: "viewportZoomIn"
+                    accessibleName: qsTr("Zoom in")
                     onClicked: root.zoomIn()
                 }
                 Rectangle { width: 1; height: 16; color: studio.divider }
@@ -424,12 +455,16 @@ Item {
                     studio: root.studio
                     small: true
                     text: "1:1"
+                    objectName: "viewportZoomActual"
+                    accessibleName: qsTr("Actual size")
                     onClicked: root.zoomTo(1)
                 }
                 StudioIconButton {
                     studio: root.studio
                     small: true
                     text: qsTr("Fit")
+                    objectName: "viewportZoomFit"
+                    accessibleName: qsTr("Fit to view")
                     onClicked: root.fitToView()
                 }
             }
@@ -443,7 +478,17 @@ Item {
     }
     onDisplayWChanged: clampPan()
     onDisplayHChanged: clampPan()
-    Component.onCompleted: Qt.callLater(fitToView)
-    onWidthChanged: Qt.callLater(centerContent)
-    onHeightChanged: Qt.callLater(centerContent)
+    onZoomLevelChanged: updateCachedFitZoom()
+    Component.onCompleted: {
+        updateCachedFitZoom()
+        Qt.callLater(fitToView)
+    }
+    onWidthChanged: {
+        updateCachedFitZoom()
+        Qt.callLater(centerContent)
+    }
+    onHeightChanged: {
+        updateCachedFitZoom()
+        Qt.callLater(centerContent)
+    }
 }

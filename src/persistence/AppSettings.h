@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QSettings>
+#include <QUrl>
 #include <QVariantList>
 
 class CodeSyntaxTheme;
@@ -23,6 +24,10 @@ class AppSettings : public QObject
     Q_PROPERTY(QString projectsRoot READ projectsRoot WRITE setProjectsRoot NOTIFY projectsRootChanged)
     Q_PROPERTY(QString exportsRoot READ exportsRoot WRITE setExportsRoot NOTIFY exportsRootChanged)
     Q_PROPERTY(QString documentsRoot READ documentsRoot WRITE setDocumentsRoot NOTIFY documentsRootChanged)
+    Q_PROPERTY(QUrl documentsUrl READ documentsUrl NOTIFY storagePathsChanged)
+    Q_PROPERTY(QUrl projectsUrl READ projectsUrl NOTIFY storagePathsChanged)
+    Q_PROPERTY(QUrl exportsUrl READ exportsUrl NOTIFY storagePathsChanged)
+    Q_PROPERTY(QUrl watchUrl READ watchUrl NOTIFY storagePathsChanged)
     Q_PROPERTY(CodeSyntaxTheme *codeSyntax READ codeSyntax CONSTANT)
 
 public:
@@ -43,6 +48,10 @@ public:
     QString projectsRoot() const { return m_projectsRoot; }
     QString exportsRoot() const { return m_exportsRoot; }
     QString documentsRoot() const { return m_documentsRoot; }
+    QUrl documentsUrl() const;
+    QUrl projectsUrl() const;
+    QUrl exportsUrl() const;
+    QUrl watchUrl() const;
 
     Q_INVOKABLE QVariantList availableLanguages() const;
     Q_INVOKABLE void resetUiDefaults();
@@ -77,10 +86,12 @@ signals:
     void projectsRootChanged();
     void exportsRootChanged();
     void documentsRootChanged();
+    void storagePathsChanged();
 
 private:
     void load();
     void saveValue(const QString &key, const QVariant &value);
+    void applyStoragePathChange();
 
     QSettings m_settings;
     QString m_languageCode = QStringLiteral("system");

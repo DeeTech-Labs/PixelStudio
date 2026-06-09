@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/PixelStudioVersion.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompileWarnings.cmake)
 
 project(PixelStudio LANGUAGES CXX)
 
@@ -79,6 +80,7 @@ target_include_directories(pixelstudio_core PUBLIC
     ${PS_GENERATED_INCLUDE_DIR}
 )
 target_link_libraries(pixelstudio_core PUBLIC Qt6::Gui Qt6::Concurrent Qt6::Network)
+pixelstudio_apply_warnings(pixelstudio_core)
 
 set(APP_SOURCES
     src/main.cpp
@@ -88,6 +90,8 @@ set(APP_SOURCES
     src/app/code/CodeSyntaxHighlighter.h
     src/app/studio/DisplayConverter.cpp
     src/app/studio/DisplayConverter.h
+    src/app/studio/SessionPersistenceService.cpp
+    src/app/studio/SessionPersistenceService.h
     src/app/preview/PreviewImageProvider.cpp
     src/app/preview/PreviewImageProvider.h
     src/app/studio/controllers/image/ImageFilterController.cpp
@@ -109,6 +113,13 @@ set(APP_SOURCES
     src/app/studio/TabStateService.cpp
     src/app/shell/WinTaskbarRecent.cpp
     src/app/shell/WinTaskbarRecent.h
+    src/app/shell/StudioViewMode.cpp
+    src/app/shell/WorkspaceContext.cpp
+    src/app/shell/WorkspaceContext.h
+    src/app/panels/InspectorImagePresenter.cpp
+    src/app/panels/InspectorImagePresenter.h
+    src/app/panels/InspectorDisplayPresenter.cpp
+    src/app/panels/InspectorDisplayPresenter.h
 )
 
 qt_add_executable(appPixelStudio ${APP_SOURCES})
@@ -123,7 +134,6 @@ target_include_directories(appPixelStudio PRIVATE
 )
 
 set(PIXELSTUDIO_QML_FILES
-    src/qml/Translation.qml
     src/qml/Main.qml
     src/qml/Theme.qml
     src/qml/welcome/WelcomeScreen.qml
@@ -133,14 +143,32 @@ set(PIXELSTUDIO_QML_FILES
     src/qml/welcome/WelcomeBrandMark.qml
     src/qml/welcome/WelcomeSparkle.qml
     src/qml/panels/InspectorDock.qml
+    src/qml/panels/InspectorTabRow.qml
     src/qml/panels/InspectorPageDisplay.qml
     src/qml/panels/InspectorPageImage.qml
-    src/qml/panels/InspectorPageExport.qml
+    src/qml/panels/inspector/InspectorImageInfo.qml
+    src/qml/panels/inspector/InspectorImageAdjustments.qml
+    src/qml/panels/inspector/InspectorImageAdvanced.qml
+    src/qml/panels/inspector/InspectorImageTransform.qml
+    src/qml/panels/inspector/InspectorImageTone.qml
+    src/qml/panels/inspector/InspectorImageAdvancedColor.qml
+    src/qml/panels/inspector/InspectorImageDithering.qml
+    src/qml/panels/inspector/InspectorImageEdgesMask.qml
     src/qml/panels/ExportActionsPanel.qml
+    src/qml/shell/WorkflowRouter.qml
+    src/qml/shell/StudioCommands.qml
+    src/qml/shell/StudioMenuFromCommands.qml
     src/qml/shell/MainMenuBar.qml
     src/qml/shell/MainDialogs.qml
+    src/qml/shell/dialogs/ProjectDialogs.qml
+    src/qml/shell/dialogs/ExportDialogs.qml
+    src/qml/shell/dialogs/SettingsDialogs.qml
+    src/qml/features/export/ExportHub.qml
+    src/qml/controls/InspectorSection.qml
     src/qml/shell/ExitConfirmDialog.qml
-    src/qml/shell/PreferencesDialog.qml
+    src/qml/settings/SettingsPage.qml
+    src/qml/settings/SettingsNavButton.qml
+    src/qml/settings/SyntaxColorsEditor.qml
     src/qml/shell/studio/StudioShell.qml
     src/qml/shell/studio/StudioTabBar.qml
     src/qml/shell/studio/StudioTabChip.qml
@@ -151,7 +179,6 @@ set(PIXELSTUDIO_QML_FILES
     src/qml/shell/studio/StudioConfirmFooter.qml
     src/qml/shell/studio/StudioOkFooter.qml
     src/qml/dialogs/AboutDialog.qml
-    src/qml/dialogs/CodeSyntaxColorsDialog.qml
     src/qml/dialogs/AboutBrandMark.qml
     src/qml/workspace/StudioDropCanvas.qml
     src/qml/workspace/StudioLayout.qml
@@ -176,6 +203,7 @@ set(PIXELSTUDIO_QML_FILES
     src/qml/controls/StudioSlider.qml
     src/qml/controls/StudioSpin.qml
     src/qml/controls/StudioCombo.qml
+    src/qml/controls/StudioBoundCombo.qml
     src/qml/controls/StudioTextField.qml
     src/qml/controls/StudioScroll.qml
 )
@@ -185,9 +213,10 @@ qt_add_resources(appPixelStudio "app_translations"
     BASE translations
     FILES ${PS_TRANSLATION_BUNDLES}
 )
-set_source_files_properties(src/qml/Translation.qml
-    PROPERTIES QT_QML_SINGLETON_TYPE TRUE
-)
+set_source_files_properties(src/qml/shell/WorkflowRouter.qml
+    PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(src/qml/shell/StudioCommands.qml
+    PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 file(GLOB PIXELSTUDIO_ICON_PNGS CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.png)
@@ -226,6 +255,8 @@ target_link_libraries(appPixelStudio
 if(WIN32)
     target_link_libraries(appPixelStudio PRIVATE dwmapi shell32 ole32 propsys shlwapi)
 endif()
+
+pixelstudio_apply_warnings(appPixelStudio)
 
 include(GNUInstallDirs)
 install(TARGETS appPixelStudio

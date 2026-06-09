@@ -52,14 +52,6 @@ int grayValue(QRgb c)
     return qRound(0.299 * qRed(c) + 0.587 * qGreen(c) + 0.114 * qBlue(c));
 }
 
-quint16 toRgb565(QRgb c)
-{
-    const quint16 r = quint16((qRed(c) >> 3) & 0x1F);
-    const quint16 g = quint16((qGreen(c) >> 2) & 0x3F);
-    const quint16 b = quint16((qBlue(c) >> 3) & 0x1F);
-    return quint16((r << 11) | (g << 5) | b);
-}
-
 quint8 toRgb233(QRgb c)
 {
     const quint8 r = quint8((qRed(c) >> 5) & 0x07);
@@ -436,7 +428,6 @@ void DisplayRasterizer::invertMonoResult(Result &result)
 DisplayRasterizer::Result DisplayRasterizer::convert(const QImage &source,
                                                      int width,
                                                      int height,
-                                                     DisplayProfile::ColorMode colorMode,
                                                      DisplayProfile::ScaleMode scaleMode,
                                                      const ImageFiltersPipeline::Params &filters,
                                                      DisplayCodeGenerator::EncodingMode encodingMode,
@@ -488,7 +479,9 @@ DisplayRasterizer::Result DisplayRasterizer::convert(const QImage &source,
                 const float bLin = linearColorSpace
                     ? PixelFormatPacking::srgbChannelToLinear(float(b8) / 255.0f)
                     : float(b8) / 255.0f;
-                r.rgb565[i] = PixelFormatPacking::quantizeLinearToRgb565(rLin, gLin, bLin);
+                r.rgb565[i] = linearColorSpace
+                    ? PixelFormatPacking::quantizeLinearToRgb565(rLin, gLin, bLin)
+                    : PixelFormatPacking::quantizeSrgbToRgb565(r8, g8, b8);
                 r.rgb24[i] = quint32(0xFF000000 | (quint32(r8) << 16) | (quint32(g8) << 8) | quint32(b8));
                 r.rgb888[i * 3] = char(r8);
                 r.rgb888[i * 3 + 1] = char(g8);

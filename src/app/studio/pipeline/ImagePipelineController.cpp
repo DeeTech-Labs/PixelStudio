@@ -1,4 +1,5 @@
 #include "app/studio/pipeline/ImagePipelineController.h"
+#include "app/studio/model/ConverterEncoding.h"
 #include "app/studio/model/ConverterState.h"
 #include "app/studio/DisplayConverter.h"
 
@@ -41,7 +42,6 @@ void ImagePipelineController::startAsyncRebuild(DisplayConverter &converter)
     const QImage source = converter.orientedSource();
     const int width = state.displayWidth;
     const int height = state.displayHeight;
-    const auto colorMode = state.colorMode;
     const auto scaleMode = state.scaleMode;
     const int monoThreshold = state.monoThreshold;
     const bool invertMono = state.invertMono;
@@ -57,7 +57,6 @@ void ImagePipelineController::startAsyncRebuild(DisplayConverter &converter)
     auto future = QtConcurrent::run([source,
                                      width,
                                      height,
-                                     colorMode,
                                      scaleMode,
                                      monoThreshold,
                                      invertMono,
@@ -74,7 +73,6 @@ void ImagePipelineController::startAsyncRebuild(DisplayConverter &converter)
         output.result = DisplayRasterizer::convert(source,
                                                    width,
                                                    height,
-                                                   colorMode,
                                                    scaleMode,
                                                    filterParams,
                                                    encodingMode,
@@ -87,7 +85,9 @@ void ImagePipelineController::startAsyncRebuild(DisplayConverter &converter)
         DisplayProfile profile = DisplayProfile::byId(profileId);
         profile.width = width;
         profile.height = height;
-        profile.colorMode = colorMode;
+        profile.colorMode = ConverterEncoding::isColorMode(static_cast<int>(encodingMode))
+            ? DisplayProfile::Rgb565
+            : DisplayProfile::Mono1Bit;
         if (profile.id == QStringLiteral("custom"))
             profile.name = AppLocale::tr("Custom %1×%2")
                                .arg(width)

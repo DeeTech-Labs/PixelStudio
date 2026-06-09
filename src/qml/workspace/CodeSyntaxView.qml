@@ -16,12 +16,12 @@ Item {
     CodeSyntaxHighlighter {
         id: syntaxHighlighter
         sourceText: root.sourceText
-        Component.onCompleted: setTheme(appSettings.codeSyntax)
+        Component.onCompleted: setTheme(workspace.settings.codeSyntax)
     }
 
     Connections {
-        target: appSettings.codeSyntax
-        function onChanged() { syntaxHighlighter.setTheme(appSettings.codeSyntax) }
+        target: workspace.settings.codeSyntax
+        function onChanged() { syntaxHighlighter.setTheme(workspace.settings.codeSyntax) }
     }
 
     readonly property real lineHeight: studio.fontSizeSm * 1.5

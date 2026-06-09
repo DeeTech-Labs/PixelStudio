@@ -132,6 +132,14 @@ quint8 PixelFormatPacking::quantizeLinearToGray8(float linear)
     return linearChannelToSrgb8(qBound(0.0f, linear, 1.0f));
 }
 
+quint16 PixelFormatPacking::quantizeSrgbToRgb565(quint8 r, quint8 g, quint8 b)
+{
+    const quint16 r5 = quint16((r >> 3) & 0x1F);
+    const quint16 g6 = quint16((g >> 2) & 0x3F);
+    const quint16 b5 = quint16((b >> 3) & 0x1F);
+    return quint16((r5 << 11) | (g6 << 5) | b5);
+}
+
 quint16 PixelFormatPacking::quantizeLinearToRgb565(float rLin, float gLin, float bLin)
 {
     const int r5 = qBound(0, int(rLin * 31.0f + 0.5f), 31);

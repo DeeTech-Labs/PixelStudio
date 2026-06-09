@@ -9,7 +9,7 @@ PixelPanel {
     id: root
     title: qsTr("Palette")
 
-    readonly property var swatches: converter.previewPalette
+    readonly property var swatches: workspace.image.previewPalette
     readonly property bool hasSwatches: swatches.length > 0
     readonly property int footerHeight: 18
     readonly property real gridSpacing: 1

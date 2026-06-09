@@ -10,7 +10,6 @@ Rectangle {
     id: root
 
     required property var studio
-    required property var win
     property int pageIndex: 0
     signal notify(string message)
 
@@ -23,7 +22,7 @@ Rectangle {
     clip: true
 
     readonly property var pages: {
-        const _ = appSettings.languageCode + converter.localizationRevision
+        const _ = workspace.settings.languageCode + workspace.image.localizationRevision
         return [
             { id: 0, title: qsTr("Image") },
             { id: 1, title: qsTr("Display") },
@@ -57,23 +56,13 @@ Rectangle {
                     elide: Text.ElideRight
                 }
 
-                RowLayout {
+                InspectorTabRow {
                     Layout.fillWidth: true
-                    spacing: studio.spacingXs
-
-                    Repeater {
-                        model: root.pages
-                        delegate: PixelTab {
-                            required property var modelData
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            studio: root.studio
-                            compact: true
-                            label: modelData.title
-                            selected: root.pageIndex === modelData.id
-                            onClicked: root.pageIndex = modelData.id
-                        }
-                    }
+                    studio: root.studio
+                    pages: root.pages
+                    pageIndex: root.pageIndex
+                    tabFillWidth: true
+                    onPageSelected: (pageId) => root.pageIndex = pageId
                 }
             }
 
@@ -95,19 +84,11 @@ Rectangle {
 
                 Item { Layout.fillWidth: true; Layout.minimumWidth: studio.spacingSm }
 
-                RowLayout {
-                    spacing: studio.spacingXs
-                    Repeater {
-                        model: root.pages
-                        delegate: PixelTab {
-                            required property var modelData
-                            studio: root.studio
-                            compact: true
-                            label: modelData.title
-                            selected: root.pageIndex === modelData.id
-                            onClicked: root.pageIndex = modelData.id
-                        }
-                    }
+                InspectorTabRow {
+                    studio: root.studio
+                    pages: root.pages
+                    pageIndex: root.pageIndex
+                    onPageSelected: (pageId) => root.pageIndex = pageId
                 }
             }
 
@@ -125,53 +106,34 @@ Rectangle {
             Layout.fillHeight: true
             studio: root.studio
 
-            Loader {
-                id: pageLoader
+            StackLayout {
+                id: pageStack
                 Layout.fillWidth: true
-                Layout.preferredHeight: item ? item.implicitHeight : 0
-                sourceComponent: {
-                    switch (root.pageIndex) {
-                    case 1:
-                        return displayPageComponent
-                    case 2:
-                        return exportPageComponent
-                    default:
-                        return imagePageComponent
-                    }
+                Layout.preferredHeight: children[root.pageIndex].implicitHeight
+                currentIndex: root.pageIndex
+
+                InspectorPageImage {
+                    studio: root.studio
+                    width: inspectorScroll.availableWidth > 0
+                        ? inspectorScroll.availableWidth
+                        : root.width
+                }
+
+                InspectorPageDisplay {
+                    studio: root.studio
+                    width: inspectorScroll.availableWidth > 0
+                        ? inspectorScroll.availableWidth
+                        : root.width
+                }
+
+                ExportHub {
+                    studio: root.studio
+                    width: inspectorScroll.availableWidth > 0
+                        ? inspectorScroll.availableWidth
+                        : root.width
+                    onNotify: (m) => root.notify(m)
                 }
             }
-        }
-    }
-
-    Component {
-        id: imagePageComponent
-        InspectorPageImage {
-            studio: root.studio
-            width: inspectorScroll.availableWidth > 0
-                ? inspectorScroll.availableWidth
-                : root.width
-        }
-    }
-
-    Component {
-        id: displayPageComponent
-        InspectorPageDisplay {
-            studio: root.studio
-            width: inspectorScroll.availableWidth > 0
-                ? inspectorScroll.availableWidth
-                : root.width
-        }
-    }
-
-    Component {
-        id: exportPageComponent
-        InspectorPageExport {
-            studio: root.studio
-            win: root.win
-            width: inspectorScroll.availableWidth > 0
-                ? inspectorScroll.availableWidth
-                : root.width
-            onNotify: (m) => root.notify(m)
         }
     }
 }

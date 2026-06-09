@@ -2,10 +2,11 @@
 
 #include "app/preview/PreviewImageProvider.h"
 #include "app/studio/TabStateService.h"
-#include "app/studio/model/ConverterTabSnapshot.h"
 #include "app/tabs/TabTypes.h"
 #include "persistence/ProjectFormat.h"
 #include "persistence/ProjectService.h"
+
+#include <QtConcurrent>
 
 #include <QFileInfo>
 
@@ -20,51 +21,104 @@ QString diskPathForTab(const StudioTabEntry &tab)
     return {};
 }
 
+ConverterTabSnapshot loadSnapshotForTab(const StudioTabEntry &tab)
+{
+    ConverterTabSnapshot snapshot;
+    snapshot.tabId = tab.id;
+
+    const QString path = diskPathForTab(tab);
+    if (path.isEmpty())
+        return snapshot;
+
+    StudioProject project;
+    if (!ProjectService::load(QUrl::fromLocalFile(path), &project, nullptr))
+        return snapshot;
+    if (!ProjectService::hasImageContent(project))
+        return snapshot;
+
+    snapshot.project = project;
+    snapshot.projectFileUrl = QUrl::fromLocalFile(path);
+
+    for (const ProjectAsset &asset : project.assets) {
+        if (!QFileInfo::exists(asset.path))
+            continue;
+        snapshot.sourceFilePath = QFileInfo(asset.path).absoluteFilePath();
+        if (snapshot.sourceImage.load(asset.path))
+            break;
+    }
+    if (snapshot.sourceImage.isNull() && !project.sourceImagePng.isEmpty())
+        snapshot.sourceImage.loadFromData(project.sourceImagePng, "PNG");
+
+    if (!project.resultPreviewPng.isEmpty()) {
+        QImage preview;
+        if (preview.loadFromData(project.resultPreviewPng, "PNG")) {
+            snapshot.lastResult.preview = preview;
+            snapshot.hasPipelineResult = true;
+        }
+    }
+
+    return snapshot;
+}
+
 } // namespace
 
-void TabPreloadService::warmAll(QList<StudioTabEntry> *tabs, PreviewImageProvider *provider)
+TabPreloadService::TabPreloadService(QObject *parent)
+    : QObject(parent)
 {
-    if (!tabs || !provider)
+    connect(&m_watcher, &QFutureWatcher<QList<TabPreloadResult>>::finished, this, [this]() {
+        applyWarmResults(m_watcher.result());
+        emit warmFinished();
+    });
+}
+
+void TabPreloadService::startWarm(QList<StudioTabEntry> *tabs, PreviewImageProvider *provider)
+{
+    if (!tabs || !provider || tabs->isEmpty())
         return;
 
-    for (StudioTabEntry &tab : *tabs) {
-        if (tab.isWelcome || tab.tabSnapshot.has_value())
-            continue;
+    if (m_watcher.isRunning())
+        m_watcher.waitForFinished();
 
-        const QString path = diskPathForTab(tab);
-        if (path.isEmpty())
-            continue;
+    m_tabs = tabs;
+    m_provider = provider;
 
-        StudioProject project;
-        if (!ProjectService::load(QUrl::fromLocalFile(path), &project, nullptr))
-            continue;
-        if (!ProjectService::hasImageContent(project))
-            continue;
-
-        ConverterTabSnapshot snapshot;
-        snapshot.tabId = tab.id;
-        snapshot.project = project;
-        snapshot.projectFileUrl = QUrl::fromLocalFile(path);
-
-        for (const ProjectAsset &asset : project.assets) {
-            if (!QFileInfo::exists(asset.path))
+    const QList<StudioTabEntry> tabsCopy = *tabs;
+    m_watcher.setFuture(QtConcurrent::run([tabsCopy]() {
+        QList<TabPreloadResult> results;
+        results.reserve(tabsCopy.size());
+        for (const StudioTabEntry &tab : tabsCopy) {
+            if (tab.isWelcome || tab.tabSnapshot.has_value())
                 continue;
-            snapshot.sourceFilePath = QFileInfo(asset.path).absoluteFilePath();
-            if (snapshot.sourceImage.load(asset.path))
-                break;
+            ConverterTabSnapshot snapshot = loadSnapshotForTab(tab);
+            if (snapshot.sourceImage.isNull() && !snapshot.hasPipelineResult)
+                continue;
+            results.append({tab.id, snapshot});
         }
-        if (snapshot.sourceImage.isNull() && !project.sourceImagePng.isEmpty())
-            snapshot.sourceImage.loadFromData(project.sourceImagePng, "PNG");
+        return results;
+    }));
+}
 
-        if (!project.resultPreviewPng.isEmpty()) {
-            QImage preview;
-            if (preview.loadFromData(project.resultPreviewPng, "PNG")) {
-                snapshot.lastResult.preview = preview;
-                snapshot.hasPipelineResult = true;
-            }
+bool TabPreloadService::isRunning() const
+{
+    return m_watcher.isRunning();
+}
+
+void TabPreloadService::applyWarmResults(const QList<TabPreloadResult> &results)
+{
+    if (!m_tabs || !m_provider)
+        return;
+
+    for (const TabPreloadResult &result : results) {
+        for (StudioTabEntry &tab : *m_tabs) {
+            if (tab.id != result.tabId || tab.tabSnapshot.has_value())
+                continue;
+            ConverterTabSnapshot snapshot = result.snapshot;
+            TabStateService::publishSnapshotPreviews(m_provider, &snapshot);
+            tab.tabSnapshot = snapshot;
+            break;
         }
-
-        TabStateService::publishSnapshotPreviews(provider, &snapshot);
-        tab.tabSnapshot = snapshot;
     }
+
+    m_tabs = nullptr;
+    m_provider = nullptr;
 }

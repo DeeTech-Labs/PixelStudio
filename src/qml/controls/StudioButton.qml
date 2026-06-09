@@ -11,8 +11,13 @@ Button {
     property bool compact: false
     property string toolTipText: ""
     property string iconName: ""
+    property string accessibleName: ""
 
     implicitHeight: compact ? studio.controlHeightSm : studio.controlHeight
+
+    Accessible.role: Accessible.Button
+    Accessible.name: accessibleName.length > 0 ? accessibleName
+        : (text.length > 0 ? text : toolTipText)
     leftPadding: iconName.length > 0
         ? (compact ? studio.spacingSm : studio.spacingMd)
         : (compact ? studio.spacingMd : studio.spacingLg)

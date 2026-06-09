@@ -32,7 +32,6 @@ bool isRasterImagePath(const QString &path)
 
 QString encodingLabelForMode(int encodingMode)
 {
-    using Mode = DisplayCodeGenerator::EncodingMode;
     const auto mode = PixelFormatCatalog::migrateLegacy(encodingMode);
     int count = 0;
     const PixelFormatCatalog::Entry *order = PixelFormatCatalog::uiOrder(&count);
@@ -53,12 +52,6 @@ QString specsMeta(int width, int height, int encodingMode)
         .arg(width)
         .arg(height)
         .arg(encodingLabelForMode(encodingMode));
-}
-
-DisplayProfile::ColorMode colorModeFromEncoding(int encodingMode)
-{
-    const auto mode = PixelFormatCatalog::migrateLegacy(encodingMode);
-    return PixelFormatCatalog::isMono(mode) ? DisplayProfile::Mono1Bit : DisplayProfile::Rgb565;
 }
 
 bool loadSourceImage(const StudioProject &project, QImage *image)
@@ -99,7 +92,6 @@ QImage resultPreviewForProject(const StudioProject &project)
         source,
         s.displayWidth,
         s.displayHeight,
-        colorModeFromEncoding(s.encodingMode),
         scaleMode,
         s.filterParams,
         encodingMode,

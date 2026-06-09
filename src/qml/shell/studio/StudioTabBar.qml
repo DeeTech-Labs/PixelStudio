@@ -60,7 +60,7 @@ Rectangle {
 
                     Repeater {
                         id: tabRepeater
-                        model: tabController.tabs
+                        model: workspace.tabs.tabs
                         delegate: StudioTabChip {
                             required property var modelData
                             required property int index
@@ -81,7 +81,7 @@ Rectangle {
             implicitWidth: 28
             implicitHeight: 26
             ToolTip.visible: hovered
-            ToolTip.text: qsTr("Open image in new tab…")
+            ToolTip.text: WorkflowRouter.shellTr("Open image in new tab…")
             onClicked: root.openImageTabRequested()
             background: Rectangle {
                 color: parent.hovered ? studio.surfaceRaised : studio.surfaceInput
@@ -102,7 +102,7 @@ Rectangle {
             implicitWidth: 28
             implicitHeight: 26
             ToolTip.visible: hovered
-            ToolTip.text: qsTr("Settings")
+            ToolTip.text: WorkflowRouter.shellTr("Settings")
             onClicked: root.settingsRequested()
             background: Rectangle {
                 color: parent.hovered ? studio.surfaceRaised : "transparent"

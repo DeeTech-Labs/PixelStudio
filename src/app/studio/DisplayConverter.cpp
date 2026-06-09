@@ -1,4 +1,5 @@
 #include "app/studio/DisplayConverter.h"
+#include "app/studio/SessionPersistenceService.h"
 #include "app/preview/PreviewImageProvider.h"
 #include "app/studio/model/ConverterEncoding.h"
 #include "app/studio/pipeline/ImagePipelineController.h"
@@ -86,23 +87,16 @@ DisplayConverter::DisplayConverter(SessionSettings *session, AppSettings *appSet
     });
     connect(&m_rebuildWatcher, &QFutureWatcher<ConverterAsyncBuildResult>::finished,
             this, [this]() { ImagePipelineController::onAsyncRebuildFinished(*this); });
-    m_sessionSaveTimer.setSingleShot(true);
-    m_sessionSaveTimer.setInterval(400);
-    connect(&m_sessionSaveTimer, &QTimer::timeout, this, &DisplayConverter::persistSession);
-    m_autosaveTimer.setSingleShot(false);
-    connect(&m_autosaveTimer, &QTimer::timeout, this, &DisplayConverter::onAutosaveTimeout);
-    if (m_appSettings) {
-        connect(m_appSettings, &AppSettings::projectAutosaveChanged, this, &DisplayConverter::restartAutosaveTimer);
-        connect(m_appSettings, &AppSettings::projectAutosaveSecondsChanged, this, &DisplayConverter::restartAutosaveTimer);
-    }
+    m_persistence = new SessionPersistenceService(m_session, m_appSettings, this);
+    m_persistence->bind(this);
     if (m_session) {
-        loadPersistedSession();
+        m_persistence->loadInitial();
         m_session->loadUiState(&m_state.uiState);
         m_session->pruneMissingRecentFiles();
         m_session->pruneMissingRecentExports();
         m_export.applyStoredWatchState();
         updateWatchExportPrefix();
-        restartAutosaveTimer();
+        m_persistence->restartAutosave();
     }
 }
 
@@ -457,38 +451,8 @@ void DisplayConverter::applySessionSnapshot(const SessionSnapshot &snapshot)
 
 void DisplayConverter::schedulePersistSession()
 {
-    if (m_session)
-        m_sessionSaveTimer.start();
-}
-
-void DisplayConverter::loadPersistedSession()
-{
-    if (!m_session)
-        return;
-    SessionSnapshot snapshot = SessionSettings::defaultSnapshot();
-    const bool hadShowGrid = m_session->containsKey(QStringLiteral("showGrid"));
-    m_session->load(&snapshot);
-    applySessionSnapshot(snapshot);
-    if (!hadShowGrid && m_appSettings)
-        m_viewport.setShowGrid(m_appSettings->showPixelGrid());
-}
-
-void DisplayConverter::persistSession()
-{
-    if (m_session)
-        m_session->save(sessionSnapshot());
-    persistUiState();
-}
-
-void DisplayConverter::persistUiState()
-{
-    if (!m_session)
-        return;
-    if (!m_state.projectFile.isEmpty())
-        m_state.uiState.lastProjectFile = m_state.projectFile.toLocalFile();
-    m_session->saveUiState(m_state.uiState);
-    m_project.notifyUiFoldersChanged();
-    m_export.notifyUiFoldersChanged();
+    if (m_persistence)
+        m_persistence->schedulePersist();
 }
 
 void DisplayConverter::refreshLocalization()
@@ -509,8 +473,8 @@ void DisplayConverter::rememberOpenSourceInRecent()
 
 void DisplayConverter::flushPersistence()
 {
-    m_sessionSaveTimer.stop();
-    persistSession();
+    if (m_persistence)
+        m_persistence->flush();
 }
 
 void DisplayConverter::applyDefaultGridPreference()
@@ -522,29 +486,8 @@ void DisplayConverter::applyDefaultGridPreference()
 
 void DisplayConverter::reloadImportedSettings()
 {
-    if (!m_session)
-        return;
-
-    if (m_appSettings)
-        m_appSettings->reloadFromDisk();
-
-    const bool hadShowGrid = m_session->containsKey(QStringLiteral("showGrid"));
-    SessionSnapshot snapshot = SessionSettings::defaultSnapshot();
-    m_session->load(&snapshot);
-    applySessionSnapshot(snapshot);
-    if (!hadShowGrid && m_appSettings)
-        m_viewport.setShowGrid(m_appSettings->showPixelGrid());
-
-    m_session->loadUiState(&m_state.uiState);
-    m_session->pruneMissingRecentFiles();
-    m_session->pruneMissingRecentExports();
-    m_export.applyStoredWatchState();
-    updateWatchExportPrefix();
-    restartAutosaveTimer();
-    m_project.notifyRecentFilesChanged();
-    m_export.notifyRecentExportsChanged();
-    m_project.notifyUiFoldersChanged();
-    m_export.notifyUiFoldersChanged();
+    if (m_persistence)
+        m_persistence->reloadImported();
 }
 
 void DisplayConverter::updateWatchExportPrefix()
@@ -557,18 +500,6 @@ void DisplayConverter::updateWatchExportPrefix()
 
 void DisplayConverter::restartAutosaveTimer()
 {
-    m_autosaveTimer.stop();
-    if (!m_appSettings || !m_appSettings->projectAutosave())
-        return;
-    m_autosaveTimer.setInterval(qMax(30, m_appSettings->projectAutosaveSeconds()) * 1000);
-    m_autosaveTimer.start();
-}
-
-void DisplayConverter::onAutosaveTimeout()
-{
-    if (!m_appSettings || !m_appSettings->projectAutosave())
-        return;
-    if (m_state.projectFile.isEmpty() || !hasImage())
-        return;
-    m_project.saveProject();
+    if (m_persistence)
+        m_persistence->restartAutosave();
 }

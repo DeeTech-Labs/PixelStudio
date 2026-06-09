@@ -6,6 +6,7 @@
 #include "persistence/AppPaths.h"
 #include "persistence/SettingsSchema.h"
 
+#include <QUrl>
 #include <QVariantMap>
 
 AppSettings::AppSettings(QObject *parent)
@@ -157,6 +158,32 @@ void AppSettings::setProjectAutosaveSeconds(int seconds)
     emit projectAutosaveSecondsChanged();
 }
 
+QUrl AppSettings::documentsUrl() const
+{
+    return QUrl::fromLocalFile(AppPaths::userDocumentsRoot());
+}
+
+QUrl AppSettings::projectsUrl() const
+{
+    return QUrl::fromLocalFile(AppPaths::projectsDir());
+}
+
+QUrl AppSettings::exportsUrl() const
+{
+    return QUrl::fromLocalFile(AppPaths::exportsDir());
+}
+
+QUrl AppSettings::watchUrl() const
+{
+    return QUrl::fromLocalFile(AppPaths::watchDir());
+}
+
+void AppSettings::applyStoragePathChange()
+{
+    AppPaths::ensureStorageDirs();
+    emit storagePathsChanged();
+}
+
 void AppSettings::setProjectsRoot(const QString &path)
 {
     if (m_projectsRoot == path)
@@ -164,6 +191,7 @@ void AppSettings::setProjectsRoot(const QString &path)
     m_projectsRoot = path;
     saveValue(QStringLiteral("app/projectsRoot"), path);
     emit projectsRootChanged();
+    applyStoragePathChange();
 }
 
 void AppSettings::setExportsRoot(const QString &path)
@@ -173,6 +201,7 @@ void AppSettings::setExportsRoot(const QString &path)
     m_exportsRoot = path;
     saveValue(QStringLiteral("app/exportsRoot"), path);
     emit exportsRootChanged();
+    applyStoragePathChange();
 }
 
 void AppSettings::setDocumentsRoot(const QString &path)
@@ -182,6 +211,7 @@ void AppSettings::setDocumentsRoot(const QString &path)
     m_documentsRoot = path;
     saveValue(QStringLiteral("app/documentsRoot"), path);
     emit documentsRootChanged();
+    applyStoragePathChange();
 }
 
 void AppSettings::reloadFromDisk()
@@ -201,4 +231,5 @@ void AppSettings::reloadFromDisk()
     emit projectsRootChanged();
     emit exportsRootChanged();
     emit documentsRootChanged();
+    applyStoragePathChange();
 }

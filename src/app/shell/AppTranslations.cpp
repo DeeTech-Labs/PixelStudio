@@ -14,14 +14,6 @@ namespace {
 QTranslator s_qtTranslator;
 JsonTranslator s_appTranslator(&TranslationStore::instance());
 
-QString systemLocaleCode()
-{
-    const QStringList langs = QLocale::system().uiLanguages();
-    if (!langs.isEmpty())
-        return langs.first().section(QLatin1Char('-'), 0, 0).toLower();
-    return QLocale::system().bcp47Name().section(QLatin1Char('-'), 0, 0).toLower();
-}
-
 } // namespace
 
 namespace AppTranslations {

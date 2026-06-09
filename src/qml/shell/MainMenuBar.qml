@@ -7,8 +7,6 @@ pragma Translator: Shell
 
 MenuBar {
     id: root
-    required property var win
-    required property var dialogs
     required property var studio
 
     spacing: 0
@@ -30,7 +28,7 @@ MenuBar {
         padding: studio.spacingMd
 
         contentItem: Label {
-            text: win.stripMenuMnemonic(menuBarItem.text)
+            text: WorkflowRouter.stripMenuMnemonic(menuBarItem.text)
             font.family: studio.fontFamily
             font.pixelSize: studio.fontSizeSm
             color: menuBarItem.highlighted ? studio.text : studio.textSecondary
@@ -44,64 +42,63 @@ MenuBar {
     }
 
     Menu {
-        title: qsTr("&File")
+        title: WorkflowRouter.shellTr("&File")
 
         Action {
-            text: qsTr("Welcome screen")
-            onTriggered: win.openWelcome()
+            text: WorkflowRouter.shellTr("Welcome screen")
+            onTriggered: WorkflowRouter.run("welcome")
         }
         MenuSeparator {}
         Action {
-            text: qsTr("New project")
+            text: WorkflowRouter.shellTr("New project")
             shortcut: "Ctrl+N"
-            onTriggered: tabController.newProjectTab(qsTr("Untitled"))
+            onTriggered: WorkflowRouter.run("newProject")
         }
         Action {
-            text: qsTr("Open project…")
+            text: WorkflowRouter.shellTr("Open project…")
             shortcut: "Ctrl+Shift+O"
-            onTriggered: dialogs.openProjectDialog.open()
+            onTriggered: WorkflowRouter.run("openProject")
         }
         Action {
-            text: qsTr("Save project")
+            text: WorkflowRouter.shellTr("Save project")
             shortcut: "Ctrl+Shift+S"
-            onTriggered: {
-                if (!project.saveProject())
-                    dialogs.saveProjectDialog.open()
-            }
+            onTriggered: WorkflowRouter.run("saveProject")
         }
         Action {
-            text: qsTr("Save project as…")
-            onTriggered: dialogs.saveProjectDialog.open()
+            text: WorkflowRouter.shellTr("Save project as…")
+            onTriggered: WorkflowRouter.run("saveProjectAs")
         }
         MenuSeparator {}
         Menu {
             id: menuBarImportMenu
-            title: qsTr("Import")
+            title: WorkflowRouter.shellTr("Import")
+
             Action {
-                text: qsTr("Open image…")
+                text: WorkflowRouter.shellTr("Open image…")
                 shortcut: "Ctrl+O"
-                onTriggered: dialogs.openDialog.open()
+                onTriggered: WorkflowRouter.run("openImage")
             }
             Action {
-                text: qsTr("Import C header…")
-                onTriggered: dialogs.importHeaderDialog.open()
+                text: WorkflowRouter.shellTr("Import C header…")
+                onTriggered: WorkflowRouter.run("importHeader")
             }
             Action {
-                text: qsTr("Paste from clipboard")
+                text: WorkflowRouter.shellTr("Paste from clipboard")
                 shortcut: "Ctrl+V"
-                onTriggered: win.importClipboard()
+                onTriggered: WorkflowRouter.run("importClipboard")
             }
             MenuSeparator {}
             Menu {
                 id: openRecentMenu
-                title: qsTr("Open recent")
-                enabled: project.recentFiles.length > 0
+                title: WorkflowRouter.shellTr("Open recent")
+                enabled: workspace.project.recentFiles.length > 0
+
                 Instantiator {
-                    model: project.recentFiles
+                    model: workspace.project.recentFiles
                     delegate: MenuItem {
                         required property var modelData
                         text: modelData.name
-                        onTriggered: win.openLocalPath(modelData.path)
+                        onTriggered: WorkflowRouter.openLocalPath(modelData.path)
                     }
                     onObjectAdded: (index, object) => openRecentMenu.insertItem(index, object)
                     onObjectRemoved: (index, object) => openRecentMenu.removeItem(object)
@@ -109,47 +106,49 @@ MenuBar {
             }
             MenuSeparator {}
             Action {
-                text: qsTr("Import settings backup…")
-                onTriggered: dialogs.settingsImportDialog.open()
+                text: WorkflowRouter.shellTr("Import settings backup…")
+                onTriggered: WorkflowRouter.run("importSettings")
             }
         }
         Menu {
             id: menuBarExportMenu
-            title: qsTr("Export")
+            title: WorkflowRouter.shellTr("Export")
+
             Action {
-                text: qsTr("Export panel…")
+                text: WorkflowRouter.shellTr("Export panel…")
                 shortcut: "Ctrl+Shift+E"
-                onTriggered: win.openExportHub()
+                onTriggered: WorkflowRouter.run("exportHub")
             }
             MenuSeparator {}
             Action {
-                text: qsTr("Save code to file…")
+                text: WorkflowRouter.shellTr("Save code to file…")
                 shortcut: "Ctrl+Alt+S"
-                enabled: converter.generatedCode.length > 0
-                onTriggered: win.saveCode()
+                enabled: WorkflowRouter.commandEnabled("saveCode")
+                onTriggered: WorkflowRouter.run("saveCode")
             }
             Action {
-                text: qsTr("Save binary…")
-                enabled: converter.hasPreview
-                onTriggered: win.saveBin()
+                text: WorkflowRouter.shellTr("Save binary…")
+                enabled: WorkflowRouter.commandEnabled("saveBin")
+                onTriggered: WorkflowRouter.run("saveBin")
             }
             MenuSeparator {}
             Action {
-                text: qsTr("Batch export .h…")
+                text: WorkflowRouter.shellTr("Batch export .h…")
                 shortcut: "Ctrl+Shift+B"
-                onTriggered: win.batchExport()
+                onTriggered: WorkflowRouter.run("batchExport")
             }
             Action {
-                text: qsTr("Build sprite atlas…")
-                onTriggered: win.buildAtlas()
+                text: WorkflowRouter.shellTr("Build sprite atlas…")
+                onTriggered: WorkflowRouter.run("buildAtlas")
             }
             MenuSeparator {}
             Menu {
                 id: menuBarRecentExportsMenu
-                title: qsTr("Recent exports")
-                enabled: exporter.recentExports.length > 0
+                title: WorkflowRouter.shellTr("Recent exports")
+                enabled: workspace.exportPanel.recentExports.length > 0
+
                 Instantiator {
-                    model: exporter.recentExports
+                    model: workspace.exportPanel.recentExports
                     delegate: MenuItem {
                         required property var modelData
                         text: modelData.name
@@ -161,164 +160,65 @@ MenuBar {
             }
             MenuSeparator {}
             Action {
-                text: qsTr("Export settings backup…")
-                onTriggered: dialogs.settingsExportDialog.open()
+                text: WorkflowRouter.shellTr("Export settings backup…")
+                onTriggered: WorkflowRouter.run("exportSettings")
             }
         }
         MenuSeparator {}
         Action {
-            text: qsTr("&Clear project")
-            enabled: converter.hasImage
-            onTriggered: converter.clear()
+            text: WorkflowRouter.shellTr("&Clear project")
+            enabled: WorkflowRouter.commandEnabled("clearProject")
+            onTriggered: WorkflowRouter.run("clearProject")
         }
         MenuSeparator {}
         Action {
-            text: qsTr("E&xit")
+            text: WorkflowRouter.shellTr("E&xit")
             shortcut: "Ctrl+Q"
-            onTriggered: win.close()
+            onTriggered: WorkflowRouter.run("exit")
         }
     }
 
-    Menu {
-        title: qsTr("&Edit")
-        Action {
-            text: qsTr("&Copy generated code")
-            shortcut: "Ctrl+C"
-            enabled: converter.generatedCode.length > 0
-            onTriggered: {
-                exporter.copyToClipboard(converter.generatedCode)
-                win.statusMessage(qsTr("Copied to clipboard"))
-            }
-        }
-        MenuSeparator {}
-        Action {
-            text: qsTr("Clear image")
-            enabled: converter.hasImage
-            onTriggered: converter.clear()
-        }
+    StudioMenuFromCommands {
+        title: WorkflowRouter.shellTr("&Edit")
+        commands: StudioCommands.menuSections.edit
+    }
+
+    StudioMenuFromCommands {
+        title: WorkflowRouter.shellTr("&View")
+        commands: StudioCommands.menuSections.view
+    }
+
+    StudioMenuFromCommands {
+        title: WorkflowRouter.shellTr("&Image")
+        commands: StudioCommands.menuSections.image
+        menuEnabled: workspace.image.hasImage
+    }
+
+    StudioMenuFromCommands {
+        title: WorkflowRouter.shellTr("&Tools")
+        commands: StudioCommands.menuSections.tools
     }
 
     Menu {
-        title: qsTr("&View")
-        Action {
-            text: qsTr("Inspector panel")
-            checkable: true
-            checked: appSettings.showSidebar
-            shortcut: "Ctrl+B"
-            onTriggered: appSettings.setShowSidebar(!appSettings.showSidebar)
-        }
-        MenuSeparator {}
-        Action {
-            text: qsTr("View: Dual")
-            onTriggered: win.setWorkspaceView(0)
-        }
-        Action {
-            text: qsTr("View: Source")
-            onTriggered: win.setWorkspaceView(1)
-        }
-        Action {
-            text: qsTr("View: Output")
-            onTriggered: win.setWorkspaceView(3)
-        }
-        MenuSeparator {}
-        Action {
-            text: qsTr("Wrap generated code")
-            checkable: true
-            checked: appSettings.codeWrap
-            onTriggered: appSettings.setCodeWrap(!appSettings.codeWrap)
-        }
-        Action {
-            text: qsTr("Show pixel grid")
-            checkable: true
-            checked: viewport.showGrid
-            onTriggered: win.togglePixelGrid()
-        }
-    }
+        title: WorkflowRouter.shellTr("&Help")
 
-    Menu {
-        title: qsTr("&Image")
-        enabled: converter.hasImage
         Action {
-            text: qsTr("Rotate 90° clockwise")
-            shortcut: "Ctrl+R"
-            onTriggered: imageTransform.rotateClockwise()
-        }
-        Action {
-            text: qsTr("Flip horizontally")
-            checkable: true
-            checked: imageTransform.flipHorizontal
-            onTriggered: imageTransform.setFlipHorizontal(!imageTransform.flipHorizontal)
-        }
-        Action {
-            text: qsTr("Flip vertically")
-            checkable: true
-            checked: imageTransform.flipVertical
-            onTriggered: imageTransform.setFlipVertical(!imageTransform.flipVertical)
-        }
-        Action {
-            text: qsTr("Invert result colors")
-            checkable: true
-            checked: displayOutput.encodingIsMono1Bit ? imageTransform.invertMono : imageFilters.filterInvert
-            onTriggered: {
-                if (displayOutput.encodingIsMono1Bit)
-                    imageTransform.setInvertMono(!imageTransform.invertMono)
-                else
-                    imageFilters.setFilterInvert(!imageFilters.filterInvert)
-            }
-        }
-        MenuSeparator {}
-        Action {
-            text: qsTr("Swap display width and height")
-            onTriggered: displayOutput.swapDisplayDimensions()
-        }
-    }
-
-    Menu {
-        title: qsTr("&Tools")
-        Action {
-            text: qsTr("Batch export .h…")
-            shortcut: "Ctrl+Shift+B"
-            onTriggered: dialogs.batchOpenDialog.open()
-        }
-        Action {
-            text: qsTr("Build sprite atlas…")
-            onTriggered: dialogs.atlasOpenDialog.open()
-        }
-        Action {
-            text: qsTr("Import C header…")
-            onTriggered: dialogs.importHeaderDialog.open()
-        }
-        MenuSeparator {}
-        Action {
-            text: qsTr("Configure watch folder…")
-            onTriggered: dialogs.watchInputDialog.open()
-        }
-        Action {
-            text: qsTr("Watch folder")
-            checkable: true
-            checked: exporter.watchFolderActive
-            onTriggered: exporter.setWatchFolderActive(!exporter.watchFolderActive)
-        }
-    }
-
-    Menu {
-        title: qsTr("&Help")
-        Action {
-            text: qsTr("Preferences…")
+            text: WorkflowRouter.shellTr("Preferences…")
             shortcut: "Ctrl+,"
-            onTriggered: dialogs.preferencesDialog.open()
+            onTriggered: WorkflowRouter.run("preferences")
         }
         Menu {
             id: languageMenu
-            title: qsTr("Language")
+            title: WorkflowRouter.shellTr("Language")
+
             Instantiator {
-                model: appSettings.availableLanguages()
+                model: workspace.settings.availableLanguages()
                 delegate: MenuItem {
                     required property var modelData
                     text: modelData.name
                     checkable: true
-                    checked: appSettings.languageCode === modelData.code
-                    onTriggered: appSettings.setLanguageCode(modelData.code)
+                    checked: workspace.settings.languageCode === modelData.code
+                    onTriggered: workspace.settings.setLanguageCode(modelData.code)
                 }
                 onObjectAdded: (index, object) => languageMenu.insertItem(index, object)
                 onObjectRemoved: (index, object) => languageMenu.removeItem(object)
@@ -326,34 +226,34 @@ MenuBar {
         }
         MenuSeparator {}
         Action {
-            text: qsTr("Reset UI defaults")
-            onTriggered: appSettings.resetUiDefaults()
+            text: WorkflowRouter.shellTr("Reset UI defaults")
+            onTriggered: WorkflowRouter.run("resetUi")
         }
         Action {
-            text: qsTr("Open settings folder")
-            onTriggered: project.openAppDataFolder()
+            text: WorkflowRouter.shellTr("Open settings folder")
+            onTriggered: WorkflowRouter.run("openSettingsFolder")
         }
         Action {
-            text: qsTr("Import settings backup…")
-            onTriggered: dialogs.settingsImportDialog.open()
+            text: WorkflowRouter.shellTr("Import settings backup…")
+            onTriggered: WorkflowRouter.run("importSettings")
         }
         Action {
-            text: qsTr("Export settings backup…")
-            onTriggered: dialogs.settingsExportDialog.open()
+            text: WorkflowRouter.shellTr("Export settings backup…")
+            onTriggered: WorkflowRouter.run("exportSettings")
         }
         Action {
-            text: qsTr("Reset session")
-            onTriggered: dialogs.resetSessionConfirmDialog.open()
-        }
-        MenuSeparator {}
-        Action {
-            text: qsTr("Open PixelStudio folder")
-            onTriggered: project.openUserDocumentsFolder()
+            text: WorkflowRouter.shellTr("Reset session")
+            onTriggered: WorkflowRouter.run("resetSession")
         }
         MenuSeparator {}
         Action {
-            text: qsTr("About PixelStudio")
-            onTriggered: dialogs.aboutDialog.open()
+            text: WorkflowRouter.shellTr("Open PixelStudio folder")
+            onTriggered: WorkflowRouter.run("openDocumentsFolder")
+        }
+        MenuSeparator {}
+        Action {
+            text: WorkflowRouter.shellTr("About PixelStudio")
+            onTriggered: WorkflowRouter.run("about")
         }
     }
 }

@@ -16,17 +16,6 @@ Item {
     property string specsText: ""
     property string toastText: ""
 
-    signal closeTabRequested(string tabId)
-    signal openImageTabRequested()
-    signal settingsRequested()
-    signal newProjectRequested()
-    signal openRequested()
-    signal saveRequested()
-    signal toggleGridRequested()
-    signal viewDualRequested()
-    signal viewSourceRequested()
-    signal viewOutputRequested()
-
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
@@ -36,24 +25,17 @@ Item {
             Layout.preferredHeight: studio.tabBarHeight
             Layout.minimumHeight: studio.tabBarHeight
             studio: root.studio
-            onCloseTabRequested: (tabId) => root.closeTabRequested(tabId)
-            onOpenImageTabRequested: root.openImageTabRequested()
-            onSettingsRequested: root.settingsRequested()
+            onCloseTabRequested: (tabId) => WorkflowRouter.requestCloseTab(tabId)
+            onOpenImageTabRequested: WorkflowRouter.run("openImage")
+            onSettingsRequested: WorkflowRouter.run("preferences")
         }
 
         StudioToolbar {
             Layout.fillWidth: true
             Layout.preferredHeight: studio.toolbarHeight
             Layout.minimumHeight: studio.toolbarHeight
-            visible: !tabController.activeIsWelcome
+            visible: !workspace.tabs.activeIsWelcome && !workspace.tabs.activeIsSettings
             studio: root.studio
-            onNewProjectRequested: root.newProjectRequested()
-            onOpenRequested: root.openRequested()
-            onSaveRequested: root.saveRequested()
-            onToggleGridRequested: root.toggleGridRequested()
-            onViewDualRequested: root.viewDualRequested()
-            onViewSourceRequested: root.viewSourceRequested()
-            onViewOutputRequested: root.viewOutputRequested()
         }
 
         Item {
@@ -62,7 +44,7 @@ Item {
 
             StudioBackdrop {
                 anchors.fill: parent
-                visible: tabController.activeIsWelcome
+                visible: workspace.tabs.activeIsWelcome
             }
 
             Item {

@@ -15,11 +15,6 @@ PixelFrame {
 
     title: qsTr("Code")
 
-    CodeSyntaxColorsDialog {
-        id: syntaxColorsDialog
-        studio: root.studio
-    }
-
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: studio.spacingSm
@@ -36,15 +31,15 @@ PixelFrame {
                 small: true
                 iconName: "copy"
                 toolTipText: qsTr("Copy")
-                enabled: converter.generatedCode.length > 0
-                onClicked: exporter.copyToClipboard(converter.generatedCode)
+                enabled: workspace.image.generatedCode.length > 0
+                onClicked: workspace.exportPanel.copyToClipboard(workspace.image.generatedCode)
             }
             StudioIconButton {
                 studio: root.studio
                 small: true
                 iconName: "download"
                 toolTipText: qsTr("Save .h")
-                enabled: converter.generatedCode.length > 0
+                enabled: workspace.image.generatedCode.length > 0
                 onClicked: root.saveCode()
             }
             StudioIconButton {
@@ -52,7 +47,7 @@ PixelFrame {
                 small: true
                 iconName: "file-image"
                 toolTipText: qsTr("Save .bin")
-                enabled: converter.hasPreview
+                enabled: workspace.image.hasPreview
                 onClicked: root.saveBin()
             }
             StudioIconButton {
@@ -60,7 +55,7 @@ PixelFrame {
                 small: true
                 iconName: "palette"
                 toolTipText: qsTr("Syntax colors")
-                onClicked: syntaxColorsDialog.open()
+                onClicked: WorkflowRouter.openSettingsTab(1)
             }
             StudioIconButton {
                 studio: root.studio
@@ -73,9 +68,9 @@ PixelFrame {
                 studio: root.studio
                 small: true
                 iconName: "columns-2"
-                toolTipText: codeGen.showFullGeneratedCode ? qsTr("Preview") : qsTr("Show all")
-                visible: converter.generatedCodeTruncated
-                onClicked: codeGen.setShowFullGeneratedCode(!codeGen.showFullGeneratedCode)
+                toolTipText: workspace.code.showFullGeneratedCode ? qsTr("Preview") : qsTr("Show all")
+                visible: workspace.image.generatedCodeTruncated
+                onClicked: workspace.code.setShowFullGeneratedCode(!workspace.code.showFullGeneratedCode)
             }
         }
 
@@ -92,8 +87,8 @@ PixelFrame {
                 anchors.fill: parent
                 anchors.margins: studio.spacingXs
                 studio: root.studio
-                sourceText: converter.generatedCodePreview
-                wrap: appSettings.codeWrap
+                sourceText: workspace.image.generatedCodePreview
+                wrap: workspace.settings.codeWrap
                 placeholderText: qsTr("// Code appears here after you import an image.")
             }
         }

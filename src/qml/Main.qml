@@ -11,24 +11,6 @@ ApplicationWindow {
     id: window
     width: 1200
     height: 780
-
-    function stripMenuMnemonic(text) {
-        let out = ""
-        for (let i = 0; i < text.length; ++i) {
-            const ch = text[i]
-            if (ch === "&") {
-                if (i + 1 < text.length && text[i + 1] === "&") {
-                    out += "&"
-                    ++i
-                } else if (i + 1 < text.length) {
-                    out += text[++i]
-                }
-            } else {
-                out += ch
-            }
-        }
-        return out
-    }
     minimumWidth: 960
     minimumHeight: 600
     visible: true
@@ -52,273 +34,14 @@ ApplicationWindow {
         color: appPalette.background
     }
 
-    title: tabController.activeIsWelcome
+    title: workspace.tabs.activeIsWelcome
         ? qsTr("PixelStudio")
-        : qsTr("PixelStudio — %1").arg(tabController.activeTabTitle)
+        : qsTr("PixelStudio — %1").arg(workspace.tabs.activeTabTitle)
     property var pendingBatchFiles: []
     property string pendingCloseTabId: ""
     property var pendingAtlasFiles: []
     property bool forceClose: false
     property int folderPickTarget: 0
-
-    function dialogBodyWidth(preferred, outerMargin) {
-        return Math.max(240, Math.min(preferred, width - outerMargin))
-    }
-
-    function openWelcome() {
-        tabController.activateWelcome()
-    }
-
-    function ensureStudioTab() {
-        if (!tabController.activeIsWelcome)
-            return
-        const tabs = tabController.tabs
-        for (let i = 0; i < tabs.length; ++i) {
-            if (!tabs[i].isWelcome) {
-                tabController.activateTab(tabs[i].id)
-                return
-            }
-        }
-        tabController.newProjectTab(qsTr("Untitled"))
-    }
-
-    function setWorkspaceView(mode) {
-        ensureStudioTab()
-        tabController.activeViewMode = mode
-    }
-
-    function urlToLocalPath(url) {
-        if (!url)
-            return ""
-        if (typeof url === "string")
-            url = Qt.resolvedUrl(url)
-        const local = url.toLocalFile !== undefined ? url.toLocalFile() : ""
-        if (local && local.length > 0)
-            return local
-        let s = url.toString()
-        if (s.startsWith("file:///"))
-            s = s.slice(8)
-        else if (s.startsWith("file://"))
-            s = s.slice(7)
-        try {
-            return decodeURIComponent(s)
-        } catch (e) {
-            return s
-        }
-    }
-
-    function openLocalPath(path) {
-        const local = urlToLocalPath(path)
-        if (!local || local.length === 0)
-            return
-        tabController.openFileTab(local)
-    }
-
-    function tabTitleForId(tabId) {
-        const tabs = tabController.tabs
-        for (let i = 0; i < tabs.length; ++i) {
-            if (tabs[i].id === tabId)
-                return tabs[i].title
-        }
-        return ""
-    }
-
-    function requestCloseTab(tabId) {
-        if (!tabId || tabId.length === 0)
-            return
-        if (!appSettings.confirmCloseTab) {
-            tabController.closeTab(tabId)
-            return
-        }
-        pendingCloseTabId = tabId
-        mainDialogs.closeTabConfirmDialog.open()
-    }
-
-    function openDroppedUrls(urls) {
-        if (!urls || urls.length === 0)
-            return
-        openLocalPath(urls[0])
-    }
-
-    function importClipboard() {
-        if (tabController.activeIsWelcome)
-            tabController.newProjectTab(qsTr("Untitled"))
-        if (converter.loadFromClipboard())
-            tabController.syncActiveTabTitle()
-    }
-
-    function saveProject() {
-        if (!project.saveProject())
-            mainDialogs.saveProjectDialog.open()
-    }
-
-    function saveProjectAs() {
-        mainDialogs.saveProjectDialog.open()
-    }
-
-    function saveCode() {
-        mainDialogs.saveCodeDialog.open()
-    }
-
-    function saveBin() {
-        mainDialogs.saveBinDialog.open()
-    }
-
-    function batchExport() {
-        mainDialogs.batchOpenDialog.open()
-    }
-
-    function buildAtlas() {
-        mainDialogs.atlasOpenDialog.open()
-    }
-
-    function openExportHub() {
-        if (tabController.activeIsWelcome)
-            tabController.newProjectTab(qsTr("Untitled"))
-        if (appSettings.showSidebar)
-            studioLayout.inspectorPageIndex = 2
-    }
-
-    function importHeader() {
-        mainDialogs.importHeaderDialog.open()
-    }
-
-    function configureWatchFolder() {
-        mainDialogs.watchInputDialog.open()
-    }
-
-    function togglePixelGrid() {
-        viewport.setShowGrid(!viewport.showGrid)
-        appSettings.setShowPixelGrid(viewport.showGrid)
-    }
-
-    Connections {
-        target: tabController
-        function onTabActionFailed(message) { statusMessage(message) }
-    }
-
-    function statusMessage(msg) {
-        toast.visible = msg.length > 0
-        toast.text = msg
-        toastTimer.restart()
-    }
-
-    function localFolderUrl(path, fallbackUrl) {
-        if (!path || path.length === 0)
-            return fallbackUrl
-        const normalized = path.replace(/\\/g, "/")
-        return normalized.startsWith("/")
-            ? ("file://" + normalized)
-            : ("file:///" + normalized)
-    }
-
-    function languageIndex() {
-        const languages = appSettings.availableLanguages()
-        for (let i = 0; i < languages.length; ++i) {
-            if (languages[i].code === appSettings.languageCode)
-                return i
-        }
-        return 0
-    }
-
-    onClosing: (close) => {
-        if (appSettings.confirmExit && !forceClose) {
-            close.accepted = false
-            mainDialogs.exitConfirmDialog.open()
-        }
-    }
-
-    menuBar: MainMenuBar {
-        win: window
-        dialogs: mainDialogs
-        studio: appPalette
-    }
-
-    DropArea {
-        anchors.fill: parent
-        z: -1
-        onDropped: (drop) => {
-            if (drop.hasUrls && drop.urls.length > 0)
-                converter.loadImage(drop.urls[0])
-        }
-    }
-
-    Connections {
-        target: converter
-        function onErrorOccurred(message) { statusMessage(message) }
-    }
-
-    MainDialogs {
-        id: mainDialogs
-        anchors.fill: parent
-        win: window
-        studio: appPalette
-    }
-
-    readonly property string statusSpecs: {
-        if (!converter.hasPreview)
-            return ""
-        return displayOutput.displayWidth + " × " + displayOutput.displayHeight
-            + "  " + displayOutput.encodingModeName
-            + "  " + converter.previewColorCount + " " + qsTr("Colors")
-    }
-
-    StudioShell {
-        id: studioShell
-        anchors.fill: parent
-        studio: appPalette
-        statusText: toast.text.length > 0 ? toast.text : qsTr("Ready")
-        specsText: statusSpecs
-        toastText: toast.visible ? toast.text : ""
-
-        onCloseTabRequested: (tabId) => requestCloseTab(tabId)
-        onOpenImageTabRequested: mainDialogs.openDialog.open()
-        onSettingsRequested: mainDialogs.preferencesDialog.open()
-        onNewProjectRequested: tabController.newProjectTab(qsTr("Untitled"))
-        onOpenRequested: mainDialogs.openDialog.open()
-        onSaveRequested: saveProject()
-        onToggleGridRequested: togglePixelGrid()
-        onViewDualRequested: setWorkspaceView(0)
-        onViewSourceRequested: setWorkspaceView(1)
-        onViewOutputRequested: setWorkspaceView(3)
-
-        WelcomeScreen {
-            anchors.fill: parent
-            visible: tabController.activeIsWelcome
-            studio: appPalette
-            onOpenImageRequested: mainDialogs.openDialog.open()
-            onPasteRequested: importClipboard()
-            onOpenProjectRequested: mainDialogs.openProjectDialog.open()
-            onNewProjectRequested: tabController.newProjectTab(qsTr("Untitled"))
-            onContinueLastProjectRequested: {
-                if (project.hasRestorableProject)
-                    tabController.openProjectTab(localFolderUrl(project.lastProjectPath, pixelStudioProjectsUrl))
-            }
-            onRecentItemRequested: (path, tabId) => {
-                if (tabId && tabId.length > 0 && tabController.activateTab(tabId))
-                    return
-                openLocalPath(path)
-            }
-            onFileDropped: (urls) => openDroppedUrls(urls)
-            onSettingsRequested: mainDialogs.preferencesDialog.open()
-        }
-
-        StudioLayout {
-            id: studioLayout
-            anchors.fill: parent
-            visible: !tabController.activeIsWelcome
-            studio: appPalette
-            viewMode: tabController.activeViewMode
-            win: window
-            onOpenRequested: function() { mainDialogs.openDialog.open() }
-            onPasteRequested: importClipboard()
-            onViewModeRequested: (mode) => setWorkspaceView(mode)
-            onAssetOpenRequested: (path) => openLocalPath(path)
-            onSaveCodeRequested: mainDialogs.saveCodeDialog.open()
-            onSaveBinRequested: mainDialogs.saveBinDialog.open()
-            onNotify: (msg) => statusMessage(msg)
-        }
-    }
 
     QtObject {
         id: toast
@@ -330,5 +53,138 @@ ApplicationWindow {
         id: toastTimer
         interval: 2600
         onTriggered: toast.visible = false
+    }
+
+    function stripMenuMnemonic(text) { return WorkflowRouter.stripMenuMnemonic(text) }
+    function dialogBodyWidth(preferred, outerMargin) { return WorkflowRouter.dialogBodyWidth(preferred, outerMargin) }
+    function openWelcome() { WorkflowRouter.openWelcome() }
+    function setWorkspaceView(mode) { WorkflowRouter.setWorkspaceView(mode) }
+    function openLocalPath(path) { WorkflowRouter.openLocalPath(path) }
+    function tabTitleForId(tabId) { return WorkflowRouter.tabTitleForId(tabId) }
+    function requestCloseTab(tabId) { WorkflowRouter.requestCloseTab(tabId) }
+    function openDroppedUrls(urls) { WorkflowRouter.openDroppedUrls(urls) }
+    function importClipboard() { WorkflowRouter.importClipboard() }
+    function saveProject() { WorkflowRouter.saveProject() }
+    function saveProjectAs() { WorkflowRouter.saveProjectAs() }
+    function saveCode() { WorkflowRouter.saveCode() }
+    function saveBin() { WorkflowRouter.saveBin() }
+    function batchExport() { WorkflowRouter.batchExport() }
+    function buildAtlas() { WorkflowRouter.buildAtlas() }
+    function openExportHub() { WorkflowRouter.openExportHub() }
+    function importHeader() { WorkflowRouter.importHeader() }
+    function configureWatchFolder() { WorkflowRouter.configureWatchFolder() }
+    function togglePixelGrid() { WorkflowRouter.togglePixelGrid() }
+    function statusMessage(msg) { WorkflowRouter.statusMessage(msg) }
+    function localFolderUrl(path, fallbackUrl) { return WorkflowRouter.localFolderUrl(path, fallbackUrl) }
+    function languageIndex() { return WorkflowRouter.languageIndex() }
+
+    Component.onCompleted: {
+        WorkflowRouter.bind({
+            window: window,
+            dialogs: mainDialogs,
+            layout: studioLayout,
+            toast: toast,
+            toastTimer: toastTimer
+        })
+    }
+
+    onClosing: (close) => {
+        if (workspace.settings.confirmExit && !forceClose) {
+            close.accepted = false
+            mainDialogs.exitConfirmDialog.open()
+        }
+    }
+
+    menuBar: MainMenuBar {
+        studio: appPalette
+    }
+
+    DropArea {
+        anchors.fill: parent
+        z: -1
+        onDropped: (drop) => {
+            if (drop.hasUrls && drop.urls.length > 0)
+                workspace.image.loadImage(drop.urls[0])
+        }
+    }
+
+    Connections {
+        target: workspace.image
+        function onErrorOccurred(message) { WorkflowRouter.statusMessage(message) }
+    }
+
+    Connections {
+        target: workspace.tabs
+        function onTabActionFailed(message) { WorkflowRouter.statusMessage(message) }
+    }
+
+    MainDialogs {
+        id: mainDialogs
+        anchors.fill: parent
+        win: window
+        studio: appPalette
+    }
+
+    readonly property string statusSpecs: {
+        if (!workspace.image.hasPreview)
+            return ""
+        return workspace.output.displayWidth + " × " + workspace.output.displayHeight
+            + "  " + workspace.output.encodingModeName
+            + "  " + workspace.image.previewColorCount + " " + qsTr("Colors")
+    }
+
+    StudioShell {
+        id: studioShell
+        anchors.fill: parent
+        studio: appPalette
+        statusText: toast.text.length > 0 ? toast.text : qsTr("Ready")
+        specsText: statusSpecs
+        toastText: toast.visible ? toast.text : ""
+
+        SettingsPage {
+            anchors.fill: parent
+            visible: workspace.tabs.activeIsSettings
+            studio: appPalette
+            win: window
+            hostDialogs: mainDialogs
+        }
+
+        WelcomeScreen {
+            anchors.fill: parent
+            visible: workspace.tabs.activeIsWelcome
+            studio: appPalette
+            onOpenImageRequested: WorkflowRouter.run("openImage")
+            onPasteRequested: WorkflowRouter.importClipboard()
+            onOpenProjectRequested: WorkflowRouter.run("openProject")
+            onNewProjectRequested: WorkflowRouter.run("newProject")
+            onContinueLastProjectRequested: {
+                if (workspace.project.hasRestorableProject)
+                    workspace.tabs.openProjectTab(WorkflowRouter.localFolderUrl(
+                        workspace.project.lastProjectPath, workspace.settings.projectsUrl))
+            }
+            onRecentItemRequested: (path, tabId) => {
+                if (tabId && tabId.length > 0 && workspace.tabs.activateTab(tabId))
+                    return
+                WorkflowRouter.openLocalPath(path)
+            }
+            onFileDropped: (urls) => WorkflowRouter.openDroppedUrls(urls)
+            onSettingsRequested: WorkflowRouter.run("preferences")
+        }
+
+        StudioLayout {
+            id: studioLayout
+            anchors.fill: parent
+            visible: !workspace.tabs.activeIsWelcome && !workspace.tabs.activeIsSettings
+            studio: appPalette
+            viewMode: workspace.tabs.activeViewMode
+            win: window
+            onOpenRequested: function() { WorkflowRouter.run("openImage") }
+            onPasteRequested: WorkflowRouter.importClipboard()
+            onViewModeRequested: (mode) => WorkflowRouter.setWorkspaceView(mode)
+            onAssetOpenRequested: (path) => WorkflowRouter.openLocalPath(path)
+            onSaveCodeRequested: WorkflowRouter.saveCode()
+            onSaveBinRequested: WorkflowRouter.saveBin()
+            onNotify: (msg) => WorkflowRouter.statusMessage(msg)
+        }
     }
 }

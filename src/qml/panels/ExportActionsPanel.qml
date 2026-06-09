@@ -50,7 +50,7 @@ Item {
                 primary: true
                 iconName: "download"
                 text: qsTr("Save code to file…")
-                enabled: converter.generatedCode.length > 0
+                enabled: workspace.image.generatedCode.length > 0
                 onClicked: root.saveCodeRequested()
             }
             StudioButton {
@@ -59,9 +59,9 @@ Item {
                 compact: root.compact
                 iconName: "copy"
                 text: qsTr("Copy generated code")
-                enabled: converter.generatedCode.length > 0
+                enabled: workspace.image.generatedCode.length > 0
                 onClicked: {
-                    exporter.copyToClipboard(converter.generatedCode)
+                    workspace.exportPanel.copyToClipboard(workspace.image.generatedCode)
                     root.notify(qsTr("Copied to clipboard"))
                 }
             }
@@ -71,9 +71,9 @@ Item {
                 compact: root.compact
                 iconName: "clipboard"
                 text: qsTr("Copy array only")
-                enabled: converter.generatedCode.length > 0
+                enabled: workspace.image.generatedCode.length > 0
                 onClicked: {
-                    codeGen.copyGeneratedArray()
+                    workspace.code.copyGeneratedArray()
                     root.notify(qsTr("Array copied to clipboard"))
                 }
             }
@@ -83,7 +83,7 @@ Item {
                 compact: root.compact
                 iconName: "file-image"
                 text: qsTr("Save binary…")
-                enabled: converter.hasPreview
+                enabled: workspace.image.hasPreview
                 onClicked: root.saveBinRequested()
             }
         }
@@ -99,7 +99,7 @@ Item {
                 compact: root.compact
                 iconName: "save"
                 text: qsTr("Save project")
-                enabled: project.projectFile.toString().length > 0
+                enabled: workspace.project.projectFile.toString().length > 0
                 onClicked: root.saveProjectRequested()
             }
             StudioButton {

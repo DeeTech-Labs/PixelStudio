@@ -1,6 +1,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QtQml/qqml.h>
 #include <QtGlobal>
 #include <QLocale>
 #include <QQuickStyle>
@@ -20,6 +21,10 @@
 #endif
 #endif
 #include "app/shell/AppTranslations.h"
+#include "app/shell/StudioViewMode.h"
+#include "app/shell/WorkspaceContext.h"
+#include "app/panels/InspectorDisplayPresenter.h"
+#include "app/panels/InspectorImagePresenter.h"
 #include "app/AppVersion.h"
 #include "app/code/CodeSyntaxHighlighter.h"
 #include "app/studio/DisplayConverter.h"
@@ -56,7 +61,17 @@ int main(int argc, char *argv[])
     auto *previewProvider = new PreviewImageProvider;
     DisplayConverter converter(&session, &appSettings);
     StudioTabController tabController(&converter);
+    WorkspaceContext workspace(&converter, &tabController, &appSettings);
+    InspectorImagePresenter inspectorImage(&converter);
+    InspectorDisplayPresenter inspectorDisplay(&converter);
     WinTaskbarRecent winTaskbarRecent;
+
+    qmlRegisterUncreatableMetaObject(StudioViewMode::staticMetaObject,
+                                     "PixelStudio",
+                                     1,
+                                     0,
+                                     "StudioViewMode",
+                                     QStringLiteral("enum"));
 
     QQmlApplicationEngine engine;
     engine.addImageProvider(QLatin1String(PreviewImageProvider::kProviderId), previewProvider);
@@ -66,26 +81,11 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("applicationVersion", appVersion);
     engine.rootContext()->setContextProperty("qtRuntimeVersion",
                                               QString::fromLatin1(qVersion()));
-    engine.rootContext()->setContextProperty("converter", &converter);
-    engine.rootContext()->setContextProperty("imageFilters", converter.imageFilters());
-    engine.rootContext()->setContextProperty("imageTransform", converter.imageTransform());
-    engine.rootContext()->setContextProperty("displayOutput", converter.displayOutput());
-    engine.rootContext()->setContextProperty("codeGen", converter.codeGen());
-    engine.rootContext()->setContextProperty("viewport", converter.viewport());
-    engine.rootContext()->setContextProperty("project", converter.project());
-    engine.rootContext()->setContextProperty("exporter", converter.exportPanel());
-    engine.rootContext()->setContextProperty("tabController", &tabController);
-    engine.rootContext()->setContextProperty("appSettings", &appSettings);
+    engine.rootContext()->setContextProperty("workspace", &workspace);
+    engine.rootContext()->setContextProperty("inspectorImage", &inspectorImage);
+    engine.rootContext()->setContextProperty("inspectorDisplay", &inspectorDisplay);
     engine.rootContext()->setContextProperty("pixelStudioDataPath",
                                               QUrl::fromLocalFile(AppPaths::dataRoot()));
-    engine.rootContext()->setContextProperty("pixelStudioDocumentsPath",
-                                              QUrl::fromLocalFile(AppPaths::userDocumentsRoot()));
-    engine.rootContext()->setContextProperty("pixelStudioProjectsUrl",
-                                              QUrl::fromLocalFile(AppPaths::projectsDir()));
-    engine.rootContext()->setContextProperty("pixelStudioExportsUrl",
-                                              QUrl::fromLocalFile(AppPaths::exportsDir()));
-    engine.rootContext()->setContextProperty("pixelStudioWatchUrl",
-                                              QUrl::fromLocalFile(AppPaths::watchDir()));
 
     const auto syncTaskbarRecent = [&]() {
         winTaskbarRecent.syncFromRecentFiles(converter.project()->recentFiles());
@@ -100,6 +100,12 @@ int main(int argc, char *argv[])
         converter.refreshLocalization();
         tabController.relocalizeTabTitles();
         engine.retranslate();
+    });
+
+    QObject::connect(&appSettings, &AppSettings::storagePathsChanged, &converter, [&converter]() {
+        converter.exportPanel()->applyStoredWatchState();
+        converter.project()->notifyUiFoldersChanged();
+        converter.exportPanel()->notifyUiFoldersChanged();
     });
 
     QObject::connect(&app, &QGuiApplication::aboutToQuit, &tabController, [&tabController, &converter]() {

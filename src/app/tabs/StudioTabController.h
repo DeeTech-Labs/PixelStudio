@@ -5,6 +5,7 @@
 #include <QUrl>
 #include <QVariantList>
 
+#include "app/tabs/TabPreloadService.h"
 #include "app/tabs/TabSessionStore.h"
 #include "app/tabs/TabTypes.h"
 
@@ -17,11 +18,13 @@ class StudioTabController : public QObject
     Q_PROPERTY(QString activeTabId READ activeTabId NOTIFY activeTabIdChanged)
     Q_PROPERTY(QString activeTabTitle READ activeTabTitle NOTIFY tabsChanged)
     Q_PROPERTY(bool activeIsWelcome READ activeIsWelcome NOTIFY activeTabIdChanged)
+    Q_PROPERTY(bool activeIsSettings READ activeIsSettings NOTIFY activeTabIdChanged)
     Q_PROPERTY(int activeViewMode READ activeViewMode WRITE setActiveViewMode NOTIFY activeViewModeChanged)
     Q_PROPERTY(QVariantList welcomeRecentItems READ welcomeRecentItems NOTIFY welcomeRecentItemsChanged)
 
 public:
     static constexpr const char *kWelcomeTabId = "welcome";
+    static constexpr const char *kSettingsTabId = "settings";
 
     explicit StudioTabController(DisplayConverter *converter, QObject *parent = nullptr);
 
@@ -29,6 +32,7 @@ public:
     QString activeTabId() const { return m_activeTabId; }
     QString activeTabTitle() const;
     bool activeIsWelcome() const;
+    bool activeIsSettings() const;
     int activeViewMode() const;
     void setActiveViewMode(int mode);
     QVariantList welcomeRecentItems() const;
@@ -38,6 +42,7 @@ public:
     Q_INVOKABLE void initialize(bool restoreLastProject = false);
     Q_INVOKABLE void persist();
     Q_INVOKABLE QString activateWelcome();
+    Q_INVOKABLE QString openSettingsTab();
     Q_INVOKABLE QString openProjectTab(const QUrl &url);
     Q_INVOKABLE QString newProjectTab(const QString &name = QString());
     Q_INVOKABLE QString openFileTab(const QString &localPath);
@@ -78,6 +83,7 @@ private:
     bool setActiveTabIdInternal(const QString &id, bool persistNow);
 
     DisplayConverter *m_converter = nullptr;
+    TabPreloadService m_preload;
     TabSessionStore m_tabStore;
     QList<StudioTabEntry> m_tabs;
     QString m_activeTabId;

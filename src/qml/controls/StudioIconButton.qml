@@ -12,8 +12,14 @@ Button {
     property bool small: false
     property bool toggled: false
     property string toolTipText: ""
+    property string accessibleName: ""
 
     readonly property int _textPadH: small ? studio.spacingSm : studio.spacingMd
+
+    Accessible.role: Accessible.Button
+    Accessible.name: accessibleName.length > 0 ? accessibleName
+        : (toolTipText.length > 0 ? toolTipText
+           : (text.length > 0 ? text : iconText))
     readonly property int _minSide: small ? 26 : 32
 
     implicitWidth: iconName.length > 0

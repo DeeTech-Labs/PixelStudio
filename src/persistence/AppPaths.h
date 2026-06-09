@@ -36,6 +36,7 @@ bool isExcludedFromRecentPath(const QString &absolutePath);
 bool isInternalDataPath(const QString &absolutePath);
 
 void ensureLayout();
+void ensureStorageDirs();
 
 } // namespace AppPaths
 

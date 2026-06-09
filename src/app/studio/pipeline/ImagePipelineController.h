@@ -1,7 +1,7 @@
 #ifndef PIXELSTUDIO_APP_CONVERTER_IMAGEPIPELINECONTROLLER_H
 #define PIXELSTUDIO_APP_CONVERTER_IMAGEPIPELINECONTROLLER_H
 
-class ConverterState;
+struct ConverterState;
 class DisplayConverter;
 
 class ImagePipelineController

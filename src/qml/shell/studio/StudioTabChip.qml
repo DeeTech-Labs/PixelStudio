@@ -16,7 +16,7 @@ Rectangle {
 
     signal closeRequested()
 
-    property bool isActive: tab.id === tabController.activeTabId
+    property bool isActive: tab.id === workspace.tabs.activeTabId
     property bool dragging: false
     property int pendingDropIndex: -1
     property int tabBarHeight: 28
@@ -42,31 +42,31 @@ Rectangle {
     Menu {
         id: tabContextMenu
         MenuItem {
-            text: qsTr("Close tab")
+            text: WorkflowRouter.shellTr("Close tab")
             enabled: tab.closable
             onTriggered: chip.closeRequested()
         }
         MenuItem {
-            text: qsTr("Close other tabs")
+            text: WorkflowRouter.shellTr("Close other tabs")
             enabled: tab.closable
-            onTriggered: tabController.closeOtherTabs(contextTabId)
+            onTriggered: workspace.tabs.closeOtherTabs(contextTabId)
         }
         MenuSeparator {}
         MenuItem {
-            text: tab.pinned ? qsTr("Unpin tab") : qsTr("Pin tab")
-            enabled: !tab.isWelcome
-            onTriggered: tabController.setTabPinned(contextTabId, !tab.pinned)
+            text: tab.pinned ? WorkflowRouter.shellTr("Unpin tab") : WorkflowRouter.shellTr("Pin tab")
+            enabled: !tab.isWelcome && !tab.isSettings
+            onTriggered: workspace.tabs.setTabPinned(contextTabId, !tab.pinned)
         }
         MenuSeparator {}
         MenuItem {
-            text: qsTr("Move left")
-            enabled: tabIndex > (tabController.tabs.length > 0 && tabController.tabs[0].isWelcome ? 1 : 0)
-            onTriggered: tabController.moveTab(contextTabId, tabIndex - 1)
+            text: WorkflowRouter.shellTr("Move left")
+            enabled: tabIndex > (workspace.tabs.tabs.length > 0 && workspace.tabs.tabs[0].isWelcome ? 1 : 0)
+            onTriggered: workspace.tabs.moveTab(contextTabId, tabIndex - 1)
         }
         MenuItem {
-            text: qsTr("Move right")
-            enabled: tabIndex < tabController.tabs.length - 1
-            onTriggered: tabController.moveTab(contextTabId, tabIndex + 1)
+            text: WorkflowRouter.shellTr("Move right")
+            enabled: tabIndex < workspace.tabs.tabs.length - 1
+            onTriggered: workspace.tabs.moveTab(contextTabId, tabIndex + 1)
         }
     }
 
@@ -78,6 +78,12 @@ Rectangle {
         StudioIcon {
             visible: tab.isWelcome
             name: "house"
+            iconSize: 11
+            tint: isActive ? studio.accent : studio.textMuted
+        }
+        StudioIcon {
+            visible: tab.isSettings
+            name: "settings"
             iconSize: 11
             tint: isActive ? studio.accent : studio.textMuted
         }
@@ -135,7 +141,7 @@ Rectangle {
             }
         }
         onPositionChanged: (mouse) => {
-            if (tab.isWelcome || !(mouse.buttons & Qt.LeftButton))
+            if (tab.isWelcome || tab.isSettings || !(mouse.buttons & Qt.LeftButton))
                 return
             if (!chip.dragging && Math.abs(mouse.x - pressX) > 8)
                 chip.dragging = true
@@ -147,13 +153,13 @@ Rectangle {
         }
         onReleased: {
             if (chip.dragging && chip.pendingDropIndex >= 0 && chip.pendingDropIndex !== tabIndex)
-                tabController.moveTab(tab.id, chip.pendingDropIndex)
+                workspace.tabs.moveTab(tab.id, chip.pendingDropIndex)
             chip.dragging = false
             chip.pendingDropIndex = -1
         }
         onClicked: (mouse) => {
             if (mouse.button === Qt.LeftButton && !didDrag)
-                tabController.activateTab(tab.id)
+                workspace.tabs.activateTab(tab.id)
         }
     }
 }

@@ -22,29 +22,29 @@ Item {
 
     property alias inspectorPageIndex: inspectorDock.pageIndex
 
-    readonly property bool showSource: viewMode === 0 || viewMode === 1
-    readonly property bool showOutput: viewMode === 0 || viewMode === 3
+    readonly property bool showSource: viewMode === StudioViewMode.Dual || viewMode === StudioViewMode.Source
+    readonly property bool showOutput: viewMode === StudioViewMode.Dual || viewMode === StudioViewMode.Output
 
     readonly property string outputSubtitle: {
-        if (!converter.hasPreview)
-            return displayOutput.displayWidth + " × " + displayOutput.displayHeight
-        let s = displayOutput.displayWidth + " × " + displayOutput.displayHeight
-        s += " · " + displayOutput.encodingModeName
-        if (displayOutput.dataByteCount > 0)
-            s += " · " + displayOutput.dataByteCount + " B"
+        if (!workspace.image.hasPreview)
+            return workspace.output.displayWidth + " × " + workspace.output.displayHeight
+        let s = workspace.output.displayWidth + " × " + workspace.output.displayHeight
+        s += " · " + workspace.output.encodingModeName
+        if (workspace.output.dataByteCount > 0)
+            s += " · " + workspace.output.dataByteCount + " B"
         return s
     }
 
     readonly property string sourceSubtitle: {
-        if (!converter.hasImage)
+        if (!workspace.image.hasImage)
             return ""
-        return converter.sourceWidth + " × " + converter.sourceHeight
+        return workspace.image.sourceWidth + " × " + workspace.image.sourceHeight
     }
 
-    readonly property bool compactDisplay: displayOutput.displayWidth * displayOutput.displayHeight <= 16384
+    readonly property bool compactDisplay: workspace.output.displayWidth * workspace.output.displayHeight <= 16384
 
     Rectangle {
-        visible: exporter.batchRunning || exporter.batchProgress > 0
+        visible: workspace.exportPanel.batchRunning || workspace.exportPanel.batchProgress > 0
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
@@ -59,31 +59,31 @@ Item {
             anchors.fill: parent
             anchors.margins: studio.spacingSm
             Label {
-                text: exporter.batchRunning ? qsTr("Batch export…") : qsTr("Batch finished")
+                text: workspace.exportPanel.batchRunning ? qsTr("Batch export…") : qsTr("Batch finished")
                 font.pixelSize: studio.fontSizeSm
                 color: studio.text
             }
             Item { Layout.fillWidth: true }
-            ProgressBar { Layout.preferredWidth: 160; from: 0; to: 100; value: exporter.batchProgress }
+            ProgressBar { Layout.preferredWidth: 160; from: 0; to: 100; value: workspace.exportPanel.batchProgress }
             Label {
-                text: exporter.batchProgress + "%"
+                text: workspace.exportPanel.batchProgress + "%"
                 font.family: studio.fontFamilyMono
                 font.pixelSize: studio.fontSizeXs
                 color: studio.textMuted
             }
             StudioButton {
-                visible: exporter.batchRunning
+                visible: workspace.exportPanel.batchRunning
                 studio: root.studio
                 compact: true
                 text: qsTr("Cancel")
-                onClicked: exporter.cancelBatchExport()
+                onClicked: workspace.exportPanel.cancelBatchExport()
             }
         }
     }
 
     SplitView {
         anchors.fill: parent
-        anchors.topMargin: (exporter.batchRunning || exporter.batchProgress > 0) ? 36 : 0
+        anchors.topMargin: (workspace.exportPanel.batchRunning || workspace.exportPanel.batchProgress > 0) ? 36 : 0
         orientation: Qt.Horizontal
 
         handle: Rectangle {
@@ -125,19 +125,19 @@ Item {
                     studio: root.studio
                     title: qsTr("Source")
                     subtitle: root.sourceSubtitle
-                    badge: converter.hasImage ? "" : qsTr("empty")
+                    badge: workspace.image.hasImage ? "" : qsTr("empty")
 
                     StudioViewport {
                         anchors.fill: parent
                         studio: root.studio
-                        visible: converter.hasImage && !converter.imageLoading
+                        visible: workspace.image.hasImage && !workspace.image.imageLoading
                         allowUpscale: true
-                        imageSource: converter.sourcePath
-                        overlayTopLeft: converter.sourceWidth + " × " + converter.sourceHeight
+                        imageSource: workspace.image.sourcePath
+                        overlayTopLeft: workspace.image.sourceWidth + " × " + workspace.image.sourceHeight
                     }
                     Label {
                         anchors.centerIn: parent
-                        visible: converter.imageLoading
+                        visible: workspace.image.imageLoading
                         text: qsTr("Loading image…")
                         color: studio.textMuted
                         horizontalAlignment: Text.AlignHCenter
@@ -147,8 +147,8 @@ Item {
                     StudioDropCanvas {
                         anchors.fill: parent
                         studio: root.studio
-                        visible: !converter.hasImage && !converter.imageLoading
-                        onFileDropped: (url) => converter.loadImage(url)
+                        visible: !workspace.image.hasImage && !workspace.image.imageLoading
+                        onFileDropped: (url) => workspace.image.loadImage(url)
                         onOpenRequested: if (root.onOpenRequested) root.onOpenRequested()
                         onPasteRequested: root.pasteRequested()
                     }
@@ -166,17 +166,17 @@ Item {
                     StudioViewport {
                         anchors.fill: parent
                         studio: root.studio
-                        visible: converter.hasPreview
+                        visible: workspace.image.hasPreview
                         allowUpscale: true
-                        showGrid: viewport.showGrid
+                        showGrid: workspace.viewport.showGrid
                         autoPixelGrid: false
-                        imageSource: converter.previewPath
-                        overlayTopLeft: displayOutput.displayWidth + " × " + displayOutput.displayHeight
-                        overlayTopRight: displayOutput.encodingModeName
+                        imageSource: workspace.image.previewPath
+                        overlayTopLeft: workspace.output.displayWidth + " × " + workspace.output.displayHeight
+                        overlayTopRight: workspace.output.encodingModeName
                     }
                     Label {
                         anchors.centerIn: parent
-                        visible: converter.imageLoading
+                        visible: workspace.image.imageLoading
                         text: qsTr("Loading image…")
                         color: studio.textMuted
                         horizontalAlignment: Text.AlignHCenter
@@ -185,8 +185,8 @@ Item {
                     }
                     Label {
                         anchors.centerIn: parent
-                        visible: !converter.imageLoading && !converter.hasPreview
-                        text: converter.hasImage ? qsTr("Rasterizing…") : qsTr("Process an image to see the result here.")
+                        visible: !workspace.image.imageLoading && !workspace.image.hasPreview
+                        text: workspace.image.hasImage ? qsTr("Rasterizing…") : qsTr("Process an image to see the result here.")
                         color: studio.textMuted
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
@@ -209,14 +209,13 @@ Item {
 
         InspectorDock {
             id: inspectorDock
-            visible: appSettings.showSidebar
-            SplitView.preferredWidth: appSettings.showSidebar
+            visible: workspace.settings.showSidebar
+            SplitView.preferredWidth: workspace.settings.showSidebar
                 ? Math.min(studio.inspectorWidth, root.width * 0.34)
                 : 0
-            SplitView.minimumWidth: appSettings.showSidebar ? 220 : 0
-            SplitView.maximumWidth: appSettings.showSidebar ? 400 : 0
+            SplitView.minimumWidth: workspace.settings.showSidebar ? 220 : 0
+            SplitView.maximumWidth: workspace.settings.showSidebar ? 400 : 0
             studio: root.studio
-            win: root.win
             onNotify: (m) => root.notify(m)
         }
     }

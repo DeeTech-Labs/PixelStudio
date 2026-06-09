@@ -28,7 +28,6 @@ public:
     static Result convert(const QImage &source,
                           int width,
                           int height,
-                          DisplayProfile::ColorMode colorMode,
                           DisplayProfile::ScaleMode scaleMode,
                           const ImageFiltersPipeline::Params &filters,
                           DisplayCodeGenerator::EncodingMode encodingMode,
