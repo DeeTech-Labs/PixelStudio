@@ -151,9 +151,6 @@ mindmap
 
 ## Скриншоты
 
-> Добавьте `welcome.png` и `workspace.png` (1280–1920 px) в [`docs/screenshots/`](docs/screenshots/) и раскомментируйте блок ниже.
-
-<!--
 <table>
 <tr>
 <td width="50%"><img src="docs/screenshots/welcome.png" alt="Экран приветствия"/></td>
@@ -164,7 +161,6 @@ mindmap
 <td align="center"><sub>Studio — превью, инспектор, экспорт</sub></td>
 </tr>
 </table>
--->
 
 ---
 
