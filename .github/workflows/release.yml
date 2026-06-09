@@ -76,6 +76,8 @@ jobs:
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
           if (-not $setup) { throw "Installer not found in installer/output" }
           $hash = (Get-FileHash $setup.FullName -Algorithm SHA256).Hash
+          # Relative path with forward slashes — absolute D:\a\... paths break GITHUB_OUTPUT (\a escape).
+          $assetPath = "installer/output/$($setup.Name)"
           @(
             "## Checksums",
             "",
@@ -85,7 +87,7 @@ jobs:
             "",
             "Built from tag ``${{ steps.tag.outputs.name }}`` on Windows x64 (Qt 6.8.2, MSVC 2022)."
           ) | Set-Content -Path release-notes-extra.md -Encoding utf8NoBOM
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "path=$($setup.FullName)"
+          "path=$assetPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8NoBOM
           "$($setup.Name)  $hash" | Set-Content -Path SHA256SUMS.txt -Encoding utf8NoBOM
 
       - name: Create GitHub Release
@@ -99,3 +101,4 @@ jobs:
           body_path: release-notes-extra.md
           generate_release_notes: true
           fail_on_unmatched_files: true
+          overwrite_files: true
