@@ -18,7 +18,7 @@ StudioDialog {
     headerTitleElide: Text.ElideNone
 
     readonly property string repoUrl: "https://github.com/DeeTech-Labs/PixelStudio"
-    readonly property string docsUrl: repoUrl + "/blob/main/docs/README.md"
+    readonly property string docsUrl: repoUrl + "/blob/main/README.md"
     readonly property string issuesUrl: repoUrl + "/issues"
     readonly property string releasesUrl: repoUrl + "/releases"
     readonly property string licenseUrl: repoUrl + "/blob/main/LICENSE"

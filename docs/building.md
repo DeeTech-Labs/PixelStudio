@@ -1,7 +1,5 @@
 # Сборка PixelStudio
 
-> **English:** [en/building.md](en/building.md)
-
 ## Требования
 
 1. **Visual Studio 2022** — рабочая нагрузка «Разработка классических приложений на C++», MSVC v143 x64.

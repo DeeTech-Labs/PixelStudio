@@ -1,7 +1,5 @@
 # Участие в разработке PixelStudio
 
-> **English:** [docs/en/CONTRIBUTING.md](docs/en/CONTRIBUTING.md)
-
 Спасибо за интерес к проекту. Ниже — минимум для сборки, проверки и отправки изменений.
 
 ## Перед началом
@@ -41,7 +39,7 @@ cmake --build build\Release
 Схема **`Major.Minor.Patch`** + опциональный **fix** (`0.1.0b`, `1.2.3b`): [docs/versioning.md](docs/versioning.md).
 
 Правки в [`cmake/PixelStudioVersion.cmake`](cmake/PixelStudioVersion.cmake) и [`CHANGELOG.md`](CHANGELOG.md) (`[Unreleased]`).  
-На PR — метки `major` / `minor` / `patch` / `version-fix` для Release Drafter.
+На PR — метки `major` / `minor` / `patch` / `version-fix` для планирования semver (см. [docs/versioning.md](docs/versioning.md)).
 
 ## Стиль кода
 

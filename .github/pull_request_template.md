@@ -37,4 +37,4 @@
 
 ---
 
-*Документация: [CONTRIBUTING.md](../CONTRIBUTING.md) · [English](../docs/en/CONTRIBUTING.md)*
+*Документация: [CONTRIBUTING.md](../CONTRIBUTING.md)*

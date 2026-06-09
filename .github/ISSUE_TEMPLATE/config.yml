@@ -1,11 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: "Документация (RU)"
-    url: https://github.com/DeeTech-Labs/PixelStudio/blob/main/docs/README.md
-    about: Указатель документации на русском
-  - name: "Documentation (EN)"
-    url: https://github.com/DeeTech-Labs/PixelStudio/blob/main/docs/en/README.md
-    about: English documentation index
+  - name: "Документация"
+    url: https://github.com/DeeTech-Labs/PixelStudio/blob/main/README.md
+    about: Обзор проекта и быстрый старт
   - name: "Сборка из исходников"
     url: https://github.com/DeeTech-Labs/PixelStudio/blob/main/docs/building.md
     about: CMake, Qt 6.8, windeployqt и установщик

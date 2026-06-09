@@ -88,16 +88,13 @@ jobs:
             "Built from tag ``${{ steps.tag.outputs.name }}`` on Windows x64 (Qt 6.8.2, MSVC 2022)."
           ) | Set-Content -Path release-notes-extra.md -Encoding utf8NoBOM
           "path=$assetPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8NoBOM
-          "$($setup.Name)  $hash" | Set-Content -Path SHA256SUMS.txt -Encoding utf8NoBOM
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.name }}
           name: PixelStudio ${{ steps.tag.outputs.name }}
-          files: |
-            ${{ steps.meta.outputs.path }}
-            SHA256SUMS.txt
+          files: ${{ steps.meta.outputs.path }}
           body_path: release-notes-extra.md
           generate_release_notes: true
           fail_on_unmatched_files: true
