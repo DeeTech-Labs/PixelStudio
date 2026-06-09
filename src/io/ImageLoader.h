@@ -41,6 +41,7 @@ private Q_SLOTS:
 private:
     static FileLoadOutcome loadFileWorker(const QUrl &url);
     void setLoading(bool loading);
+    void emitLoadError(const QString &message);
 
     QNetworkAccessManager m_networkManager;
     QFutureWatcher<FileLoadOutcome> m_fileLoadWatcher;

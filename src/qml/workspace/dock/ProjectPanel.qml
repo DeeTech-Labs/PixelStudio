@@ -17,7 +17,7 @@ PixelPanel {
         anchors.bottomMargin: 22
         clip: true
         spacing: 1
-        model: converter.projectAssets
+        model: project.projectAssets
 
         delegate: ItemDelegate {
             required property var modelData
@@ -51,8 +51,8 @@ PixelPanel {
         anchors.bottom: parent.bottom
         height: 20
         padding: studio.spacingXs
-        text: converter.projectFile.toString().length > 0
-            ? converter.projectName + ".pspx"
+        text: project.projectFile.toString().length > 0
+            ? project.projectName + ".pspx"
             : qsTr("No project")
         font.family: studio.fontFamilyMono
         font.pixelSize: studio.fontSizeXs

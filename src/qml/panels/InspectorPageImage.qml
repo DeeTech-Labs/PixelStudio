@@ -10,9 +10,9 @@ Item {
     id: root
     required property var studio
 
-    readonly property bool monoOutput: converter.encodingIsMono1Bit
-    readonly property bool grayscaleOutput: converter.encodingIsGrayscale
-    readonly property bool toneLocked: converter.tonePreset !== 0
+    readonly property bool monoOutput: displayOutput.encodingIsMono1Bit
+    readonly property bool grayscaleOutput: displayOutput.encodingIsGrayscale
+    readonly property bool toneLocked: imageFilters.tonePreset !== 0
 
     implicitHeight: column.implicitHeight
     Layout.fillWidth: true
@@ -52,7 +52,7 @@ Item {
                 }
                 Label { text: qsTr("BPP"); font.pixelSize: studio.fontSizeXs; color: studio.textMuted }
                 Label {
-                    text: converter.hasPreview ? converter.encodingModeName : "—"
+                    text: converter.hasPreview ? displayOutput.encodingModeName : "—"
                     font.family: studio.fontFamilyMono
                     font.pixelSize: studio.fontSizeXs
                     color: studio.text
@@ -78,32 +78,32 @@ Item {
                 label: qsTr("Contrast")
                 enabled: !toneLocked
                 from: 0; to: 200
-                value: converter.contrast
-                valueText: (converter.contrast / 100).toFixed(2)
-                onValueCommitted: (v) => converter.setContrast(Math.round(v))
+                value: imageFilters.contrast
+                valueText: (imageFilters.contrast / 100).toFixed(2)
+                onValueCommitted: (v) => imageFilters.setContrast(Math.round(v))
             }
             StudioCheck {
                 studio: root.studio
                 text: qsTr("Dither")
-                checked: converter.dithering
-                onToggled: converter.setDithering(checked)
+                checked: imageFilters.dithering
+                onToggled: imageFilters.setDithering(checked)
             }
             StudioCombo {
                 id: encQuickCombo
                 Layout.fillWidth: true
                 studio: root.studio
                 readonly property int _localeRev: converter.localizationRevision
-                model: _localeRev >= 0 ? converter.availableEncodingModesForUi() : []
+                model: _localeRev >= 0 ? displayOutput.availableEncodingModesForUi() : []
                 textRole: "name"
                 Component.onCompleted: syncEncQuick()
                 onActivated: {
                     const item = model[currentIndex]
                     if (item && item.mode !== undefined)
-                        converter.setEncodingMode(item.mode)
+                        displayOutput.setEncodingMode(item.mode)
                 }
                 function syncEncQuick() {
                     for (let i = 0; i < model.length; ++i) {
-                        if (model[i].mode === converter.encodingMode) {
+                        if (model[i].mode === displayOutput.encodingMode) {
                             currentIndex = i
                             return
                         }
@@ -115,8 +115,8 @@ Item {
                 studio: root.studio
                 label: qsTr("Max colors")
                 from: 0; to: 30
-                value: converter.posterizeRgb
-                onValueCommitted: (v) => converter.setPosterizeRgb(Math.round(v))
+                value: imageFilters.posterizeRgb
+                onValueCommitted: (v) => imageFilters.setPosterizeRgb(Math.round(v))
             }
         }
 
@@ -136,13 +136,13 @@ Item {
                     qsTr("JJN"),
                     qsTr("Bayer")
                 ]
-                Component.onCompleted: currentIndex = converter.ditherMode
-                onActivated: converter.setDitherMode(currentIndex)
+                Component.onCompleted: currentIndex = imageFilters.ditherMode
+                onActivated: imageFilters.setDitherMode(currentIndex)
             }
             StudioCheck {
                 studio: root.studio
                 text: qsTr("Serpentine")
-                checked: converter.ditherMode === 1
+                checked: imageFilters.ditherMode === 1
                 enabled: false
             }
             StudioSlider {
@@ -150,9 +150,9 @@ Item {
                 studio: root.studio
                 label: qsTr("Edge threshold")
                 from: 0; to: 100
-                value: converter.sobelEdges
-                valueText: converter.sobelEdges + "%"
-                onValueCommitted: (v) => converter.setSobelEdges(Math.round(v))
+                value: imageFilters.sobelEdges
+                valueText: imageFilters.sobelEdges + "%"
+                onValueCommitted: (v) => imageFilters.setSobelEdges(Math.round(v))
             }
         }
 
@@ -170,8 +170,8 @@ Item {
                     qsTr("Stretch to fill"),
                     qsTr("Crop center")
                 ]
-                Component.onCompleted: currentIndex = converter.scaleMode
-                onActivated: converter.setScaleMode(currentIndex)
+                Component.onCompleted: currentIndex = imageTransform.scaleMode
+                onActivated: imageTransform.setScaleMode(currentIndex)
             }
 
             StudioSegmented {
@@ -184,8 +184,8 @@ Item {
                     { label: qsTr("180"), value: 180 },
                     { label: qsTr("270"), value: 270 }
                 ]
-                selectedValue: converter.rotation
-                onSegmentActivated: (v) => converter.setRotation(v)
+                selectedValue: imageTransform.rotation
+                onSegmentActivated: (v) => imageTransform.setRotation(v)
             }
 
             ColumnLayout {
@@ -195,15 +195,15 @@ Item {
                     Layout.fillWidth: true
                     studio: root.studio
                     text: qsTr("Flip horizontal")
-                    checked: converter.flipHorizontal
-                    onToggled: converter.setFlipHorizontal(checked)
+                    checked: imageTransform.flipHorizontal
+                    onToggled: imageTransform.setFlipHorizontal(checked)
                 }
                 StudioCheck {
                     Layout.fillWidth: true
                     studio: root.studio
                     text: qsTr("Flip vertical")
-                    checked: converter.flipVertical
-                    onToggled: converter.setFlipVertical(checked)
+                    checked: imageTransform.flipVertical
+                    onToggled: imageTransform.setFlipVertical(checked)
                 }
             }
 
@@ -215,10 +215,10 @@ Item {
                     label: "X"
                     from: -512
                     to: 512
-                    value: converter.offsetX
+                    value: imageTransform.offsetX
                     onValueCommitted: (v) => {
-                        if (v !== converter.offsetX)
-                            converter.setOffsetX(v)
+                        if (v !== imageTransform.offsetX)
+                            imageTransform.setOffsetX(v)
                     }
                 }
                 StudioSpin {
@@ -227,10 +227,10 @@ Item {
                     label: "Y"
                     from: -512
                     to: 512
-                    value: converter.offsetY
+                    value: imageTransform.offsetY
                     onValueCommitted: (v) => {
-                        if (v !== converter.offsetY)
-                            converter.setOffsetY(v)
+                        if (v !== imageTransform.offsetY)
+                            imageTransform.setOffsetY(v)
                     }
                 }
             }
@@ -240,7 +240,7 @@ Item {
                 studio: root.studio
                 text: qsTr("Center on display")
                 enabled: converter.hasImage
-                onClicked: converter.centerOffsetOnDisplay()
+                onClicked: imageTransform.centerOffsetOnDisplay()
             }
             StudioButton {
                 Layout.fillWidth: true
@@ -248,7 +248,7 @@ Item {
                 iconName: "rotate-cw"
                 text: qsTr("Reset transform")
                 enabled: converter.hasImage
-                onClicked: converter.resetTransform()
+                onClicked: imageTransform.resetTransform()
             }
         }
 
@@ -267,15 +267,15 @@ Item {
                     qsTr("Icon (high contrast)"),
                     qsTr("Photo (natural)")
                 ]
-                Component.onCompleted: currentIndex = converter.tonePreset
-                onActivated: converter.setTonePreset(currentIndex)
+                Component.onCompleted: currentIndex = imageFilters.tonePreset
+                onActivated: imageFilters.setTonePreset(currentIndex)
             }
 
             StudioCheck {
                 studio: root.studio
                 text: qsTr("Black background")
-                checked: converter.blackBackground
-                onToggled: converter.setBlackBackground(checked)
+                checked: imageFilters.blackBackground
+                onToggled: imageFilters.setBlackBackground(checked)
             }
             StudioSlider {
                 Layout.fillWidth: true
@@ -283,8 +283,8 @@ Item {
                 label: qsTr("Brightness")
                 enabled: !toneLocked
                 from: 0; to: 200
-                value: converter.brightness
-                onValueCommitted: (v) => converter.setBrightness(Math.round(v))
+                value: imageFilters.brightness
+                onValueCommitted: (v) => imageFilters.setBrightness(Math.round(v))
             }
             StudioSlider {
                 Layout.fillWidth: true
@@ -292,18 +292,18 @@ Item {
                 label: qsTr("Contrast")
                 enabled: !toneLocked
                 from: 0; to: 200
-                value: converter.contrast
-                onValueCommitted: (v) => converter.setContrast(Math.round(v))
+                value: imageFilters.contrast
+                onValueCommitted: (v) => imageFilters.setContrast(Math.round(v))
             }
             StudioCheck {
                 studio: root.studio
                 text: qsTr("Invert colors")
-                checked: root.monoOutput ? converter.invertMono : converter.filterInvert
+                checked: root.monoOutput ? imageTransform.invertMono : imageFilters.filterInvert
                 onToggled: {
                     if (root.monoOutput)
-                        converter.setInvertMono(checked)
+                        imageTransform.setInvertMono(checked)
                     else
-                        converter.setFilterInvert(checked)
+                        imageFilters.setFilterInvert(checked)
                 }
             }
         }
@@ -321,8 +321,8 @@ Item {
                 label: qsTr("Saturation")
                 enabled: !toneLocked
                 from: 0; to: 200
-                value: converter.saturation
-                onValueCommitted: (v) => converter.setSaturation(Math.round(v))
+                value: imageFilters.saturation
+                onValueCommitted: (v) => imageFilters.setSaturation(Math.round(v))
             }
             StudioSlider {
                 Layout.fillWidth: true
@@ -330,9 +330,9 @@ Item {
                 label: qsTr("Exposure")
                 enabled: !toneLocked
                 from: 50; to: 200
-                value: converter.exposure
-                valueText: converter.exposure + "%"
-                onValueCommitted: (v) => converter.setExposure(Math.round(v))
+                value: imageFilters.exposure
+                valueText: imageFilters.exposure + "%"
+                onValueCommitted: (v) => imageFilters.setExposure(Math.round(v))
             }
             StudioSlider {
                 Layout.fillWidth: true
@@ -340,25 +340,25 @@ Item {
                 label: qsTr("Gamma")
                 enabled: !toneLocked
                 from: 50; to: 200
-                value: converter.gamma
-                valueText: converter.gamma + "%"
-                onValueCommitted: (v) => converter.setGamma(Math.round(v))
+                value: imageFilters.gamma
+                valueText: imageFilters.gamma + "%"
+                onValueCommitted: (v) => imageFilters.setGamma(Math.round(v))
             }
             StudioSlider {
                 Layout.fillWidth: true
                 studio: root.studio
                 label: qsTr("Blur")
                 from: 0; to: 6
-                value: converter.blur
-                onValueCommitted: (v) => converter.setBlur(Math.round(v))
+                value: imageFilters.blur
+                onValueCommitted: (v) => imageFilters.setBlur(Math.round(v))
             }
             StudioSlider {
                 Layout.fillWidth: true
                 studio: root.studio
                 label: qsTr("Posterize (RGB)")
                 from: 0; to: 30
-                value: converter.posterizeRgb
-                onValueCommitted: (v) => converter.setPosterizeRgb(Math.round(v))
+                value: imageFilters.posterizeRgb
+                onValueCommitted: (v) => imageFilters.setPosterizeRgb(Math.round(v))
             }
         }
 
@@ -382,19 +382,19 @@ Item {
                     qsTr("JJN"),
                     qsTr("Bayer")
                 ]
-                Component.onCompleted: currentIndex = converter.ditherMode
-                onActivated: converter.setDitherMode(currentIndex)
+                Component.onCompleted: currentIndex = imageFilters.ditherMode
+                onActivated: imageFilters.setDitherMode(currentIndex)
             }
             StudioSlider {
                 Layout.fillWidth: true
                 studio: root.studio
                 label: qsTr("B&W threshold")
-                visible: root.monoOutput && converter.ditherMode === 0
+                visible: root.monoOutput && imageFilters.ditherMode === 0
                 from: 0
                 to: 255
                 liveUpdate: false
-                value: converter.monoThreshold
-                onValueCommitted: (v) => converter.setMonoThreshold(Math.round(v))
+                value: displayOutput.monoThreshold
+                onValueCommitted: (v) => displayOutput.setMonoThreshold(Math.round(v))
             }
         }
 
@@ -407,24 +407,24 @@ Item {
             StudioCheck {
                 studio: root.studio
                 text: qsTr("Sharpen")
-                checked: converter.sharpen
-                onToggled: converter.setSharpen(checked)
+                checked: imageFilters.sharpen
+                onToggled: imageFilters.setSharpen(checked)
             }
             StudioSlider {
                 Layout.fillWidth: true
                 studio: root.studio
                 label: qsTr("Sobel edges")
                 from: 0; to: 100
-                value: converter.sobelEdges
-                onValueCommitted: (v) => converter.setSobelEdges(Math.round(v))
+                value: imageFilters.sobelEdges
+                onValueCommitted: (v) => imageFilters.setSobelEdges(Math.round(v))
             }
             StudioSlider {
                 Layout.fillWidth: true
                 studio: root.studio
                 label: qsTr("Posterize (gray)")
                 from: 0; to: 30
-                value: converter.posterizeGray
-                onValueCommitted: (v) => converter.setPosterizeGray(Math.round(v))
+                value: imageFilters.posterizeGray
+                onValueCommitted: (v) => imageFilters.setPosterizeGray(Math.round(v))
             }
             StudioField { studio: root.studio; labelText: qsTr("Contours") }
             StudioCombo {
@@ -436,24 +436,24 @@ Item {
                     qsTr("4-connected"),
                     qsTr("8-connected")
                 ]
-                Component.onCompleted: currentIndex = converter.contourMode
-                onActivated: converter.setContourMode(currentIndex)
+                Component.onCompleted: currentIndex = imageFilters.contourMode
+                onActivated: imageFilters.setContourMode(currentIndex)
             }
 
             StudioCheck {
                 id: maskOn
                 studio: root.studio
                 text: qsTr("Enable color mask")
-                checked: converter.colorMaskEnabled
-                onToggled: converter.setColorMaskEnabled(checked)
+                checked: imageFilters.colorMaskEnabled
+                onToggled: imageFilters.setColorMaskEnabled(checked)
             }
             StudioTextField {
                 Layout.fillWidth: true
                 visible: maskOn.checked
                 studio: root.studio
-                text: converter.maskColor
+                text: imageFilters.maskColor
                 placeholderText: "#RRGGBB"
-                onEditingFinished: converter.setMaskColor(text)
+                onEditingFinished: imageFilters.setMaskColor(text)
             }
             StudioSlider {
                 Layout.fillWidth: true
@@ -461,8 +461,8 @@ Item {
                 studio: root.studio
                 label: qsTr("Tolerance")
                 from: 0; to: 255
-                value: converter.maskTolerance
-                onValueCommitted: (v) => converter.setMaskTolerance(Math.round(v))
+                value: imageFilters.maskTolerance
+                onValueCommitted: (v) => imageFilters.setMaskTolerance(Math.round(v))
             }
             StudioSlider {
                 Layout.fillWidth: true
@@ -470,8 +470,8 @@ Item {
                 studio: root.studio
                 label: qsTr("Amplify")
                 from: 1; to: 10
-                value: converter.maskAmplify
-                onValueCommitted: (v) => converter.setMaskAmplify(Math.round(v))
+                value: imageFilters.maskAmplify
+                onValueCommitted: (v) => imageFilters.setMaskAmplify(Math.round(v))
             }
         }
 
@@ -480,7 +480,7 @@ Item {
             studio: root.studio
             iconName: "eraser"
             text: qsTr("Reset all filters")
-            onClicked: converter.resetFilters()
+            onClicked: imageFilters.resetFilters()
         }
 
         Label {
@@ -494,15 +494,23 @@ Item {
     }
 
     Connections {
-        target: converter
-        function onRotationChanged() { rotationSeg.selectedValue = converter.rotation }
-        function onScaleModeChanged() { scaleCombo.currentIndex = converter.scaleMode }
-        function onContourModeChanged() { contourCombo.currentIndex = converter.contourMode }
-        function onDitherModeChanged() {
-            ditherCombo.currentIndex = converter.ditherMode
-            ditherComboTop.currentIndex = converter.ditherMode
-        }
-        function onTonePresetChanged() { toneCombo.currentIndex = converter.tonePreset }
+        target: imageTransform
+        function onRotationChanged() { rotationSeg.selectedValue = imageTransform.rotation }
+        function onScaleModeChanged() { scaleCombo.currentIndex = imageTransform.scaleMode }
+    }
+
+    Connections {
+        target: displayOutput
         function onEncodingModeChanged() { encQuickCombo.syncEncQuick() }
+    }
+
+    Connections {
+        target: imageFilters
+        function onContourModeChanged() { contourCombo.currentIndex = imageFilters.contourMode }
+        function onDitherModeChanged() {
+            ditherCombo.currentIndex = imageFilters.ditherMode
+            ditherComboTop.currentIndex = imageFilters.ditherMode
+        }
+        function onTonePresetChanged() { toneCombo.currentIndex = imageFilters.tonePreset }
     }
 }

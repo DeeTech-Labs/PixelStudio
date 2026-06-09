@@ -1,6 +1,6 @@
 #include "persistence/AppSettings.h"
 
-#include "app/CodeSyntaxTheme.h"
+#include "app/code/CodeSyntaxTheme.h"
 #include "translation/AppLocale.h"
 #include "translation/TranslationStore.h"
 #include "persistence/AppPaths.h"
@@ -181,5 +181,24 @@ void AppSettings::setDocumentsRoot(const QString &path)
         return;
     m_documentsRoot = path;
     saveValue(QStringLiteral("app/documentsRoot"), path);
+    emit documentsRootChanged();
+}
+
+void AppSettings::reloadFromDisk()
+{
+    m_settings.sync();
+    load();
+    emit languageCodeChanged();
+    emit showSidebarChanged();
+    emit showPixelGridChanged();
+    emit codeWrapChanged();
+    emit confirmExitChanged();
+    emit confirmCloseTabChanged();
+    emit restoreLastProjectChanged();
+    emit showWelcomeOnStartupChanged();
+    emit projectAutosaveChanged();
+    emit projectAutosaveSecondsChanged();
+    emit projectsRootChanged();
+    emit exportsRootChanged();
     emit documentsRootChanged();
 }

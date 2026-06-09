@@ -9,7 +9,7 @@ pragma Translator: Workspace
 PixelFrame {
     id: root
 
-    required property var exportBridge
+    required property var win
     signal saveCode()
     signal saveBin()
 
@@ -37,7 +37,7 @@ PixelFrame {
                 iconName: "copy"
                 toolTipText: qsTr("Copy")
                 enabled: converter.generatedCode.length > 0
-                onClicked: converter.copyToClipboard(converter.generatedCode)
+                onClicked: exporter.copyToClipboard(converter.generatedCode)
             }
             StudioIconButton {
                 studio: root.studio
@@ -67,15 +67,15 @@ PixelFrame {
                 small: true
                 iconName: "settings"
                 toolTipText: qsTr("Code options")
-                onClicked: exportBridge.openExportHub()
+                onClicked: win.openExportHub()
             }
             StudioIconButton {
                 studio: root.studio
                 small: true
                 iconName: "columns-2"
-                toolTipText: converter.showFullGeneratedCode ? qsTr("Preview") : qsTr("Show all")
+                toolTipText: codeGen.showFullGeneratedCode ? qsTr("Preview") : qsTr("Show all")
                 visible: converter.generatedCodeTruncated
-                onClicked: converter.setShowFullGeneratedCode(!converter.showFullGeneratedCode)
+                onClicked: codeGen.setShowFullGeneratedCode(!codeGen.showFullGeneratedCode)
             }
         }
 

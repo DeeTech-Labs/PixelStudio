@@ -1,5 +1,7 @@
-#include "translation/AppLocale.h"
 #include "io/ImageLoader.h"
+
+#include "LogCategories.h"
+#include "translation/AppLocale.h"
 
 #include <QClipboard>
 #include <QFileInfo>
@@ -75,6 +77,12 @@ void ImageLoader::setLoading(bool loading)
     emit loadingChanged();
 }
 
+void ImageLoader::emitLoadError(const QString &message)
+{
+    qCWarning(lcIo) << message;
+    emit error(message);
+}
+
 FileLoadOutcome ImageLoader::loadFileWorker(const QUrl &url)
 {
     FileLoadOutcome outcome;
@@ -131,7 +139,7 @@ bool ImageLoader::loadFromFile(const QUrl &url, QImage &outImage)
 {
     const FileLoadOutcome outcome = loadFileWorker(url);
     if (!outcome.ok) {
-        emit error(outcome.errorMessage);
+        emitLoadError(outcome.errorMessage);
         return false;
     }
     outImage = outcome.image;
@@ -152,7 +160,7 @@ void ImageLoader::onFileLoadFinished()
     setLoading(false);
     const FileLoadOutcome outcome = m_fileLoadWatcher.result();
     if (!outcome.ok) {
-        emit error(outcome.errorMessage);
+        emitLoadError(outcome.errorMessage);
         return;
     }
     emit loaded(outcome.image, outcome.sourceUrl);
@@ -162,20 +170,20 @@ bool ImageLoader::loadFromClipboard(QImage &outImage)
 {
     QClipboard *clipboard = QGuiApplication::clipboard();
     if (!clipboard) {
-        emit error(AppLocale::tr("No image in clipboard"));
+        emitLoadError(AppLocale::tr("No image in clipboard"));
         return false;
     }
 
     const QMimeData *mime = clipboard->mimeData(QClipboard::Clipboard);
     const QImage img = imageFromMimeData(mime);
     if (img.isNull()) {
-        emit error(AppLocale::tr("No image in clipboard"));
+        emitLoadError(AppLocale::tr("No image in clipboard"));
         return false;
     }
 
     const qint64 pixels = qint64(img.width()) * qint64(img.height());
     if (pixels > kMaxImagePixels) {
-        emit error(AppLocale::tr("Image resolution is too large (%1×%2)")
+        emitLoadError(AppLocale::tr("Image resolution is too large (%1×%2)")
                        .arg(img.width())
                        .arg(img.height()));
         return false;
@@ -189,7 +197,7 @@ void ImageLoader::loadFromUrl(const QString &urlString)
 {
     QUrl url(urlString.trimmed());
     if (!url.isValid() || (!url.scheme().startsWith("http", Qt::CaseInsensitive) && url.scheme() != "file")) {
-        emit error(AppLocale::tr("Invalid URL: %1").arg(urlString));
+        emitLoadError(AppLocale::tr("Invalid URL: %1").arg(urlString));
         return;
     }
     if (url.scheme() == "file") {
@@ -208,7 +216,7 @@ void ImageLoader::loadFromUrl(const QString &urlString)
             reply->setProperty("tooLarge", true);
             reply->abort();
             setLoading(false);
-            emit error(AppLocale::tr("Image is too large (over %1 MB)")
+            emitLoadError(AppLocale::tr("Image is too large (over %1 MB)")
                            .arg(kMaxImageBytes / (1024 * 1024)));
         }
     });
@@ -227,31 +235,31 @@ void ImageLoader::onUrlDownloadFinished()
         return;
 
     if (reply->error() != QNetworkReply::NoError) {
-        emit error(AppLocale::tr("Download error: %1").arg(reply->errorString()));
+        emitLoadError(AppLocale::tr("Download error: %1").arg(reply->errorString()));
         return;
     }
 
     const QString contentType = reply->header(QNetworkRequest::ContentTypeHeader).toString();
     if (!contentType.isEmpty() && !contentType.startsWith(QStringLiteral("image/"), Qt::CaseInsensitive)) {
-        emit error(AppLocale::tr("URL is not an image (Content-Type: %1)").arg(contentType));
+        emitLoadError(AppLocale::tr("URL is not an image (Content-Type: %1)").arg(contentType));
         return;
     }
 
     QByteArray data = reply->readAll();
     if (data.size() > kMaxImageBytes) {
-        emit error(AppLocale::tr("Image is too large (over %1 MB)")
+        emitLoadError(AppLocale::tr("Image is too large (over %1 MB)")
                        .arg(kMaxImageBytes / (1024 * 1024)));
         return;
     }
     QImage img;
     if (!img.loadFromData(data)) {
-        emit error(AppLocale::tr("Could not decode image from URL"));
+        emitLoadError(AppLocale::tr("Could not decode image from URL"));
         return;
     }
 
     const qint64 pixels = qint64(img.width()) * qint64(img.height());
     if (pixels > kMaxImagePixels) {
-        emit error(AppLocale::tr("Image resolution is too large (%1×%2)")
+        emitLoadError(AppLocale::tr("Image resolution is too large (%1×%2)")
                        .arg(img.width())
                        .arg(img.height()));
         return;

@@ -69,7 +69,7 @@ Rectangle {
                     color: studio.border
                 }
 
-                readonly property bool gridActive: modelData.action === "grid" && appSettings.showPixelGrid
+                readonly property bool gridActive: modelData.action === "grid" && viewport.showGrid
 
                 ToolButton {
                     visible: modelData.sep !== true

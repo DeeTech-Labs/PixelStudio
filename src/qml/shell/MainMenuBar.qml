@@ -65,7 +65,7 @@ MenuBar {
             text: qsTr("Save project")
             shortcut: "Ctrl+Shift+S"
             onTriggered: {
-                if (!converter.saveProject())
+                if (!project.saveProject())
                     dialogs.saveProjectDialog.open()
             }
         }
@@ -95,9 +95,9 @@ MenuBar {
             Menu {
                 id: openRecentMenu
                 title: qsTr("Open recent")
-                enabled: converter.recentFiles.length > 0
+                enabled: project.recentFiles.length > 0
                 Instantiator {
-                    model: converter.recentFiles
+                    model: project.recentFiles
                     delegate: MenuItem {
                         required property var modelData
                         text: modelData.name
@@ -119,37 +119,37 @@ MenuBar {
             Action {
                 text: qsTr("Export panel…")
                 shortcut: "Ctrl+Shift+E"
-                onTriggered: win.exportBridge.openExportHub()
+                onTriggered: win.openExportHub()
             }
             MenuSeparator {}
             Action {
                 text: qsTr("Save code to file…")
                 shortcut: "Ctrl+Alt+S"
                 enabled: converter.generatedCode.length > 0
-                onTriggered: win.exportBridge.saveCode()
+                onTriggered: win.saveCode()
             }
             Action {
                 text: qsTr("Save binary…")
                 enabled: converter.hasPreview
-                onTriggered: win.exportBridge.saveBin()
+                onTriggered: win.saveBin()
             }
             MenuSeparator {}
             Action {
                 text: qsTr("Batch export .h…")
                 shortcut: "Ctrl+Shift+B"
-                onTriggered: win.exportBridge.batchExport()
+                onTriggered: win.batchExport()
             }
             Action {
                 text: qsTr("Build sprite atlas…")
-                onTriggered: win.exportBridge.buildAtlas()
+                onTriggered: win.buildAtlas()
             }
             MenuSeparator {}
             Menu {
                 id: menuBarRecentExportsMenu
                 title: qsTr("Recent exports")
-                enabled: converter.recentExports.length > 0
+                enabled: exporter.recentExports.length > 0
                 Instantiator {
-                    model: converter.recentExports
+                    model: exporter.recentExports
                     delegate: MenuItem {
                         required property var modelData
                         text: modelData.name
@@ -186,7 +186,7 @@ MenuBar {
             shortcut: "Ctrl+C"
             enabled: converter.generatedCode.length > 0
             onTriggered: {
-                converter.copyToClipboard(converter.generatedCode)
+                exporter.copyToClipboard(converter.generatedCode)
                 win.statusMessage(qsTr("Copied to clipboard"))
             }
         }
@@ -230,8 +230,8 @@ MenuBar {
         Action {
             text: qsTr("Show pixel grid")
             checkable: true
-            checked: appSettings.showPixelGrid
-            onTriggered: appSettings.setShowPixelGrid(!appSettings.showPixelGrid)
+            checked: viewport.showGrid
+            onTriggered: win.togglePixelGrid()
         }
     }
 
@@ -241,35 +241,35 @@ MenuBar {
         Action {
             text: qsTr("Rotate 90° clockwise")
             shortcut: "Ctrl+R"
-            onTriggered: converter.rotateClockwise()
+            onTriggered: imageTransform.rotateClockwise()
         }
         Action {
             text: qsTr("Flip horizontally")
             checkable: true
-            checked: converter.flipHorizontal
-            onTriggered: converter.setFlipHorizontal(!converter.flipHorizontal)
+            checked: imageTransform.flipHorizontal
+            onTriggered: imageTransform.setFlipHorizontal(!imageTransform.flipHorizontal)
         }
         Action {
             text: qsTr("Flip vertically")
             checkable: true
-            checked: converter.flipVertical
-            onTriggered: converter.setFlipVertical(!converter.flipVertical)
+            checked: imageTransform.flipVertical
+            onTriggered: imageTransform.setFlipVertical(!imageTransform.flipVertical)
         }
         Action {
             text: qsTr("Invert result colors")
             checkable: true
-            checked: converter.encodingIsMono1Bit ? converter.invertMono : converter.filterInvert
+            checked: displayOutput.encodingIsMono1Bit ? imageTransform.invertMono : imageFilters.filterInvert
             onTriggered: {
-                if (converter.encodingIsMono1Bit)
-                    converter.setInvertMono(!converter.invertMono)
+                if (displayOutput.encodingIsMono1Bit)
+                    imageTransform.setInvertMono(!imageTransform.invertMono)
                 else
-                    converter.setFilterInvert(!converter.filterInvert)
+                    imageFilters.setFilterInvert(!imageFilters.filterInvert)
             }
         }
         MenuSeparator {}
         Action {
             text: qsTr("Swap display width and height")
-            onTriggered: converter.swapDisplayDimensions()
+            onTriggered: displayOutput.swapDisplayDimensions()
         }
     }
 
@@ -296,8 +296,8 @@ MenuBar {
         Action {
             text: qsTr("Watch folder")
             checkable: true
-            checked: converter.watchFolderActive
-            onTriggered: converter.setWatchFolderActive(!converter.watchFolderActive)
+            checked: exporter.watchFolderActive
+            onTriggered: exporter.setWatchFolderActive(!exporter.watchFolderActive)
         }
     }
 
@@ -331,7 +331,7 @@ MenuBar {
         }
         Action {
             text: qsTr("Open settings folder")
-            onTriggered: converter.openAppDataFolder()
+            onTriggered: project.openAppDataFolder()
         }
         Action {
             text: qsTr("Import settings backup…")
@@ -348,7 +348,7 @@ MenuBar {
         MenuSeparator {}
         Action {
             text: qsTr("Open PixelStudio folder")
-            onTriggered: converter.openUserDocumentsFolder()
+            onTriggered: project.openUserDocumentsFolder()
         }
         MenuSeparator {}
         Action {

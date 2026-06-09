@@ -32,6 +32,7 @@ public:
     QVariantList availableLanguages() const;
     bool hasLanguage(const QString &code) const;
     QString effectiveLanguageCode(const QString &languageCode) const;
+    LanguageInfo catalogInfoForCode(const QString &code) const;
 
 private:
     TranslationStore() = default;

@@ -61,7 +61,7 @@ Item {
                 text: qsTr("Copy generated code")
                 enabled: converter.generatedCode.length > 0
                 onClicked: {
-                    converter.copyToClipboard(converter.generatedCode)
+                    exporter.copyToClipboard(converter.generatedCode)
                     root.notify(qsTr("Copied to clipboard"))
                 }
             }
@@ -73,7 +73,7 @@ Item {
                 text: qsTr("Copy array only")
                 enabled: converter.generatedCode.length > 0
                 onClicked: {
-                    converter.copyGeneratedArray()
+                    codeGen.copyGeneratedArray()
                     root.notify(qsTr("Array copied to clipboard"))
                 }
             }
@@ -99,7 +99,7 @@ Item {
                 compact: root.compact
                 iconName: "save"
                 text: qsTr("Save project")
-                enabled: converter.projectFile.toString().length > 0
+                enabled: project.projectFile.toString().length > 0
                 onClicked: root.saveProjectRequested()
             }
             StudioButton {

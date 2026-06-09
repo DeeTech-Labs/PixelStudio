@@ -10,7 +10,7 @@ Item {
     id: root
 
     required property var studio
-    required property var exportBridge
+    required property var win
     property int viewMode: 0
     property var onOpenRequested: null
     signal pasteRequested()
@@ -27,11 +27,11 @@ Item {
 
     readonly property string outputSubtitle: {
         if (!converter.hasPreview)
-            return converter.displayWidth + " × " + converter.displayHeight
-        let s = converter.displayWidth + " × " + converter.displayHeight
-        s += " · " + converter.encodingModeName
-        if (converter.dataByteCount > 0)
-            s += " · " + converter.dataByteCount + " B"
+            return displayOutput.displayWidth + " × " + displayOutput.displayHeight
+        let s = displayOutput.displayWidth + " × " + displayOutput.displayHeight
+        s += " · " + displayOutput.encodingModeName
+        if (displayOutput.dataByteCount > 0)
+            s += " · " + displayOutput.dataByteCount + " B"
         return s
     }
 
@@ -41,10 +41,10 @@ Item {
         return converter.sourceWidth + " × " + converter.sourceHeight
     }
 
-    readonly property bool compactDisplay: converter.displayWidth * converter.displayHeight <= 16384
+    readonly property bool compactDisplay: displayOutput.displayWidth * displayOutput.displayHeight <= 16384
 
     Rectangle {
-        visible: converter.batchRunning || converter.batchProgress > 0
+        visible: exporter.batchRunning || exporter.batchProgress > 0
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
@@ -59,31 +59,31 @@ Item {
             anchors.fill: parent
             anchors.margins: studio.spacingSm
             Label {
-                text: converter.batchRunning ? qsTr("Batch export…") : qsTr("Batch finished")
+                text: exporter.batchRunning ? qsTr("Batch export…") : qsTr("Batch finished")
                 font.pixelSize: studio.fontSizeSm
                 color: studio.text
             }
             Item { Layout.fillWidth: true }
-            ProgressBar { Layout.preferredWidth: 160; from: 0; to: 100; value: converter.batchProgress }
+            ProgressBar { Layout.preferredWidth: 160; from: 0; to: 100; value: exporter.batchProgress }
             Label {
-                text: converter.batchProgress + "%"
+                text: exporter.batchProgress + "%"
                 font.family: studio.fontFamilyMono
                 font.pixelSize: studio.fontSizeXs
                 color: studio.textMuted
             }
             StudioButton {
-                visible: converter.batchRunning
+                visible: exporter.batchRunning
                 studio: root.studio
                 compact: true
                 text: qsTr("Cancel")
-                onClicked: converter.cancelBatchExport()
+                onClicked: exporter.cancelBatchExport()
             }
         }
     }
 
     SplitView {
         anchors.fill: parent
-        anchors.topMargin: (converter.batchRunning || converter.batchProgress > 0) ? 36 : 0
+        anchors.topMargin: (exporter.batchRunning || exporter.batchProgress > 0) ? 36 : 0
         orientation: Qt.Horizontal
 
         handle: Rectangle {
@@ -168,11 +168,11 @@ Item {
                         studio: root.studio
                         visible: converter.hasPreview
                         allowUpscale: true
-                        showGrid: appSettings.showPixelGrid
+                        showGrid: viewport.showGrid
                         autoPixelGrid: false
                         imageSource: converter.previewPath
-                        overlayTopLeft: converter.displayWidth + " × " + converter.displayHeight
-                        overlayTopRight: converter.encodingModeName
+                        overlayTopLeft: displayOutput.displayWidth + " × " + displayOutput.displayHeight
+                        overlayTopRight: displayOutput.encodingModeName
                     }
                     Label {
                         anchors.centerIn: parent
@@ -201,7 +201,7 @@ Item {
                 SplitView.preferredHeight: studio.codeDockHeight
                 SplitView.minimumHeight: 100
                 studio: root.studio
-                exportBridge: root.exportBridge
+                win: root.win
                 onSaveCode: root.saveCodeRequested()
                 onSaveBin: root.saveBinRequested()
             }
@@ -216,7 +216,7 @@ Item {
             SplitView.minimumWidth: appSettings.showSidebar ? 220 : 0
             SplitView.maximumWidth: appSettings.showSidebar ? 400 : 0
             studio: root.studio
-            exportBridge: root.exportBridge
+            win: root.win
             onNotify: (m) => root.notify(m)
         }
     }

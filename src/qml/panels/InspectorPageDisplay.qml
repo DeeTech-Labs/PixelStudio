@@ -11,7 +11,7 @@ Item {
     required property var studio
     property bool showFlash: false
 
-    readonly property bool monoEncoding: converter.encodingIsMono1Bit
+    readonly property bool monoEncoding: displayOutput.encodingIsMono1Bit
 
     implicitHeight: column.implicitHeight
     Layout.fillWidth: true
@@ -27,10 +27,10 @@ Item {
             font.family: studio.fontFamilyMono
             font.pixelSize: studio.fontSizeSm
             color: studio.textMuted
-            text: converter.displayWidth + " × " + converter.displayHeight
-                  + " · " + converter.encodingModeName
-                  + " · " + converter.dataByteCount + " " + qsTr("B")
-                  + (converter.codeUseProgmem ? " · PROGMEM" : "")
+            text: displayOutput.displayWidth + " × " + displayOutput.displayHeight
+                  + " · " + displayOutput.encodingModeName
+                  + " · " + displayOutput.dataByteCount + " " + qsTr("B")
+                  + (codeGen.codeUseProgmem ? " · PROGMEM" : "")
         }
 
         StudioSection {
@@ -44,13 +44,13 @@ Item {
                 Layout.fillWidth: true
                 studio: root.studio
                 readonly property int _localeRev: converter.localizationRevision
-                model: _localeRev >= 0 ? converter.displayPresets() : []
+                model: _localeRev >= 0 ? displayOutput.displayPresets() : []
                 textRole: "name"
                 Component.onCompleted: syncPreset()
                 onActivated: {
                     const item = model[currentIndex]
                     if (item && item.id)
-                        converter.setProfileId(item.id)
+                        displayOutput.setProfileId(item.id)
                 }
             }
 
@@ -63,10 +63,10 @@ Item {
                     from: 8
                     to: 2048
                     stepSize: 1
-                    value: converter.displayWidth
+                    value: displayOutput.displayWidth
                     onValueCommitted: (v) => {
-                        if (v !== converter.displayWidth)
-                            converter.setDisplayWidth(v)
+                        if (v !== displayOutput.displayWidth)
+                            displayOutput.setDisplayWidth(v)
                     }
                 }
                 StudioSpin {
@@ -75,10 +75,10 @@ Item {
                     label: qsTr("Height")
                     from: 8
                     to: 2048
-                    value: converter.displayHeight
+                    value: displayOutput.displayHeight
                     onValueCommitted: (v) => {
-                        if (v !== converter.displayHeight)
-                            converter.setDisplayHeight(v)
+                        if (v !== displayOutput.displayHeight)
+                            displayOutput.setDisplayHeight(v)
                     }
                 }
             }
@@ -87,7 +87,7 @@ Item {
                 Layout.fillWidth: true
                 studio: root.studio
                 text: qsTr("Swap width ↔ height")
-                onClicked: converter.swapDisplayDimensions()
+                onClicked: displayOutput.swapDisplayDimensions()
             }
         }
 
@@ -101,13 +101,13 @@ Item {
                 Layout.fillWidth: true
                 studio: root.studio
                 readonly property int _localeRev: converter.localizationRevision
-                model: _localeRev >= 0 ? converter.availableEncodingModesForUi() : []
+                model: _localeRev >= 0 ? displayOutput.availableEncodingModesForUi() : []
                 textRole: "name"
                 Component.onCompleted: syncEnc()
                 onActivated: {
                     const item = model[currentIndex]
                     if (item && item.mode !== undefined)
-                        converter.setEncodingMode(item.mode)
+                        displayOutput.setEncodingMode(item.mode)
                 }
             }
         }
@@ -127,8 +127,8 @@ Item {
                     qsTr("Vertical page buffer"),
                     qsTr("Vertical column")
                 ]
-                Component.onCompleted: currentIndex = converter.monoLayout
-                onActivated: converter.setMonoLayout(currentIndex)
+                Component.onCompleted: currentIndex = displayOutput.monoLayout
+                onActivated: displayOutput.setMonoLayout(currentIndex)
             }
         }
 
@@ -142,40 +142,40 @@ Item {
                 id: arrayField
                 Layout.fillWidth: true
                 studio: root.studio
-                text: converter.arrayName
-                onEditingFinished: converter.setArrayName(text)
+                text: codeGen.arrayName
+                onEditingFinished: codeGen.setArrayName(text)
             }
 
             StudioCheck {
                 studio: root.studio
                 text: qsTr("Include header comments")
-                checked: converter.codeIncludeComments
-                onToggled: converter.setCodeIncludeComments(checked)
+                checked: codeGen.codeIncludeComments
+                onToggled: codeGen.setCodeIncludeComments(checked)
             }
             StudioCheck {
                 studio: root.studio
                 text: qsTr("PROGMEM (Arduino)")
-                checked: converter.codeUseProgmem
-                onToggled: converter.setCodeUseProgmem(checked)
+                checked: codeGen.codeUseProgmem
+                onToggled: codeGen.setCodeUseProgmem(checked)
             }
             StudioCheck {
                 studio: root.studio
                 text: qsTr("static storage")
-                checked: converter.codeStaticStorage
-                onToggled: converter.setCodeStaticStorage(checked)
+                checked: codeGen.codeStaticStorage
+                onToggled: codeGen.setCodeStaticStorage(checked)
             }
             StudioCheck {
-                visible: converter.encodingMode === 4 || converter.encodingMode === 8
+                visible: displayOutput.encodingMode === 4 || displayOutput.encodingMode === 8
                 studio: root.studio
                 text: qsTr("RGB565 big-endian (SPI)")
-                checked: converter.rgb565BigEndian
-                onToggled: converter.setRgb565BigEndian(checked)
+                checked: codeGen.rgb565BigEndian
+                onToggled: codeGen.setRgb565BigEndian(checked)
             }
             StudioCheck {
                 studio: root.studio
                 text: qsTr("sRGB → linear quantization")
-                checked: converter.linearColorSpace
-                onToggled: converter.setLinearColorSpace(checked)
+                checked: displayOutput.linearColorSpace
+                onToggled: displayOutput.setLinearColorSpace(checked)
             }
             StudioField { studio: root.studio; labelText: qsTr("DMA buffer alignment") }
             StudioCombo {
@@ -189,7 +189,7 @@ Item {
                 ]
                 textRole: "label"
                 Component.onCompleted: syncDmaAlign()
-                onActivated: converter.setCodeDmaAlign(model[currentIndex].value)
+                onActivated: codeGen.setCodeDmaAlign(model[currentIndex].value)
             }
         }
 
@@ -234,7 +234,7 @@ Item {
 
     function syncPreset() {
         for (let i = 0; i < presetCombo.model.length; ++i) {
-            if (presetCombo.model[i].id === converter.profileId) {
+            if (presetCombo.model[i].id === displayOutput.profileId) {
                 presetCombo.currentIndex = i
                 return
             }
@@ -243,7 +243,7 @@ Item {
 
     function syncDmaAlign() {
         for (let i = 0; i < dmaAlignCombo.model.length; ++i) {
-            if (dmaAlignCombo.model[i].value === converter.codeDmaAlign) {
+            if (dmaAlignCombo.model[i].value === codeGen.codeDmaAlign) {
                 dmaAlignCombo.currentIndex = i
                 return
             }
@@ -252,7 +252,7 @@ Item {
 
     function syncEnc() {
         for (let i = 0; i < encCombo.model.length; ++i) {
-            if (encCombo.model[i].mode === converter.encodingMode) {
+            if (encCombo.model[i].mode === displayOutput.encodingMode) {
                 encCombo.currentIndex = i
                 return
             }
@@ -263,26 +263,30 @@ Item {
         for (let i = 0; i < converter.flashReport.length; ++i) {
             const row = converter.flashReport[i]
             if (row.recommended && row.mode !== undefined) {
-                converter.setEncodingMode(row.mode)
+                displayOutput.setEncodingMode(row.mode)
                 return
             }
         }
     }
 
     Connections {
-        target: converter
+        target: displayOutput
         function onProfileIdChanged() { syncPreset() }
         function onDisplayWidthChanged() { syncPreset() }
         function onDisplayHeightChanged() { syncPreset() }
         function onColorModeChanged() { syncEnc() }
         function onEncodingModeChanged() { syncEnc() }
-        function onCodeDmaAlignChanged() { syncDmaAlign() }
         function onMonoLayoutChanged() {
-            monoLayoutCombo.currentIndex = converter.monoLayout
+            monoLayoutCombo.currentIndex = displayOutput.monoLayout
         }
+    }
+
+    Connections {
+        target: codeGen
+        function onCodeDmaAlignChanged() { syncDmaAlign() }
         function onArrayNameChanged() {
-            if (arrayField.text !== converter.arrayName)
-                arrayField.text = converter.arrayName
+            if (arrayField.text !== codeGen.arrayName)
+                arrayField.text = codeGen.arrayName
         }
     }
 }

@@ -41,6 +41,7 @@ qt_standard_project_setup(REQUIRES 6.8)
 set(PIXELSTUDIO_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set(PIXELSTUDIO_CORE_SOURCES
+    src/LogCategories.cpp
     src/processing/DisplayProfile.cpp
     src/processing/ImageFiltersPipeline.cpp
     src/processing/DisplayRasterizer.cpp
@@ -49,6 +50,7 @@ set(PIXELSTUDIO_CORE_SOURCES
     src/processing/EncodingAnalyzer.cpp
     src/processing/PixelFormatCatalog.cpp
     src/processing/PixelFormatPacking.cpp
+    src/processing/PreviewPalette.cpp
     src/export/BatchExportService.cpp
     src/export/SpriteAtlasService.cpp
     src/persistence/AppPaths.cpp
@@ -62,7 +64,7 @@ set(PIXELSTUDIO_CORE_SOURCES
     src/persistence/RecentPreview.cpp
     src/persistence/StoredPath.cpp
     src/persistence/SettingsSchema.cpp
-    src/app/CodeSyntaxTheme.cpp
+    src/app/code/CodeSyntaxTheme.cpp
     src/io/ImageLoader.cpp
     src/io/BinaryExporter.cpp
     src/io/HeaderImportService.cpp
@@ -80,21 +82,33 @@ target_link_libraries(pixelstudio_core PUBLIC Qt6::Gui Qt6::Concurrent Qt6::Netw
 
 set(APP_SOURCES
     src/main.cpp
-    src/app/AppTranslations.cpp
-    src/app/AppTranslations.h
-    src/app/CodeSyntaxHighlighter.cpp
-    src/app/CodeSyntaxHighlighter.h
-    src/app/DisplayConverter.cpp
-    src/app/DisplayConverter.h
-    src/app/PreviewImageProvider.cpp
-    src/app/PreviewImageProvider.h
-    src/app/converter/ImagePipelineController.cpp
-    src/app/converter/ProjectSessionController.cpp
-    src/app/converter/ExportController.cpp
-    src/app/StudioTabController.cpp
-    src/app/StudioTabController.h
-    src/app/WinTaskbarRecent.cpp
-    src/app/WinTaskbarRecent.h
+    src/app/shell/AppTranslations.cpp
+    src/app/shell/AppTranslations.h
+    src/app/code/CodeSyntaxHighlighter.cpp
+    src/app/code/CodeSyntaxHighlighter.h
+    src/app/studio/DisplayConverter.cpp
+    src/app/studio/DisplayConverter.h
+    src/app/preview/PreviewImageProvider.cpp
+    src/app/preview/PreviewImageProvider.h
+    src/app/studio/controllers/image/ImageFilterController.cpp
+    src/app/studio/controllers/image/ImageTransformController.cpp
+    src/app/studio/controllers/output/DisplayOutputController.cpp
+    src/app/studio/controllers/output/CodeGenController.cpp
+    src/app/studio/controllers/output/ViewportController.cpp
+    src/app/studio/pipeline/ImagePipelineController.cpp
+    src/app/studio/controllers/project/ProjectController.cpp
+    src/app/studio/controllers/export/ExportController.cpp
+    src/app/tabs/StudioTabController.cpp
+    src/app/tabs/StudioTabController.h
+    src/app/tabs/TabPersistence.cpp
+    src/app/tabs/TabSessionStore.cpp
+    src/app/tabs/TabProjectSync.cpp
+    src/app/tabs/TabRestoreService.cpp
+    src/app/tabs/TabPreloadService.cpp
+    src/app/tabs/TabWelcomeService.cpp
+    src/app/studio/TabStateService.cpp
+    src/app/shell/WinTaskbarRecent.cpp
+    src/app/shell/WinTaskbarRecent.h
 )
 
 qt_add_executable(appPixelStudio ${APP_SOURCES})

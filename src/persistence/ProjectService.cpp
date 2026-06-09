@@ -1,3 +1,4 @@
+#include "LogCategories.h"
 #include "translation/AppLocale.h"
 #include "persistence/ProjectFormat.h"
 #include "persistence/ProjectService.h"
@@ -28,12 +29,14 @@ bool ProjectService::save(const StudioProject &project, const QUrl &url, QString
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         if (errorText)
             *errorText = AppLocale::tr("Failed to save project: %1").arg(path);
+        qCWarning(lcPersistence) << "Project save open failed:" << path;
         return false;
     }
     file.write(ProjectFormat::encode(project));
     if (!file.commit()) {
         if (errorText)
             *errorText = AppLocale::tr("Failed to save project: %1").arg(path);
+        qCWarning(lcPersistence) << "Project save commit failed:" << path;
         return false;
     }
     return true;
@@ -70,6 +73,7 @@ bool ProjectService::load(const QUrl &url, StudioProject *project, QString *erro
     if (!file.open(QIODevice::ReadOnly)) {
         if (errorText)
             *errorText = AppLocale::tr("Failed to open project: %1").arg(path);
+        qCWarning(lcPersistence) << "Project load open failed:" << path;
         return false;
     }
     return ProjectFormat::decode(file.readAll(), project, errorText);

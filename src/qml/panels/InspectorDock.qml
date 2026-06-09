@@ -10,7 +10,7 @@ Rectangle {
     id: root
 
     required property var studio
-    required property var exportBridge
+    required property var win
     property int pageIndex: 0
     signal notify(string message)
 
@@ -167,7 +167,7 @@ Rectangle {
         id: exportPageComponent
         InspectorPageExport {
             studio: root.studio
-            exportBridge: root.exportBridge
+            win: root.win
             width: inspectorScroll.availableWidth > 0
                 ? inspectorScroll.availableWidth
                 : root.width

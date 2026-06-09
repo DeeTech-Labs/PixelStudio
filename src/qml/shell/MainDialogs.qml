@@ -46,7 +46,7 @@ Item {
     FileDialog {
         id: openDialog
         title: qsTr("Open image")
-        currentFolder: win.localFolderUrl(converter.lastOpenImageDir, pixelStudioProjectsUrl)
+        currentFolder: win.localFolderUrl(project.lastOpenImageDir, pixelStudioProjectsUrl)
         nameFilters: [
             qsTr("Images") + " (*.png *.jpg *.jpeg *.bmp *.gif *.webp)",
             qsTr("All files") + " (*)"
@@ -70,7 +70,7 @@ Item {
         defaultSuffix: "pspx"
         nameFilters: [ qsTr("PixelStudio project") + " (*.pspx)" ]
         onAccepted: {
-            if (converter.saveProjectAs(selectedFile)) {
+            if (project.saveProjectAs(selectedFile)) {
                 tabController.syncActiveTabTitle()
                 win.statusMessage(qsTr("Project saved"))
             }
@@ -80,12 +80,12 @@ Item {
     FileDialog {
         id: importHeaderDialog
         title: qsTr("Import C header")
-        currentFolder: win.localFolderUrl(converter.lastOpenImageDir, pixelStudioExportsUrl)
+        currentFolder: win.localFolderUrl(project.lastOpenImageDir, pixelStudioExportsUrl)
         nameFilters: [ qsTr("C header") + " (*.h *.hpp)", qsTr("All files") + " (*)" ]
         onAccepted: {
             if (tabController.activeIsWelcome)
                 tabController.newProjectTab(qsTr("Untitled"))
-            if (converter.importHeader(selectedFile))
+            if (project.importHeader(selectedFile))
                 tabController.syncActiveTabTitle()
         }
     }
@@ -94,8 +94,8 @@ Item {
         id: saveCodeDialog
         title: qsTr("Save code")
         fileMode: FileDialog.SaveFile
-        currentFolder: win.localFolderUrl(converter.lastExportDir, pixelStudioExportsUrl)
-        currentFile: converter.suggestedCodeFileUrl()
+        currentFolder: win.localFolderUrl(exporter.lastExportDir, pixelStudioExportsUrl)
+        currentFile: exporter.suggestedCodeFileUrl()
         defaultSuffix: "h"
         nameFilters: [
             qsTr("C header") + " (*.h)",
@@ -103,7 +103,7 @@ Item {
             qsTr("All files") + " (*)"
         ]
         onAccepted: {
-            if (converter.saveCodeToFile(selectedFile))
+            if (exporter.saveCodeToFile(selectedFile))
                 win.statusMessage(qsTr("File saved"))
         }
     }
@@ -112,14 +112,14 @@ Item {
         id: saveBinDialog
         title: qsTr("Save binary")
         fileMode: FileDialog.SaveFile
-        currentFolder: win.localFolderUrl(converter.lastExportDir, pixelStudioExportsUrl)
+        currentFolder: win.localFolderUrl(exporter.lastExportDir, pixelStudioExportsUrl)
         defaultSuffix: "bin"
         nameFilters: [
             qsTr("Binary") + " (*.bin)",
             qsTr("All files") + " (*)"
         ]
         onAccepted: {
-            if (converter.saveBinaryToFile(selectedFile))
+            if (exporter.saveBinaryToFile(selectedFile))
                 win.statusMessage(qsTr("File saved"))
         }
     }
@@ -128,7 +128,7 @@ Item {
         id: batchOpenDialog
         title: qsTr("Select images for batch")
         fileMode: FileDialog.OpenFiles
-        currentFolder: win.localFolderUrl(converter.lastOpenImageDir, pixelStudioProjectsUrl)
+        currentFolder: win.localFolderUrl(project.lastOpenImageDir, pixelStudioProjectsUrl)
         nameFilters: [
             qsTr("Images") + " (*.png *.jpg *.jpeg *.bmp *.gif *.webp)",
             qsTr("All files") + " (*)"
@@ -144,7 +144,7 @@ Item {
         id: atlasOpenDialog
         title: qsTr("Select images for atlas")
         fileMode: FileDialog.OpenFiles
-        currentFolder: win.localFolderUrl(converter.lastOpenImageDir, pixelStudioProjectsUrl)
+        currentFolder: win.localFolderUrl(project.lastOpenImageDir, pixelStudioProjectsUrl)
         nameFilters: [
             qsTr("Images") + " (*.png *.jpg *.jpeg *.bmp *.gif *.webp)",
             qsTr("All files") + " (*)"
@@ -160,11 +160,11 @@ Item {
         id: atlasSaveDialog
         title: qsTr("Save atlas header")
         fileMode: FileDialog.SaveFile
-        currentFolder: win.localFolderUrl(converter.lastExportDir, pixelStudioExportsUrl)
+        currentFolder: win.localFolderUrl(exporter.lastExportDir, pixelStudioExportsUrl)
         defaultSuffix: "h"
         nameFilters: [ qsTr("C header") + " (*.h)" ]
         onAccepted: {
-            if (converter.buildSpriteAtlas(win.pendingAtlasFiles, selectedFile, converter.displayWidth, converter.displayHeight))
+            if (exporter.buildSpriteAtlas(win.pendingAtlasFiles, selectedFile, displayOutput.displayWidth, displayOutput.displayHeight))
                 win.statusMessage(qsTr("Atlas saved"))
         }
     }
@@ -194,8 +194,8 @@ Item {
         title: qsTr("Select watch output folder")
         currentFolder: pixelStudioWatchUrl
         onAccepted: {
-            converter.configureWatchFolders(watchInputDialog.selectedFolder, selectedFolder)
-            converter.setWatchFolderActive(true)
+            exporter.configureWatchFolders(watchInputDialog.selectedFolder, selectedFolder)
+            exporter.setWatchFolderActive(true)
             win.statusMessage(qsTr("Watch folder enabled"))
         }
     }
@@ -205,7 +205,7 @@ Item {
         title: qsTr("Export settings backup")
         currentFolder: pixelStudioDataPath
         onAccepted: {
-            if (converter.exportSettingsTo(selectedFolder))
+            if (project.exportSettingsTo(selectedFolder))
                 win.statusMessage(qsTr("Settings exported"))
             else
                 win.statusMessage(qsTr("Settings export failed"))
@@ -217,8 +217,8 @@ Item {
         title: qsTr("Import settings backup")
         currentFolder: pixelStudioDataPath
         onAccepted: {
-            if (converter.importSettingsFrom(selectedFolder))
-                win.statusMessage(qsTr("Settings imported — restart app"))
+            if (project.importSettingsFrom(selectedFolder))
+                win.statusMessage(qsTr("Settings imported"))
             else
                 win.statusMessage(qsTr("Settings import failed"))
         }
@@ -228,11 +228,11 @@ Item {
         id: batchSaveDialog
         title: qsTr("Save batch header")
         fileMode: FileDialog.SaveFile
-        currentFolder: win.localFolderUrl(converter.lastExportDir, pixelStudioExportsUrl)
+        currentFolder: win.localFolderUrl(exporter.lastExportDir, pixelStudioExportsUrl)
         defaultSuffix: "h"
         nameFilters: [ qsTr("C header") + " (*.h)" ]
         onAccepted: {
-            converter.enqueueBatchCodeExport(win.pendingBatchFiles, selectedFile)
+            exporter.enqueueBatchCodeExport(win.pendingBatchFiles, selectedFile)
             win.statusMessage(qsTr("Batch queued"))
         }
     }
@@ -263,7 +263,7 @@ Item {
         property int bodyWidth: win.dialogBodyWidth(320, root.studio.spacingXl * 4)
         width: bodyWidth + 2 * padding
         onAccepted: {
-            converter.resetSession()
+            project.resetSession()
             win.statusMessage(qsTr("Session reset"))
         }
         background: Rectangle {

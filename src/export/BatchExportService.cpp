@@ -1,5 +1,6 @@
 #include "export/BatchExportService.h"
 
+#include "LogCategories.h"
 #include "translation/AppLocale.h"
 
 #include <QFile>
@@ -177,7 +178,10 @@ void BatchExportService::onFinished()
 
     m_running = false;
     emit runningChanged();
-    emit finished(writeOk, error.isEmpty() && !writeOk ? AppLocale::tr("Batch conversion failed") : error);
+    const QString finishedError = error.isEmpty() && !writeOk ? AppLocale::tr("Batch conversion failed") : error;
+    if (!writeOk && !finishedError.isEmpty())
+        qCWarning(lcExport) << finishedError;
+    emit finished(writeOk, finishedError);
 
     processQueue();
 }

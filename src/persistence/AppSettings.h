@@ -46,6 +46,7 @@ public:
 
     Q_INVOKABLE QVariantList availableLanguages() const;
     Q_INVOKABLE void resetUiDefaults();
+    void reloadFromDisk();
 
 public slots:
     void setLanguageCode(const QString &code);

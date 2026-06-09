@@ -63,42 +63,42 @@ Dialog {
                             return null
                         return langs[idx]
                     }
+                    readonly property string authorName: {
+                        const lang = languageCredits.selectedLanguage
+                        return lang && lang.author ? String(lang.author) : ""
+                    }
+                    readonly property var contributorNames: {
+                        const lang = languageCredits.selectedLanguage
+                        return lang && lang.contributors ? lang.contributors : []
+                    }
+                    readonly property bool showCredits: languageCredits.selectedLanguage
+                        && (languageCredits.authorName.length > 0
+                            || languageCredits.contributorNames.length > 0)
 
                     ColumnLayout {
                         id: creditsColumn
                         width: parent.width
                         spacing: theme.spacingXs
-                        visible: languageCredits.selectedLanguage
-                                 && languageCredits.selectedLanguage.code !== "system"
-                                 && (languageCredits.selectedLanguage.author
-                                     || (languageCredits.selectedLanguage.contributors
-                                         && languageCredits.selectedLanguage.contributors.length > 0))
+                        visible: languageCredits.showCredits
 
                         Text {
                             Layout.fillWidth: true
-                            visible: languageCredits.selectedLanguage
-                                     && languageCredits.selectedLanguage.author
+                            visible: languageCredits.authorName.length > 0
                             wrapMode: Text.WordWrap
                             font.family: theme.fontFamily
                             font.pixelSize: theme.fontSizeXs
                             color: theme.textMuted
-                            text: languageCredits.selectedLanguage
-                                  ? qsTr("Author: %1").arg(languageCredits.selectedLanguage.author)
-                                  : ""
+                            text: qsTr("Author: %1").arg(languageCredits.authorName)
                         }
                         Text {
                             Layout.fillWidth: true
-                            visible: languageCredits.selectedLanguage
-                                     && languageCredits.selectedLanguage.contributors
-                                     && languageCredits.selectedLanguage.contributors.length > 0
+                            visible: languageCredits.contributorNames.length > 0
                             wrapMode: Text.WordWrap
                             font.family: theme.fontFamily
                             font.pixelSize: theme.fontSizeXs
                             color: theme.textMuted
-                            text: languageCredits.selectedLanguage
-                                  ? qsTr("Contributors: %1").arg(
-                                        languageCredits.selectedLanguage.contributors.join(", "))
-                                  : ""
+                            text: qsTr("Contributors: %1").arg(
+                                      languageCredits.contributorNames.join(", "))
                         }
                     }
                 }
@@ -114,8 +114,11 @@ Dialog {
                     Layout.fillWidth: true
                     studio: theme
                     text: qsTr("Show pixel grid")
-                    checked: appSettings.showPixelGrid
-                    onToggled: appSettings.setShowPixelGrid(checked)
+                    checked: viewport.showGrid
+                    onToggled: {
+                        viewport.setShowGrid(checked)
+                        appSettings.setShowPixelGrid(checked)
+                    }
                 }
                 StudioCheck {
                     Layout.fillWidth: true

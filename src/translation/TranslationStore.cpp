@@ -180,13 +180,39 @@ QString TranslationStore::translate(const QString &context, const QString &sourc
     return *sourceIt;
 }
 
+TranslationStore::LanguageInfo TranslationStore::catalogInfoForCode(const QString &code) const
+{
+    const QString normalized = code.toLower();
+    for (const LanguageInfo &info : m_catalog) {
+        if (info.code == normalized)
+            return info;
+    }
+
+    const QString builtinPath = QStringLiteral(":/translations/%1.json").arg(normalized);
+    const LanguageInfo builtin = catalogEntryFromJson(builtinPath, false);
+    if (!builtin.code.isEmpty())
+        return builtin;
+
+    const QString userPath = AppPaths::userTranslationsDir() + QLatin1Char('/') + normalized
+                             + QStringLiteral(".json");
+    return catalogEntryFromJson(userPath, true);
+}
+
 QVariantList TranslationStore::availableLanguages() const
 {
     QVariantList list;
     const QString systemLabel = translate(QStringLiteral("Core"), QStringLiteral("System language"));
+    const LanguageInfo resolvedSystem = catalogInfoForCode(effectiveLanguageCode(QStringLiteral("system")));
+    QVariantList systemContributors;
+    systemContributors.reserve(resolvedSystem.contributors.size());
+    for (const QString &contributor : resolvedSystem.contributors)
+        systemContributors.append(contributor);
+
     list.append(QVariantMap{{QStringLiteral("code"), QStringLiteral("system")},
                             {QStringLiteral("name"),
-                             systemLabel.isEmpty() ? QStringLiteral("System language") : systemLabel}});
+                             systemLabel.isEmpty() ? QStringLiteral("System language") : systemLabel},
+                            {QStringLiteral("author"), resolvedSystem.author},
+                            {QStringLiteral("contributors"), systemContributors}});
     for (const LanguageInfo &info : m_catalog) {
         if (info.code == QStringLiteral("system"))
             continue;

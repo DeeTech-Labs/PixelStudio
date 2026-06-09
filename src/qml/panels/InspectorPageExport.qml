@@ -9,7 +9,7 @@ pragma Translator: Inspector
 Item {
     id: root
     required property var studio
-    required property var exportBridge
+    required property var win
     signal notify(string message)
 
     implicitHeight: column.implicitHeight
@@ -26,10 +26,10 @@ Item {
             studio: root.studio
             compact: true
             onNotify: (m) => root.notify(m)
-            onSaveProjectRequested: root.exportBridge.saveProject()
-            onSaveProjectAsRequested: root.exportBridge.saveProjectAs()
-            onSaveCodeRequested: root.exportBridge.saveCode()
-            onSaveBinRequested: root.exportBridge.saveBin()
+            onSaveProjectRequested: root.win.saveProject()
+            onSaveProjectAsRequested: root.win.saveProjectAs()
+            onSaveCodeRequested: root.win.saveCode()
+            onSaveBinRequested: root.win.saveBin()
         }
 
         StudioSection {
@@ -42,16 +42,16 @@ Item {
                 studio: root.studio
                 compact: true
                 text: qsTr("Import C header…")
-                onClicked: root.exportBridge.importHeader()
+                onClicked: root.win.importHeader()
             }
             StudioButton {
                 Layout.fillWidth: true
                 studio: root.studio
                 compact: true
-                text: converter.watchFolderActive
+                text: exporter.watchFolderActive
                        ? qsTr("Watch folder: on")
                        : qsTr("Configure watch folder…")
-                onClicked: root.exportBridge.configureWatchFolder()
+                onClicked: root.win.configureWatchFolder()
             }
         }
 
@@ -64,14 +64,14 @@ Item {
                 studio: root.studio
                 compact: true
                 text: qsTr("Batch export .h…")
-                onClicked: root.exportBridge.batchExport()
+                onClicked: root.win.batchExport()
             }
             StudioButton {
                 Layout.fillWidth: true
                 studio: root.studio
                 compact: true
                 text: qsTr("Build sprite atlas…")
-                onClicked: root.exportBridge.buildAtlas()
+                onClicked: root.win.buildAtlas()
             }
         }
     }

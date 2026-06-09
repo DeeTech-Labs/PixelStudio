@@ -1,5 +1,6 @@
 #include "persistence/ProjectFormatDecoder.h"
 
+#include "LogCategories.h"
 #include "persistence/ProjectFormat.h"
 #include "persistence/ProjectFormatIo.h"
 #include "persistence/ProjectService.h"
@@ -322,6 +323,7 @@ bool ProjectFormatDecoder::decodeFile(const QByteArray &fileData, StudioProject 
     if (!parsePayload(payload, version, project, errorText)) {
         if (errorText && errorText->isEmpty())
             *errorText = QStringLiteral("Corrupt project data");
+        qCWarning(lcPersistence) << "Project decode failed:" << (errorText ? *errorText : QString());
         return false;
     }
     if (project->name.isEmpty())

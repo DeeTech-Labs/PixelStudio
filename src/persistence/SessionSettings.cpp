@@ -5,6 +5,7 @@
 #include "persistence/ProjectFormat.h"
 #include "persistence/SettingsSchema.h"
 #include "persistence/StoredPath.h"
+#include "LogCategories.h"
 
 #include <QDateTime>
 #include <QFileInfo>
@@ -96,6 +97,11 @@ SessionSnapshot SessionSettings::defaultSnapshot()
     return SessionSnapshot{};
 }
 
+bool SessionSettings::containsKey(const QString &key) const
+{
+    return m_settings.contains(key);
+}
+
 void SessionSettings::load(SessionSnapshot *snapshot) const
 {
     if (!snapshot)
@@ -151,6 +157,7 @@ void SessionSettings::save(const SessionSnapshot &snapshot)
     m_settings.setValue(QStringLiteral("code/linearColorSpace"), snapshot.linearColorSpace);
     writeFilterParams(m_settings, snapshot.filterParams);
     syncNow();
+    qCDebug(lcPersistence) << "Session snapshot saved";
 }
 
 void SessionSettings::loadUiState(SessionUiState *state) const

@@ -55,6 +55,7 @@ public:
 
     void load(SessionSnapshot *snapshot) const;
     void save(const SessionSnapshot &snapshot);
+    bool containsKey(const QString &key) const;
 
     void loadUiState(SessionUiState *state) const;
     void saveUiState(const SessionUiState &state);

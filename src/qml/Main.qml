@@ -147,31 +147,54 @@ ApplicationWindow {
             tabController.syncActiveTabTitle()
     }
 
+    function saveProject() {
+        if (!project.saveProject())
+            mainDialogs.saveProjectDialog.open()
+    }
+
+    function saveProjectAs() {
+        mainDialogs.saveProjectDialog.open()
+    }
+
+    function saveCode() {
+        mainDialogs.saveCodeDialog.open()
+    }
+
+    function saveBin() {
+        mainDialogs.saveBinDialog.open()
+    }
+
+    function batchExport() {
+        mainDialogs.batchOpenDialog.open()
+    }
+
+    function buildAtlas() {
+        mainDialogs.atlasOpenDialog.open()
+    }
+
+    function openExportHub() {
+        if (tabController.activeIsWelcome)
+            tabController.newProjectTab(qsTr("Untitled"))
+        if (appSettings.showSidebar)
+            studioLayout.inspectorPageIndex = 2
+    }
+
+    function importHeader() {
+        mainDialogs.importHeaderDialog.open()
+    }
+
+    function configureWatchFolder() {
+        mainDialogs.watchInputDialog.open()
+    }
+
+    function togglePixelGrid() {
+        viewport.setShowGrid(!viewport.showGrid)
+        appSettings.setShowPixelGrid(viewport.showGrid)
+    }
+
     Connections {
         target: tabController
         function onTabActionFailed(message) { statusMessage(message) }
-    }
-
-    QtObject {
-        id: exportBridge
-        function notify(msg) { statusMessage(msg) }
-        function saveProject() {
-            if (!converter.saveProject())
-                mainDialogs.saveProjectDialog.open()
-        }
-        function saveProjectAs() { mainDialogs.saveProjectDialog.open() }
-        function saveCode() { mainDialogs.saveCodeDialog.open() }
-        function saveBin() { mainDialogs.saveBinDialog.open() }
-        function batchExport() { mainDialogs.batchOpenDialog.open() }
-        function buildAtlas() { mainDialogs.atlasOpenDialog.open() }
-        function openExportHub() {
-            if (tabController.activeIsWelcome)
-                tabController.newProjectTab(qsTr("Untitled"))
-            if (appSettings.showSidebar)
-                studioLayout.inspectorPageIndex = 2
-        }
-        function importHeader() { mainDialogs.importHeaderDialog.open() }
-        function configureWatchFolder() { mainDialogs.watchInputDialog.open() }
     }
 
     function statusMessage(msg) {
@@ -235,8 +258,8 @@ ApplicationWindow {
     readonly property string statusSpecs: {
         if (!converter.hasPreview)
             return ""
-        return converter.displayWidth + " × " + converter.displayHeight
-            + "  " + converter.encodingModeName
+        return displayOutput.displayWidth + " × " + displayOutput.displayHeight
+            + "  " + displayOutput.encodingModeName
             + "  " + converter.previewColorCount + " " + qsTr("Colors")
     }
 
@@ -253,8 +276,8 @@ ApplicationWindow {
         onSettingsRequested: mainDialogs.preferencesDialog.open()
         onNewProjectRequested: tabController.newProjectTab(qsTr("Untitled"))
         onOpenRequested: mainDialogs.openDialog.open()
-        onSaveRequested: exportBridge.saveProject()
-        onToggleGridRequested: appSettings.setShowPixelGrid(!appSettings.showPixelGrid)
+        onSaveRequested: saveProject()
+        onToggleGridRequested: togglePixelGrid()
         onViewDualRequested: setWorkspaceView(0)
         onViewSourceRequested: setWorkspaceView(1)
         onViewOutputRequested: setWorkspaceView(3)
@@ -268,8 +291,8 @@ ApplicationWindow {
             onOpenProjectRequested: mainDialogs.openProjectDialog.open()
             onNewProjectRequested: tabController.newProjectTab(qsTr("Untitled"))
             onContinueLastProjectRequested: {
-                if (converter.hasRestorableProject)
-                    tabController.openProjectTab(localFolderUrl(converter.lastProjectPath, pixelStudioProjectsUrl))
+                if (project.hasRestorableProject)
+                    tabController.openProjectTab(localFolderUrl(project.lastProjectPath, pixelStudioProjectsUrl))
             }
             onRecentItemRequested: (path, tabId) => {
                 if (tabId && tabId.length > 0 && tabController.activateTab(tabId))
@@ -286,7 +309,7 @@ ApplicationWindow {
             visible: !tabController.activeIsWelcome
             studio: appPalette
             viewMode: tabController.activeViewMode
-            exportBridge: exportBridge
+            win: window
             onOpenRequested: function() { mainDialogs.openDialog.open() }
             onPasteRequested: importClipboard()
             onViewModeRequested: (mode) => setWorkspaceView(mode)

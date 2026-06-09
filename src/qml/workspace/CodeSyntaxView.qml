@@ -25,16 +25,7 @@ Item {
     }
 
     readonly property real lineHeight: studio.fontSizeSm * 1.5
-    readonly property int lineCount: {
-        if (sourceText.length === 0)
-            return 0
-        let count = 1
-        for (let i = 0; i < sourceText.length; ++i) {
-            if (sourceText.charCodeAt(i) === 10)
-                count++
-        }
-        return count
-    }
+    readonly property int lineCount: syntaxHighlighter.lineCount
 
     readonly property real documentHeight: Math.max(lineHeight, lineCount * lineHeight) + studio.spacingXs * 2
     readonly property real documentWidth: root.wrap

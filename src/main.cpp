@@ -19,13 +19,14 @@
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
 #endif
-#include "app/AppTranslations.h"
+#include "app/shell/AppTranslations.h"
 #include "app/AppVersion.h"
-#include "app/CodeSyntaxHighlighter.h"
-#include "app/DisplayConverter.h"
-#include "app/PreviewImageProvider.h"
-#include "app/StudioTabController.h"
-#include "app/WinTaskbarRecent.h"
+#include "app/code/CodeSyntaxHighlighter.h"
+#include "app/studio/DisplayConverter.h"
+#include "app/studio/controllers/project/ProjectController.h"
+#include "app/preview/PreviewImageProvider.h"
+#include "app/tabs/StudioTabController.h"
+#include "app/shell/WinTaskbarRecent.h"
 #include "translation/TranslationStore.h"
 #include "persistence/AppPaths.h"
 #include "persistence/AppSettings.h"
@@ -66,6 +67,13 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("qtRuntimeVersion",
                                               QString::fromLatin1(qVersion()));
     engine.rootContext()->setContextProperty("converter", &converter);
+    engine.rootContext()->setContextProperty("imageFilters", converter.imageFilters());
+    engine.rootContext()->setContextProperty("imageTransform", converter.imageTransform());
+    engine.rootContext()->setContextProperty("displayOutput", converter.displayOutput());
+    engine.rootContext()->setContextProperty("codeGen", converter.codeGen());
+    engine.rootContext()->setContextProperty("viewport", converter.viewport());
+    engine.rootContext()->setContextProperty("project", converter.project());
+    engine.rootContext()->setContextProperty("exporter", converter.exportPanel());
     engine.rootContext()->setContextProperty("tabController", &tabController);
     engine.rootContext()->setContextProperty("appSettings", &appSettings);
     engine.rootContext()->setContextProperty("pixelStudioDataPath",
@@ -80,9 +88,9 @@ int main(int argc, char *argv[])
                                               QUrl::fromLocalFile(AppPaths::watchDir()));
 
     const auto syncTaskbarRecent = [&]() {
-        winTaskbarRecent.syncFromRecentFiles(converter.recentFiles());
+        winTaskbarRecent.syncFromRecentFiles(converter.project()->recentFiles());
     };
-    QObject::connect(&converter, &DisplayConverter::recentFilesChanged, &app, syncTaskbarRecent);
+    QObject::connect(converter.project(), &ProjectController::recentFilesChanged, &app, syncTaskbarRecent);
     syncTaskbarRecent();
 
     QObject::connect(&appSettings, &AppSettings::languageCodeChanged, &engine, [&]() {
