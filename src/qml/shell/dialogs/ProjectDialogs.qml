@@ -22,7 +22,7 @@ Item {
         title: qsTr("Open image")
         currentFolder: WorkflowRouter.localFolderUrl(workspace.project.lastOpenImageDir, workspace.settings.projectsUrl)
         nameFilters: [
-            qsTr("Images") + " (*.png *.jpg *.jpeg *.bmp *.gif *.webp)",
+            qsTr("Images") + " " + imageFormats.extensionPattern,
             qsTr("All files") + " (*)"
         ]
         onAccepted: WorkflowRouter.openLocalPath(selectedFile)

@@ -24,6 +24,9 @@ QString watchDir();
 // User-editable translation bundles (%AppData%/DeeTech/PixelStudio/translations).
 QString userTranslationsDir();
 
+// Application logs and crash dumps under dataRoot()/logs.
+QString logsDir();
+
 // Derived/runtime data under dataRoot()/cache (regenerable, not authoritative).
 QString cacheDir();
 QString tabCacheDir();

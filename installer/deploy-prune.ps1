@@ -104,9 +104,7 @@ function Get-DeployPruneGroups {
                 'imageformats\qjp2.dll'
                 'imageformats\qpdf.dll'
                 'imageformats\qtga.dll'
-                'imageformats\qtiff.dll'
                 'imageformats\qwbmp.dll'
-                'imageformats\qwebp.dll'
             )
         }
         @{

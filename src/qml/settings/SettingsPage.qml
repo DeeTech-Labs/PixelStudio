@@ -528,6 +528,12 @@ Item {
                         StudioButton {
                             Layout.fillWidth: true
                             studio: root.studio
+                            text: qsTr("Open logs folder")
+                            onClicked: workspace.project.openLogsFolder()
+                        }
+                        StudioButton {
+                            Layout.fillWidth: true
+                            studio: root.studio
                             text: qsTr("Reset UI defaults")
                             onClicked: workspace.settings.resetUiDefaults()
                         }

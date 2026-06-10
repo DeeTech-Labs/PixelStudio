@@ -37,6 +37,9 @@
 #include "persistence/AppSettings.h"
 #include "persistence/ProjectFormat.h"
 #include "persistence/SessionSettings.h"
+#include "io/ImageFormatsProvider.h"
+#include "logging/AppLogger.h"
+#include "logging/CrashHandler.h"
 
 int main(int argc, char *argv[])
 {
@@ -53,6 +56,11 @@ int main(int argc, char *argv[])
     const QString appVersion = AppVersion::display();
     app.setApplicationVersion(appVersion);
     AppPaths::ensureLayout();
+    AppLogger::install();
+#ifdef Q_OS_WIN
+    CrashHandler::install();
+#endif
+    AppLogger::logSessionStart(appVersion);
     TranslationStore::instance().refreshCatalog();
 
     AppSettings appSettings;
@@ -65,6 +73,7 @@ int main(int argc, char *argv[])
     InspectorImagePresenter inspectorImage(&converter);
     InspectorDisplayPresenter inspectorDisplay(&converter);
     WinTaskbarRecent winTaskbarRecent;
+    ImageFormatsProvider imageFormats;
 
     qmlRegisterUncreatableMetaObject(StudioViewMode::staticMetaObject,
                                      "PixelStudio",
@@ -86,6 +95,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("inspectorDisplay", &inspectorDisplay);
     engine.rootContext()->setContextProperty("pixelStudioDataPath",
                                               QUrl::fromLocalFile(AppPaths::dataRoot()));
+    engine.rootContext()->setContextProperty("imageFormats", &imageFormats);
 
     const auto syncTaskbarRecent = [&]() {
         winTaskbarRecent.syncFromRecentFiles(converter.project()->recentFiles());
@@ -109,6 +119,7 @@ int main(int argc, char *argv[])
     });
 
     QObject::connect(&app, &QGuiApplication::aboutToQuit, &tabController, [&tabController, &converter]() {
+        AppLogger::logSessionEnd();
         tabController.persist();
         converter.flushPersistence();
     });
