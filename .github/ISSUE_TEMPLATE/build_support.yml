@@ -16,7 +16,7 @@ body:
       options:
         - Локальная сборка (cmake / ninja)
         - windeployqt / запуск exe
-        - installer/build-installer.ps1
+        - installer/windows-build-installer.ps1
         - GitHub Actions (CI / Release)
     validations:
       required: true

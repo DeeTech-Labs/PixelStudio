@@ -7,6 +7,11 @@ project(PixelStudio LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum macOS deployment version")
+    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS architectures (universal binary)")
+endif()
+
 if(PS_VERSION_FIX STREQUAL "")
     set(PS_VERSION_FIX_LITERAL "0")
 else()
@@ -56,6 +61,7 @@ set(PIXELSTUDIO_CORE_SOURCES
     src/export/BatchExportService.cpp
     src/export/SpriteAtlasService.cpp
     src/persistence/AppPaths.cpp
+    src/persistence/PathCompare.cpp
     src/persistence/AppSettings.cpp
     src/persistence/SessionSettings.cpp
     src/persistence/ProjectService.cpp
@@ -248,12 +254,38 @@ qt_add_qml_module(PixelStudio
     RESOURCE_PREFIX /
 )
 
-set_target_properties(PixelStudio PROPERTIES
+set(_ps_bundle_props
     MACOSX_BUNDLE_BUNDLE_VERSION ${PS_VERSION_DISPLAY}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PS_VERSION_DISPLAY}
     MACOSX_BUNDLE TRUE
-    WIN32_EXECUTABLE TRUE
 )
+if(WIN32)
+    set(_ps_bundle_props WIN32_EXECUTABLE TRUE)
+endif()
+if(APPLE)
+    set(PS_MACOS_ICNS ${CMAKE_CURRENT_SOURCE_DIR}/resources/ico/PixelStudio.icns)
+    if(NOT EXISTS ${PS_MACOS_ICNS})
+        message(STATUS "PixelStudio.icns missing — running installer/macos-make-icns.sh")
+        execute_process(
+            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/installer/macos-make-icns.sh
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            RESULT_VARIABLE _ps_icns_result
+        )
+        if(NOT _ps_icns_result EQUAL 0 OR NOT EXISTS ${PS_MACOS_ICNS})
+            message(FATAL_ERROR "Failed to generate ${PS_MACOS_ICNS}. Run installer/macos-make-icns.sh on macOS.")
+        endif()
+    endif()
+
+    list(APPEND _ps_bundle_props
+        MACOSX_BUNDLE_BUNDLE_NAME PixelStudio
+        MACOSX_BUNDLE_GUI_IDENTIFIER com.deetech.pixelstudio
+        MACOSX_BUNDLE_ICON_FILE PixelStudio.icns
+        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/src/mac/Info.plist.in
+    )
+    set_source_files_properties(${PS_MACOS_ICNS} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    target_sources(PixelStudio PRIVATE ${PS_MACOS_ICNS})
+endif()
+set_target_properties(PixelStudio PROPERTIES ${_ps_bundle_props})
 
 target_link_libraries(PixelStudio
     PRIVATE pixelstudio_core Qt6::Quick Qt6::QuickControls2 Qt6::Gui Qt6::Network Qt6::Concurrent Qt6::Svg

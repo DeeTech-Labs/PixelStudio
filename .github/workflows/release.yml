@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   release-windows:
-    name: Build installer and publish release
+    name: Build Windows installer
     runs-on: windows-latest
     timeout-minutes: 90
     steps:
@@ -66,35 +66,143 @@ jobs:
         shell: pwsh
         run: |
           $buildDir = Join-Path $PWD "build\Release"
-          & "$PWD\installer\build-installer.ps1" -QtDir $env:QT_ROOT_DIR -BuildDir $buildDir
+          & "$PWD\installer\windows-build-installer.ps1" -QtDir $env:QT_ROOT_DIR -BuildDir $buildDir
 
-      - name: Write release notes
-        id: meta
-        shell: pwsh
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-windows
+          path: installer/output/PixelStudio-Setup-*.exe
+          if-no-files-found: error
+
+  release-macos:
+    name: Build macOS DMG
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+
+      - name: Resolve release tag
+        id: tag
+        shell: bash
         run: |
-          $setup = Get-ChildItem installer/output -Filter "PixelStudio-Setup-*.exe" |
-            Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          if (-not $setup) { throw "Installer not found in installer/output" }
-          $hash = (Get-FileHash $setup.FullName -Algorithm SHA256).Hash
-          # Relative path with forward slashes — absolute D:\a\... paths break GITHUB_OUTPUT (\a escape).
-          $assetPath = "installer/output/$($setup.Name)"
-          @(
-            "## Checksums",
-            "",
-            "| File | SHA256 |",
-            "|------|--------|",
-            "| $($setup.Name) | ``$hash`` |",
-            "",
-            "Built from tag ``${{ steps.tag.outputs.name }}`` on Windows x64 (Qt 6.8.2, MSVC 2022)."
-          ) | Set-Content -Path release-notes-extra.md -Encoding utf8NoBOM
-          "path=$assetPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8NoBOM
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            t="${{ inputs.tag }}"
+          else
+            t="${{ github.ref_name }}"
+          fi
+          if [[ ! "$t" =~ ^v[0-9]+(\.[0-9]+){2}([a-zA-Z])?$ ]]; then
+            echo "Invalid tag: $t (expected vMajor.Minor.Patch or vMajor.Minor.Patchfix, e.g. v1.2.3b)" >&2
+            exit 1
+          fi
+          echo "name=$t" >> "$GITHUB_OUTPUT"
+
+      - name: Verify tag matches cmake version
+        shell: bash
+        run: |
+          set -euo pipefail
+          source ./cmake/read-pixel-studio-version.sh
+          test_pixel_studio_release_tag '${{ steps.tag.outputs.name }}' "$PWD"
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-macos-qt
+
+      - name: Build macOS bundle and DMG
+        shell: bash
+        run: |
+          set -euo pipefail
+          export QT_DIR="$QT_ROOT_DIR"
+          chmod +x installer/macos-*.sh cmake/read-pixel-studio-version.sh
+          installer/macos-build-bundle.sh
+          installer/macos-make-dmg.sh
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-macos
+          path: installer/output/PixelStudio_*_macos_universal.dmg
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [release-windows, release-macos]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            t="${{ inputs.tag }}"
+          else
+            t="${{ github.ref_name }}"
+          fi
+          echo "name=$t" >> "$GITHUB_OUTPUT"
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v6
+        with:
+          path: release-artifacts
+
+      - name: Prepare release assets and notes
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          win_assets=(release-artifacts/release-windows/PixelStudio-Setup-*.exe)
+          mac_assets=(release-artifacts/release-macos/PixelStudio_*_macos_universal.dmg)
+          if [[ ${#win_assets[@]} -eq 0 ]]; then
+            echo "Windows installer not found" >&2
+            exit 1
+          fi
+          if [[ ${#mac_assets[@]} -eq 0 ]]; then
+            echo "macOS DMG not found" >&2
+            exit 1
+          fi
+          win_file="${win_assets[0]}"
+          mac_file="${mac_assets[0]}"
+          win_name="$(basename "$win_file")"
+          mac_name="$(basename "$mac_file")"
+          win_hash="$(sha256sum "$win_file" | awk '{print $1}')"
+          mac_hash="$(sha256sum "$mac_file" | awk '{print $1}')"
+          mkdir -p release-upload
+          cp "$win_file" "release-upload/$win_name"
+          cp "$mac_file" "release-upload/$mac_name"
+          cat > release-notes-extra.md <<EOF
+## Checksums
+
+| File | SHA256 |
+|------|--------|
+| $win_name | \`$win_hash\` |
+| $mac_name | \`$mac_hash\` |
+
+Built from tag \`${{ steps.tag.outputs.name }}\` on Windows x64 (Qt 6.8.2, MSVC 2022) and macOS universal (Qt 6.8.2, clang).
+EOF
+          {
+            echo "win_name=$win_name"
+            echo "mac_name=$mac_name"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.name }}
           name: PixelStudio ${{ steps.tag.outputs.name }}
-          files: ${{ steps.meta.outputs.path }}
+          files: |
+            release-upload/${{ steps.meta.outputs.win_name }}
+            release-upload/${{ steps.meta.outputs.mac_name }}
           body_path: release-notes-extra.md
           generate_release_notes: true
           fail_on_unmatched_files: true

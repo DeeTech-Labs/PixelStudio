@@ -258,7 +258,7 @@ QtObject {
         case "toggleWatch": workspace.exportPanel.setWatchFolderActive(!workspace.exportPanel.watchFolderActive); break
         case "preferences": openSettingsTab(0); break
         case "resetUi": workspace.settings.resetUiDefaults(); break
-        case "openSettingsFolder": workspace.project.openAppDataFolder(); break
+        case "openSettingsFolder": workspace.project.openApplicationDataFolder(); break
         case "resetSession": dialogs.resetSessionConfirmDialog.open(); break
         case "openDocumentsFolder": workspace.project.openUserDocumentsFolder(); break
         case "about": dialogs.aboutDialog.open(); break

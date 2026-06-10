@@ -1,4 +1,4 @@
-; Self-contained PixelStudio installer. Build: installer\build-installer.ps1
+; Windows installer (Inno Setup). Build: installer\windows-build-installer.ps1
 ; Installs the pruned staging folder (windeployqt + verified runtime files only).
 
 ; MyAppVersion / MyAppVersionInfo — из cmake/PixelStudioVersion.cmake через generated/version.iss
@@ -6,7 +6,7 @@
   #include "generated\version.iss"
 #endif
 #ifndef StageDir
-  #define StageDir "staging"
+  #define StageDir "staging-windows"
 #endif
 
 #define MyAppName "PixelStudio"
@@ -54,7 +54,7 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; staging = pruned deploy tree from build-installer.ps1
+; staging-windows = pruned deploy tree from windows-build-installer.ps1
 Source: "{#StageDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "vc_redist.x64.exe"
 Source: "{#StageDir}\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall skipifsourcedoesntexist
 

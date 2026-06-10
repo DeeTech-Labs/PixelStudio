@@ -2,8 +2,9 @@
 
 #include "persistence/AppPaths.h"
 
-#ifdef Q_OS_WIN
 #include "logging/CrashHandler.h"
+
+#ifdef Q_OS_WIN
 #include <windows.h>
 #endif
 
@@ -23,6 +24,9 @@
 
 #ifdef Q_OS_WIN
 #include <io.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
 #endif
 
 namespace {
@@ -168,11 +172,15 @@ void appendToLogFileDirect(const QString &line)
     FlushFileBuffers(file);
     CloseHandle(file);
 #else
-    QFile file(logPath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Append))
+    const int fd = ::open(logPath.toUtf8().constData(),
+                          O_WRONLY | O_CREAT | O_APPEND,
+                          0644);
+    if (fd < 0)
         return;
-    file.write(payload);
-    file.flush();
+    const ssize_t written = ::write(fd, payload.constData(), static_cast<size_t>(payload.size()));
+    if (written > 0)
+        ::fsync(fd);
+    ::close(fd);
 #endif
 }
 
@@ -337,9 +345,7 @@ void AppLogger::messageHandler(QtMsgType type, const QMessageLogContext &context
     writeToConsole(type, line);
 
     if (type == QtFatalMsg) {
-#ifdef Q_OS_WIN
         CrashHandler::captureFatalDump();
-#endif
         abort();
     }
 }

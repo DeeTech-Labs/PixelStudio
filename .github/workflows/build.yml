@@ -54,3 +54,46 @@ jobs:
           path: build-ci/Release/PixelStudio.exe
           if-no-files-found: error
           retention-days: 14
+
+  build-macos:
+    name: macOS universal (Qt 6.8, Release)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-macos-qt
+
+      - name: Configure and build
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x installer/macos-make-icns.sh
+          installer/macos-make-icns.sh
+          cmake -S . -B build-ci -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR" \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          cmake --build build-ci --parallel
+
+      - name: Verify universal binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x installer/macos-verify-universal.sh
+          installer/macos-verify-universal.sh build-ci/PixelStudio.app
+
+      - name: Package app bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          ditto -c -k --sequesterRsrc --keepParent build-ci/PixelStudio.app PixelStudio-macos.zip
+
+      - name: Upload app bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: PixelStudio-macos
+          path: PixelStudio-macos.zip
+          if-no-files-found: error
+          retention-days: 14

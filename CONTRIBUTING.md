@@ -13,10 +13,13 @@
 | Инструмент | Заметки |
 |------------|---------|
 | Windows 10/11 x64 | Основная платформа |
-| Qt 6.8.x MSVC 2022 64-bit | Quick, QuickControls2, Gui, Network, Concurrent, Svg |
+| macOS 12+ (universal arm64+x86_64 в CI) | Сборка и релиз DMG в CI |
+| Qt 6.8.x | Windows: MSVC 2022 64-bit; macOS: clang_64 kit |
+| Qt modules | **qt5compat**, **qtshadertools** (QML deploy на обеих ОС) |
 | CMake ≥ 3.16 | Рекомендуется Ninja |
-| Visual Studio 2022 | C++ desktop workload |
-| Inno Setup 6 | Только для сборки установщика |
+| Visual Studio 2022 | C++ desktop workload (Windows) |
+| Xcode CLT | macOS (`xcode-select --install`) |
+| Inno Setup 6 | Только для Windows installer |
 
 Подробная сборка: [docs/building.md](docs/building.md).
 
@@ -32,7 +35,20 @@ cmake -S . -B build\Release -G Ninja `
 cmake --build build\Release
 ```
 
-Запуск: `build\Release\PixelStudio.exe`. Для redistributable — `windeployqt` или `installer\build-installer.ps1`.
+Запуск: `build\Release\PixelStudio.exe`. Для redistributable — `windeployqt` или `installer\windows-build-installer.ps1`.
+
+macOS:
+
+```bash
+export QT_DIR="$HOME/Qt/6.8.2/macos"
+installer/macos-make-icns.sh
+cmake -S . -B build/Release -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$QT_DIR" -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+cmake --build build/Release
+installer/macos-verify-universal.sh build/Release/PixelStudio.app
+open build/Release/PixelStudio.app
+```
+
+Для redistributable — `installer/macos-build-bundle.sh` + `installer/macos-make-dmg.sh`.
 
 ## Версии
 
@@ -68,7 +84,7 @@ cmake --build build\Release
 
 Контексты: `Welcome`, `Inspector`, `Shell`, `Workspace`, `Controls`, `Core`. В QML — `pragma Translator: <Контекст>` и `qsTr()`.
 
-**Пользовательские языки** (без пересборки): положите `%AppData%/DeeTech/PixelStudio/translations/<код>.json` — язык появится в меню автоматически. Пример: `translations/de.example.json`.
+**Пользовательские языки** (без пересборки): положите `<application data>/translations/<код>.json` — Windows: `%AppData%\\DeeTech\\PixelStudio\\translations`, macOS: `~/Library/Application Support/DeeTech/PixelStudio/translations`. Пример: `translations/de.example.json`.
 
 Встроенный язык: добавьте `translations/<код>.json` (два символа в имени файла), пересоберите.
 

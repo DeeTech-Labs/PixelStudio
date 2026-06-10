@@ -1,5 +1,7 @@
 #include "persistence/AppPaths.h"
 
+#include "persistence/PathCompare.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -131,16 +133,39 @@ void migrateLegacyStore()
     sessionStore.sync();
 }
 
-void migrateUserDataFromAppData()
+QStringList legacyUserDataRoots()
 {
-    const QString roaming = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
-    const QStringList legacyRoots = {
-        roaming + QStringLiteral("/PixelStudio"),
-        roaming + QStringLiteral("/DeTech/PixelStudio"),
-        dataRoot(),
-    };
-    for (const QString &oldRoot : legacyRoots) {
+    QStringList roots;
+    const QString genericData = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+    const QString home = QDir::homePath();
+
+    roots << genericData + QStringLiteral("/PixelStudio")
+          << genericData + QStringLiteral("/DeeTech/PixelStudio")
+          << genericData + QStringLiteral("/DeTech/PixelStudio");
+
+#if defined(Q_OS_MACOS)
+    roots << home + QStringLiteral("/Library/Application Support/PixelStudio")
+          << home + QStringLiteral("/Library/Application Support/DeeTech/PixelStudio")
+          << home + QStringLiteral("/Library/Application Support/DeTech/PixelStudio");
+#elif defined(Q_OS_WIN)
+    const QString localAppData = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
+    if (!localAppData.isEmpty()) {
+        roots << localAppData + QStringLiteral("/PixelStudio")
+              << localAppData + QStringLiteral("/DeeTech/PixelStudio");
+    }
+#endif
+
+    roots.removeDuplicates();
+    return roots;
+}
+
+void migrateLegacyUserData()
+{
+    const QString canonicalData = QDir::cleanPath(dataRoot());
+    for (const QString &oldRoot : legacyUserDataRoots()) {
         if (oldRoot.isEmpty() || !QDir(oldRoot).exists())
+            continue;
+        if (QDir::cleanPath(oldRoot) == canonicalData)
             continue;
         copyMissingFilesRecursive(oldRoot + QStringLiteral("/projects"), projectsDir());
         copyMissingFilesRecursive(oldRoot + QStringLiteral("/exports"), exportsDir());
@@ -193,6 +218,31 @@ void migrateLegacyTranslationsDir()
 }
 
 } // namespace
+
+QString formatDisplayPath(const QString &absolutePath)
+{
+    if (absolutePath.isEmpty())
+        return QString();
+
+    const QString cleaned = QDir::cleanPath(QDir::fromNativeSeparators(absolutePath));
+    const QString home = QDir::homePath();
+    if (!home.isEmpty() && PathCompare::startsWithRoot(cleaned, home))
+        return QStringLiteral("~") + QDir::toNativeSeparators(cleaned.mid(home.size()));
+    return QDir::toNativeSeparators(cleaned);
+}
+
+QString defaultDocumentsRootHint()
+{
+    const QString docs = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    if (docs.isEmpty())
+        return formatDisplayPath(dataRoot() + QStringLiteral("/Documents/PixelStudio"));
+    return formatDisplayPath(docs + QStringLiteral("/PixelStudio"));
+}
+
+QString defaultApplicationDataHint()
+{
+    return formatDisplayPath(dataRoot());
+}
 
 QString dataRoot()
 {
@@ -275,7 +325,7 @@ QString cacheRelativePath(const QString &absolutePath)
         return QString();
     const QString native = QDir::cleanPath(QDir::fromNativeSeparators(absolutePath));
     const QString data = QDir::cleanPath(dataRoot());
-    if (!native.startsWith(data, Qt::CaseInsensitive))
+    if (!PathCompare::startsWithRoot(native, data))
         return QString();
     QString rel = native.mid(data.size()).trimmed();
     if (rel.startsWith(QLatin1Char('/')) || rel.startsWith(QLatin1Char('\\')))
@@ -288,14 +338,14 @@ QString cacheRelativePath(const QString &absolutePath)
 bool isTabCachePath(const QString &absolutePath)
 {
     const QString rel = cacheRelativePath(absolutePath);
-    return rel.startsWith(QStringLiteral("cache/tabs/"), Qt::CaseInsensitive);
+    return rel.startsWith(QStringLiteral("cache/tabs/"), PathCompare::prefixSensitivity());
 }
 
 bool isTransientCachePath(const QString &absolutePath)
 {
     const QString rel = cacheRelativePath(absolutePath);
-    return rel.startsWith(QStringLiteral("cache/runtime/"), Qt::CaseInsensitive)
-        || rel.startsWith(QStringLiteral("cache/recent/"), Qt::CaseInsensitive);
+    return rel.startsWith(QStringLiteral("cache/runtime/"), PathCompare::prefixSensitivity())
+        || rel.startsWith(QStringLiteral("cache/recent/"), PathCompare::prefixSensitivity());
 }
 
 bool isExcludedFromRecentPath(const QString &absolutePath)
@@ -330,7 +380,7 @@ void ensureLayout()
 
     if (!migrationCompleted()) {
         migrateLegacyStore();
-        migrateUserDataFromAppData();
+        migrateLegacyUserData();
         migrateLegacyCacheDirs();
         markMigrationCompleted();
     } else {

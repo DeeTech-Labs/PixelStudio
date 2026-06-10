@@ -7,7 +7,7 @@ inputs:
     required: false
     default: "6.8.2"
   install-ninja:
-    description: Install Ninja tool (for build-installer.ps1 / Ninja generator)
+    description: Install Ninja tool (for windows-build-installer.ps1 / Ninja generator)
     required: false
     default: "false"
   modules:

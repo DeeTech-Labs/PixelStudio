@@ -12,10 +12,10 @@
 [![Release](https://img.shields.io/github/v/release/DeeTech-Labs/PixelStudio?label=release&sort=semver)](https://github.com/DeeTech-Labs/PixelStudio/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Qt 6.8](https://img.shields.io/badge/Qt-6.8-41cd52?logo=qt)](https://www.qt.io/)
-[![Platform](https://img.shields.io/badge/platform-Windows%20x64-0078d4?logo=windows)](https://github.com/DeeTech-Labs/PixelStudio/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20x64%20%7C%20macOS%20universal-0078d4)](https://github.com/DeeTech-Labs/PixelStudio/releases)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus)](https://isocpp.org/)
 
-[**Скачать установщик**](https://github.com/DeeTech-Labs/PixelStudio/releases) ·
+[**Скачать релиз**](https://github.com/DeeTech-Labs/PixelStudio/releases) (Windows installer · macOS DMG) ·
 [**Сборка**](docs/building.md) ·
 [**Issues**](https://github.com/DeeTech-Labs/PixelStudio/issues) ·
 [**Contributing**](CONTRIBUTING.md)
@@ -206,7 +206,7 @@ cmake --build build\Release
 <summary><b>Установщик Inno Setup</b> — развернуть</summary>
 
 ```powershell
-.\installer\build-installer.ps1 -QtDir "C:\Qt6\6.8.2\msvc2022_64"
+.\installer\windows-build-installer.ps1 -QtDir "C:\Qt6\6.8.2\msvc2022_64"
 # → installer\output\PixelStudio-Setup-<версия>.exe
 ```
 
@@ -255,7 +255,7 @@ PixelStudio/
 │   └── persistence/ Проекты и настройки
 ├── translations/    en.json · ru.json (+ AppData overrides)
 ├── resources/       Иконки и ассеты
-├── installer/       Inno Setup + CI pipeline
+├── installer/       windows-* (Inno Setup) · macos-* (DMG)
 └── docs/            Сборка, версионирование
 ```
 

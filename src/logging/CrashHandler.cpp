@@ -6,10 +6,17 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QTextStream>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
 #include <dbghelp.h>
+#endif
+
+#if defined(Q_OS_MACOS)
+#include <execinfo.h>
+#include <signal.h>
+#include <unistd.h>
 #endif
 
 namespace {
@@ -110,7 +117,106 @@ LONG WINAPI unhandledExceptionFilter(EXCEPTION_POINTERS *exceptionPointers)
         return g_previousFilter(exceptionPointers);
     return EXCEPTION_EXECUTE_HANDLER;
 }
-#endif
+#endif // Q_OS_WIN
+
+#if defined(Q_OS_MACOS)
+constexpr int kMaxCrashReports = 3;
+constexpr int kMaxBacktraceFrames = 64;
+
+struct sigaction g_previousHandlers[NSIG] = {};
+bool g_installed = false;
+
+QString crashReportFileName(const QString &suffix = QString())
+{
+    const QString timestamp = QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd_HHmmss"));
+    if (suffix.isEmpty())
+        return QStringLiteral("PixelStudio_%1.crash").arg(timestamp);
+    return QStringLiteral("PixelStudio_%1_%2.crash").arg(timestamp, suffix);
+}
+
+void pruneOldCrashReports()
+{
+    QDir dir(AppLogger::logsDir());
+    if (!dir.exists())
+        return;
+
+    QFileInfoList reports = dir.entryInfoList(
+        {QStringLiteral("PixelStudio_*.crash")},
+        QDir::Files,
+        QDir::Time);
+    while (reports.size() > kMaxCrashReports)
+        QFile::remove(reports.takeFirst().absoluteFilePath());
+}
+
+void writeBacktraceLines()
+{
+    void *frames[kMaxBacktraceFrames];
+    const int count = backtrace(frames, kMaxBacktraceFrames);
+    char **symbols = backtrace_symbols(frames, count);
+    if (!symbols)
+        return;
+
+    for (int i = 0; i < count; ++i)
+        AppLogger::writeCrashLine(QString::fromLocal8Bit(symbols[i]));
+    free(symbols);
+}
+
+bool writeCrashReport(int signum, void *faultAddress, const QString &suffix)
+{
+    const QString reportPath = AppLogger::logsDir() + QLatin1Char('/') + crashReportFileName(suffix);
+
+    QFile file(reportPath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate))
+        return false;
+
+    QTextStream stream(&file);
+    stream << QStringLiteral("========== crash report ==========\n");
+    if (signum != 0)
+        stream << QStringLiteral("signal: %1\n").arg(signum);
+    if (faultAddress) {
+        stream << QStringLiteral("faultAddress: 0x%1\n")
+                      .arg(QString::number(reinterpret_cast<quintptr>(faultAddress), 16));
+    }
+
+    void *frames[kMaxBacktraceFrames];
+    const int count = backtrace(frames, kMaxBacktraceFrames);
+    char **symbols = backtrace_symbols(frames, count);
+    if (symbols) {
+        for (int i = 0; i < count; ++i)
+            stream << QString::fromLocal8Bit(symbols[i]) << QLatin1Char('\n');
+        free(symbols);
+    }
+    stream.flush();
+    file.close();
+
+    AppLogger::writeCrashLine(QStringLiteral("crash report: %1").arg(reportPath));
+    pruneOldCrashReports();
+    return true;
+}
+
+void fatalSignalHandler(int signum, siginfo_t *info, void * /*context*/)
+{
+    void *faultAddress = info ? info->si_addr : nullptr;
+
+    AppLogger::writeCrashLine(QStringLiteral("========== fatal signal =========="));
+    AppLogger::writeCrashLine(QStringLiteral("signal: %1").arg(signum));
+    if (faultAddress) {
+        AppLogger::writeCrashLine(QStringLiteral("faultAddress: 0x%1")
+                                      .arg(QString::number(reinterpret_cast<quintptr>(faultAddress),
+                                                           16)));
+    }
+    writeBacktraceLines();
+
+    if (!writeCrashReport(signum, faultAddress, QString())) {
+        const QString reportPath = AppLogger::logsDir() + QLatin1Char('/') + crashReportFileName();
+        AppLogger::writeCrashLine(QStringLiteral("crash report: failed to write %1").arg(reportPath));
+    }
+
+    struct sigaction previous = g_previousHandlers[signum];
+    sigaction(signum, &previous, nullptr);
+    raise(signum);
+}
+#endif // Q_OS_MACOS
 
 } // namespace
 
@@ -120,6 +226,21 @@ void CrashHandler::install()
     if (g_installed)
         return;
     g_previousFilter = SetUnhandledExceptionFilter(unhandledExceptionFilter);
+    g_installed = true;
+#elif defined(Q_OS_MACOS)
+    if (g_installed)
+        return;
+
+    struct sigaction action;
+    action.sa_sigaction = fatalSignalHandler;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = SA_SIGINFO;
+
+    const int signals[] = {SIGSEGV, SIGABRT, SIGBUS, SIGILL, SIGFPE};
+    for (int signum : signals) {
+        if (sigaction(signum, &action, &g_previousHandlers[signum]) != 0)
+            continue;
+    }
     g_installed = true;
 #endif
 }
@@ -132,6 +253,14 @@ void CrashHandler::uninstall()
     SetUnhandledExceptionFilter(g_previousFilter);
     g_previousFilter = nullptr;
     g_installed = false;
+#elif defined(Q_OS_MACOS)
+    if (!g_installed)
+        return;
+
+    const int signals[] = {SIGSEGV, SIGABRT, SIGBUS, SIGILL, SIGFPE};
+    for (int signum : signals)
+        sigaction(signum, &g_previousHandlers[signum], nullptr);
+    g_installed = false;
 #endif
 }
 
@@ -143,6 +272,14 @@ void CrashHandler::captureFatalDump()
         const QString dumpPath = AppLogger::logsDir() + QLatin1Char('/')
             + dumpFileName(QStringLiteral("fatal"));
         AppLogger::writeCrashLine(QStringLiteral("minidump: failed to write %1").arg(dumpPath));
+    }
+#elif defined(Q_OS_MACOS)
+    AppLogger::writeCrashLine(QStringLiteral("========== fatal error =========="));
+    writeBacktraceLines();
+    if (!writeCrashReport(0, nullptr, QStringLiteral("fatal"))) {
+        const QString reportPath = AppLogger::logsDir() + QLatin1Char('/')
+            + crashReportFileName(QStringLiteral("fatal"));
+        AppLogger::writeCrashLine(QStringLiteral("crash report: failed to write %1").arg(reportPath));
     }
 #endif
 }

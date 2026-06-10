@@ -46,7 +46,7 @@ public:
     Q_INVOKABLE bool importSettingsFrom(const QUrl &folderUrl);
     Q_INVOKABLE void flushPersistence();
     Q_INVOKABLE void openUserDocumentsFolder();
-    Q_INVOKABLE void openAppDataFolder();
+    Q_INVOKABLE void openApplicationDataFolder();
     Q_INVOKABLE void openLogsFolder();
 
     void applyProject(const StudioProject &project);

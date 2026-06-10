@@ -1,4 +1,4 @@
-﻿# Build Release + windeployqt + prune staging + Inno Setup.
+# Build Release + windeployqt + prune staging + Inno Setup.
 param(
     [string]$BuildDir = "",
     [string]$QtDir = "C:\Qt6\6.8.2\msvc2022_64",
@@ -12,13 +12,13 @@ Set-StrictMode -Version Latest
 
 $Root = Split-Path $PSScriptRoot -Parent
 if (-not $BuildDir) { $BuildDir = Join-Path $Root "build\Release" }
-$StageDir = Join-Path $PSScriptRoot "staging"
+$StageDir = Join-Path $PSScriptRoot "staging-windows"
 $OutputDir = Join-Path $PSScriptRoot "output"
-$Iss = Join-Path $PSScriptRoot "PixelStudio.iss"
+$Iss = Join-Path $PSScriptRoot "windows-PixelStudio.iss"
 $QmlDir = Join-Path $Root "src\qml"
 
 . (Join-Path $Root "cmake\ReadPixelStudioVersion.ps1")
-. (Join-Path $PSScriptRoot "deploy-prune.ps1")
+. (Join-Path $PSScriptRoot "windows-deploy-prune.ps1")
 
 function Invoke-VcVars {
     $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"

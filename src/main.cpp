@@ -57,9 +57,7 @@ int main(int argc, char *argv[])
     app.setApplicationVersion(appVersion);
     AppPaths::ensureLayout();
     AppLogger::install();
-#ifdef Q_OS_WIN
     CrashHandler::install();
-#endif
     AppLogger::logSessionStart(appVersion);
     TranslationStore::instance().refreshCatalog();
 

@@ -1,6 +1,7 @@
 #include "persistence/StoredPath.h"
 
 #include "persistence/AppPaths.h"
+#include "persistence/PathCompare.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -38,11 +39,11 @@ QString encode(const QString &absolutePath)
         return native;
 
     const QString docsRoot = QDir::cleanPath(AppPaths::userDocumentsRoot());
-    if (native.startsWith(docsRoot, Qt::CaseInsensitive))
+    if (PathCompare::startsWithRoot(native, docsRoot))
         return relativeToRoot(docsRoot, native);
 
     const QString dataRoot = QDir::cleanPath(AppPaths::dataRoot());
-    if (native.startsWith(dataRoot, Qt::CaseInsensitive))
+    if (PathCompare::startsWithRoot(native, dataRoot))
         return QString(kDataPrefix) + relativeToRoot(dataRoot, native);
 
     return native;
