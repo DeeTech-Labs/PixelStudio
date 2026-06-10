@@ -85,4 +85,5 @@ CMakeLists.txt.user*
 /installer/generated/
 /installer/output/
 .cursor/
+/ref/
 aqtinstall.log
