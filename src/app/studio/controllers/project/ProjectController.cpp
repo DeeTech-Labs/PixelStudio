@@ -310,6 +310,11 @@ void ProjectController::openAppDataFolder()
     QDesktopServices::openUrl(QUrl::fromLocalFile(AppPaths::dataRoot()));
 }
 
+void ProjectController::openLogsFolder()
+{
+    QDesktopServices::openUrl(QUrl::fromLocalFile(AppPaths::logsDir()));
+}
+
 void ProjectController::flushPersistence()
 {
     if (m_host)

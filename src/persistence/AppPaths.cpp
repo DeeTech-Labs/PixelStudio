@@ -242,6 +242,11 @@ QString userTranslationsDir()
     return dataRoot() + QStringLiteral("/translations");
 }
 
+QString logsDir()
+{
+    return dataRoot() + QStringLiteral("/logs");
+}
+
 QString cacheDir()
 {
     return dataRoot() + QStringLiteral("/cache");
@@ -314,6 +319,7 @@ void ensureStorageDirs()
 void ensureLayout()
 {
     ensureDir(dataRoot());
+    ensureDir(logsDir());
     ensureDir(cacheDir());
     ensureDir(tabCacheDir());
     ensureDir(recentThumbnailsDir());

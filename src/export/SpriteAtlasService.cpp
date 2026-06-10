@@ -1,5 +1,6 @@
 #include "export/SpriteAtlasService.h"
 
+#include "io/ImageFileReader.h"
 #include "translation/AppLocale.h"
 
 #include <QFileInfo>
@@ -16,11 +17,7 @@ bool loadImage(const QUrl &url, QImage *out)
     QString path = url.toLocalFile();
     if (path.isEmpty())
         path = url.path();
-    const QImage img(path);
-    if (img.isNull())
-        return false;
-    *out = img.convertToFormat(QImage::Format_ARGB32);
-    return true;
+    return ImageFileReader::readFromPath(path, out);
 }
 
 QString sanitizedStem(const QUrl &url, int index)

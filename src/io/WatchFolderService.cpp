@@ -1,5 +1,6 @@
 #include "io/WatchFolderService.h"
 
+#include "io/ImageFormats.h"
 #include "processing/DisplayCodeGenerator.h"
 
 #include <QDateTime>
@@ -66,11 +67,7 @@ void WatchFolderService::rescan()
     if (!m_active || m_inputFolder.isEmpty())
         return;
     QDir dir(m_inputFolder);
-    const QStringList names = dir.entryList({QStringLiteral("*.png"),
-                                             QStringLiteral("*.jpg"),
-                                             QStringLiteral("*.jpeg"),
-                                             QStringLiteral("*.bmp"),
-                                             QStringLiteral("*.webp")},
+    const QStringList names = dir.entryList(ImageFormats::watchGlobPatterns(),
                                             QDir::Files,
                                             QDir::Name);
     QStringList files;

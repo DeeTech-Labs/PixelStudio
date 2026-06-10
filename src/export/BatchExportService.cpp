@@ -1,5 +1,6 @@
 #include "export/BatchExportService.h"
 
+#include "io/ImageFileReader.h"
 #include "LogCategories.h"
 #include "translation/AppLocale.h"
 
@@ -15,11 +16,7 @@ bool loadImageFile(const QUrl &url, QImage &outImage)
     QString path = url.toLocalFile();
     if (path.isEmpty())
         path = url.path();
-    const QImage img(path);
-    if (img.isNull())
-        return false;
-    outImage = img.convertToFormat(QImage::Format_ARGB32);
-    return true;
+    return ImageFileReader::readFromPath(path, &outImage);
 }
 
 } // namespace

@@ -47,6 +47,7 @@ public:
     Q_INVOKABLE void flushPersistence();
     Q_INVOKABLE void openUserDocumentsFolder();
     Q_INVOKABLE void openAppDataFolder();
+    Q_INVOKABLE void openLogsFolder();
 
     void applyProject(const StudioProject &project);
     StudioProject projectSnapshotForDisk() const;

@@ -43,6 +43,7 @@ set(PIXELSTUDIO_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set(PIXELSTUDIO_CORE_SOURCES
     src/LogCategories.cpp
+    src/logging/AppLogger.cpp
     src/processing/DisplayProfile.cpp
     src/processing/ImageFiltersPipeline.cpp
     src/processing/DisplayRasterizer.cpp
@@ -67,6 +68,8 @@ set(PIXELSTUDIO_CORE_SOURCES
     src/persistence/SettingsSchema.cpp
     src/app/code/CodeSyntaxTheme.cpp
     src/io/ImageLoader.cpp
+    src/io/ImageFormats.cpp
+    src/io/ImageFileReader.cpp
     src/io/BinaryExporter.cpp
     src/io/HeaderImportService.cpp
     src/io/WatchFolderService.cpp
@@ -79,11 +82,12 @@ target_include_directories(pixelstudio_core PUBLIC
     ${PIXELSTUDIO_SRC_DIR}
     ${PS_GENERATED_INCLUDE_DIR}
 )
-target_link_libraries(pixelstudio_core PUBLIC Qt6::Gui Qt6::Concurrent Qt6::Network)
+target_link_libraries(pixelstudio_core PUBLIC Qt6::Gui Qt6::Concurrent Qt6::Network Qt6::Svg)
 pixelstudio_apply_warnings(pixelstudio_core)
 
 set(APP_SOURCES
     src/main.cpp
+    src/logging/CrashHandler.cpp
     src/app/shell/AppTranslations.cpp
     src/app/shell/AppTranslations.h
     src/app/code/CodeSyntaxHighlighter.cpp
@@ -113,6 +117,8 @@ set(APP_SOURCES
     src/app/studio/TabStateService.cpp
     src/app/shell/WinTaskbarRecent.cpp
     src/app/shell/WinTaskbarRecent.h
+    src/io/ImageFormatsProvider.cpp
+    src/io/ImageFormatsProvider.h
     src/app/shell/StudioViewMode.cpp
     src/app/shell/WorkspaceContext.cpp
     src/app/shell/WorkspaceContext.h
@@ -253,7 +259,7 @@ target_link_libraries(PixelStudio
     PRIVATE pixelstudio_core Qt6::Quick Qt6::QuickControls2 Qt6::Gui Qt6::Network Qt6::Concurrent Qt6::Svg
 )
 if(WIN32)
-    target_link_libraries(PixelStudio PRIVATE dwmapi shell32 ole32 propsys shlwapi)
+    target_link_libraries(PixelStudio PRIVATE dbghelp dwmapi shell32 ole32 propsys shlwapi)
 endif()
 
 pixelstudio_apply_warnings(PixelStudio)
