@@ -85,8 +85,9 @@ void initConsoleLogging()
         g_consoleLogging = true;
 #ifdef Q_OS_WIN
         if (AttachConsole(ATTACH_PARENT_PROCESS)) {
-            freopen("CONOUT$", "w", stdout);
-            freopen("CONOUT$", "w", stderr);
+            FILE *stream = nullptr;
+            freopen_s(&stream, "CONOUT$", "w", stdout);
+            freopen_s(&stream, "CONOUT$", "w", stderr);
         }
 #endif
         return;
