@@ -11,33 +11,38 @@ OLED, TFT, E-paper — без ручной рутины с hex-дампами.
 
 <br/>
 
-[![Download](https://img.shields.io/badge/Download-Windows_x64-0078d4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DeeTech-Labs/PixelStudio/releases)
-[![Docs](https://img.shields.io/badge/Docs-building.md-0f766e?style=for-the-badge)](docs/building.md)
-[![Contributing](https://img.shields.io/badge/Contributing-guide-6366f1?style=for-the-badge)](CONTRIBUTING.md)
+[![Скачать](https://img.shields.io/badge/Скачать-Windows_x64-0078d4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DeeTech-Labs/PixelStudio/releases)
+[![Документация](https://img.shields.io/badge/Документация-building.md-0f766e?style=for-the-badge)](docs/building.md)
+[![Участие](https://img.shields.io/badge/Участие-руководство-6366f1?style=for-the-badge)](CONTRIBUTING.md)
 
 <br/>
 
 [![GitHub stars](https://img.shields.io/github/stars/DeeTech-Labs/PixelStudio?style=flat-square)](https://github.com/DeeTech-Labs/PixelStudio/stargazers)
-[![Release](https://img.shields.io/github/v/release/DeeTech-Labs/PixelStudio?style=flat-square&label=release&sort=semver)](https://github.com/DeeTech-Labs/PixelStudio/releases)
-[![CI](https://img.shields.io/github/actions/workflow/status/DeeTech-Labs/PixelStudio/build.yml?branch=main&style=flat-square&label=build)](https://github.com/DeeTech-Labs/PixelStudio/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/DeeTech-Labs/PixelStudio?style=flat-square&label=релиз&sort=semver)](https://github.com/DeeTech-Labs/PixelStudio/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/DeeTech-Labs/PixelStudio/build.yml?branch=main&style=flat-square&label=сборка)](https://github.com/DeeTech-Labs/PixelStudio/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Qt](https://img.shields.io/badge/Qt-6.8-41cd52?style=flat-square&logo=qt)](https://www.qt.io/)
 [![C++](https://img.shields.io/badge/C++-17-00599C?style=flat-square&logo=cplusplus&logoColor=white)](https://isocpp.org/)
 
 </div>
 
-<br/>
+> [!TIP]
+>
+> <table>
+> <tr>
+> <td valign="middle">
+> <h3><a href="Funding.md">🎉 Поддержать проект</a></h3>
+> <p><strong><a href="https://www.donationalerts.com/r/deexsed">DonationAlerts</a></strong> — в сообщении к донату можно написать пожелания по доработкам.</p>
+> </td>
+> <td valign="middle" align="right" width="140">
+> <a href="https://www.donationalerts.com/r/deexsed"><img src="https://files.donationalerts.com/uploads/qr/3930763/qr_eca09ac80a9cc25a80ea84284da64454.png" width="128" alt="QR-код DonationAlerts" /></a>
+> </td>
+> </tr>
+> </table>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/workspace.png">
-  <img alt="PixelStudio — рабочая область студии с превью, инспектором и панелью экспорта" src="docs/screenshots/workspace.png" width="100%">
-</picture>
+![PixelStudio — рабочая область студии с превью, инспектором и панелью экспорта](docs/screenshots/workspace.png)
 
-<p align="center">
-  <sub>Studio — live preview, инспектор параметров, экспорт в один клик</sub>
-</p>
-
-<br/>
+*Студия — превью в реальном времени, инспектор параметров, экспорт в один клик*
 
 ## Возможности
 
@@ -45,32 +50,36 @@ OLED, TFT, E-paper — без ручной рутины с hex-дампами.
 <tr>
 <td width="50%" valign="top">
 
-**Растеризация под экран**  
-Масштаб, кроп, фильтры и dithering — результат сразу виден в превью.
+**Растеризация под экран**
 
-**Профили дисплея**  
+Масштаб, кроп, фильтры и дизеринг — результат сразу виден в превью.
+
+**Профили дисплея**
+
 Mono 1-bpp, RGB565, indexed palette, пресеты Icon / Splash / E-paper.
 
-**Генерация кода**  
-C/C++ headers, PROGMEM-friendly layout, анализ кодирования.
+**Генерация кода**
+
+Заголовки C/C++, раскладка под PROGMEM, анализ кодирования.
 
 </td>
 <td width="50%" valign="top">
 
-**Экспорт без рутины**  
-Batch, sprite atlas, binary dump, watch folder.
+**Экспорт без рутины**
 
-**Проекты и сессии**  
+Пакетный экспорт, спрайт-атлас, бинарный дамп, watch folder.
+
+**Проекты и сессии**
+
 Сохранение настроек студии, вкладок и параметров экспорта.
 
-**Локализация**  
-Русский и English из коробки; свои языки через JSON в AppData.
+**Локализация**
+
+Русский и английский из коробки; свои языки через JSON в AppData.
 
 </td>
 </tr>
 </table>
-
-<br/>
 
 ## Как это работает
 
@@ -91,8 +100,6 @@ flowchart LR
     style E fill:#b45309,stroke:#f59e0b,color:#fffbeb
 ```
 
-<br/>
-
 ## Форматы пикселей
 
 | Формат | Применение | Дисплей |
@@ -102,21 +109,15 @@ flowchart LR
 | **Indexed 4/8-bit** | Спрайты, tilemaps | Game Boy-style |
 | **Custom palette** | Брендовые цвета | Любой fixed-palette |
 
-<br/>
-
 ## Быстрый старт
 
-```text
-1. Скачайте PixelStudio-Setup-*.exe  →  GitHub Releases
-2. Установите и откройте приложение
-3. Перетащите изображение → выберите профиль → экспортируйте .h
-```
+1. Скачайте [`PixelStudio-Setup-*.exe`](https://github.com/DeeTech-Labs/PixelStudio/releases) из релизов GitHub.
+2. Установите и откройте приложение.
+3. Перетащите изображение → выберите профиль → экспортируйте `.h`.
 
 SHA256 установщика — в описании [релиза](https://github.com/DeeTech-Labs/PixelStudio/releases).
 
 > Установщик не подписан Authenticode — Windows SmartScreen может запросить подтверждение при первом запуске.
-
-<br/>
 
 ## Пример выхода
 
@@ -135,17 +136,9 @@ static const uint8_t icon_logo[] PROGMEM = {
 };
 ```
 
-<br/>
+![Экран приветствия PixelStudio](docs/screenshots/welcome.png)
 
-<p align="center">
-  <img src="docs/screenshots/welcome.png" alt="Экран приветствия PixelStudio" width="72%">
-</p>
-
-<p align="center">
-  <sub>Welcome — недавние проекты и быстрый старт</sub>
-</p>
-
-<br/>
+*Приветствие — недавние проекты и быстрый старт*
 
 ## Для разработчиков
 
@@ -153,19 +146,22 @@ static const uint8_t icon_logo[] PROGMEM = {
 <tr>
 <td width="33%" align="center">
 
-[**Сборка**](docs/building.md)  
+[**Сборка**](docs/building.md)
+
 CMake · Qt 6.8 · Ninja
 
 </td>
 <td width="33%" align="center">
 
-[**Участие**](CONTRIBUTING.md)  
+[**Участие**](CONTRIBUTING.md)
+
 PR · стиль · переводы
 
 </td>
 <td width="33%" align="center">
 
-[**Changelog**](CHANGELOG.md)  
+[**Журнал изменений**](CHANGELOG.md)
+
 История версий
 
 </td>
@@ -176,15 +172,13 @@ PR · стиль · переводы
 PixelStudio/
 ├── src/
 │   ├── processing/   растер, палитры, codegen
-│   ├── export/       batch, atlas, watch folder
+│   ├── export/       пакетный экспорт, атлас, watch folder
 │   └── persistence/  проекты и настройки
-├── translations/     RU · EN (+ AppData overrides)
+├── translations/     RU · EN (+ переопределения в AppData)
 └── installer/        Inno Setup, CI pipeline
 ```
 
 Qt 6.8 Quick · C++17 · CMake · GitHub Actions
-
-<br/>
 
 ## Сообщество
 
@@ -197,21 +191,6 @@ Qt 6.8 Quick · C++17 · CMake · GitHub Actions
 
 > При баг-репорте: логи в **Настройки → Данные → Открыть папку логов**.
 
-<br/>
-
-## Поддержать проект
-
-PixelStudio — open source под [MIT](LICENSE). Если приложение экономит вам время на прошивке дисплеев, можно поддержать разработку:
-
-[![DonationAlerts — Поддержать](https://img.shields.io/badge/DonationAlerts-Поддержать-F57F20?style=for-the-badge&logoColor=white)](https://www.donationalerts.com/r/deexsed)
-
-> В сообщении к донату можно написать личные пожелания — что доработать, исправить или добавить.  
-> Донат не даёт SLA, но пожелания читаем и учитываем в roadmap.
-
-> Бесплатная альтернатива — [issue с идеей](https://github.com/DeeTech-Labs/PixelStudio/issues/new?template=feature_request.yml).
-
-<br/>
-
 ## Благодарность сообществу
 
 PixelStudio развивается благодаря всем, кто сообщает об ошибках, предлагает идеи и присылает pull request'ы.
@@ -219,8 +198,6 @@ PixelStudio развивается благодаря всем, кто сооб�
 [![Контрибьюторы PixelStudio](https://contrib.rocks/image?repo=DeeTech-Labs/PixelStudio&columns=8)](https://github.com/DeeTech-Labs/PixelStudio/graphs/contributors)
 
 Хотите попасть в этот список? См. [руководство для участников](CONTRIBUTING.md).
-
-<br/>
 
 Если PixelStudio полезен — поставьте ⭐ репозиторию.
 
@@ -230,4 +207,4 @@ PixelStudio развивается благодаря всем, кто сооб�
 
 **[MIT License](LICENSE)** · [NOTICE.txt](NOTICE.txt)
 
-*Made with Qt · Windows x64*
+*Сделано на Qt · Windows x64*
