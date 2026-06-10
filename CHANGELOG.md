@@ -1,10 +1,10 @@
 # Changelog
 
+[← README](README.md)
+
 Все заметные изменения PixelStudio документируются в этом файле.
 
-Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/),
-версионирование — [Semantic Versioning](https://semver.org/lang/ru/).
-
+Формат — [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), версии — [Semantic Versioning](https://semver.org/lang/ru/).
 ## [Unreleased]
 
 ## [0.2.1] - 2026-06-10
