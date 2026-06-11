@@ -1,238 +1,119 @@
-name: "Сообщить об ошибке"
-
-description: Неверное поведение, сбой или регрессия
-
+name: "🐛 Баг"
+description: Что-то сломалось, упало или работает не так, как ожидали
 title: "[Bug]: "
-
 labels: ["bug"]
-
 body:
-
   - type: markdown
-
     attributes:
-
       value: |
-
         Опишите проблему максимально конкретно: версия, шаги, ожидаемый и фактический результат.
-
-
 
         **Баг с картинкой?** Приложите PNG — разберём быстрее.
 
-
-
         Логи: **Настройки → Данные → Открыть папку логов** (приложите последний файл, если есть).
 
-
-
   - type: input
-
     id: version
-
     attributes:
-
       label: Версия PixelStudio
-
       description: Из «О программе», установщика или тега GitHub
-
       placeholder: "0.2.1 или 0.3.0-beta"
-
     validations:
-
       required: true
 
-
-
   - type: dropdown
-
     id: install
-
     attributes:
-
       label: Способ установки
-
       options:
-
         - Установщик с GitHub Releases
-
         - Собрал из исходников
-
         - Другое
-
     validations:
-
       required: true
 
-
-
   - type: dropdown
-
     id: display_type
-
     attributes:
-
       label: Тип дисплея
-
       options:
-
         - OLED (монохром)
-
         - OLED (цветной)
-
         - TFT / LCD (RGB)
-
         - E-paper
-
         - LED матрица
-
         - Другое
-
         - Не применимо
-
     validations:
-
       required: true
 
-
-
   - type: input
-
     id: controller
-
     attributes:
-
       label: Контроллер / драйвер
-
       description: SSD1306, ILI9341, ST7789… — или «не знаю»
-
       placeholder: "SSD1306"
-
     validations:
-
       required: false
-
-
 
   - type: dropdown
-
     id: export_format
-
     attributes:
-
       label: Формат экспорта
-
       options:
-
         - C/C++ header (.h)
-
         - Бинарный (.bin)
-
         - Несколько форматов
-
         - Не применимо
-
     validations:
-
       required: true
-
-
 
   - type: input
-
     id: display_preset
-
     attributes:
-
       label: Пресет / профиль в PixelStudio
-
       description: Имя пресета из инспектора, если использовали
-
       placeholder: "Icon, Splash, пользовательский…"
-
     validations:
-
       required: false
 
-
-
   - type: textarea
-
     id: steps
-
     attributes:
-
       label: Шаги воспроизведения
-
       placeholder: |
-
         1. Открыть проект …
-
         2. Загрузить PNG …
-
         3. Экспорт в .h …
-
     validations:
-
       required: true
 
-
-
   - type: textarea
-
     id: expected
-
     attributes:
-
       label: Ожидаемое поведение
-
     validations:
-
       required: true
 
-
-
   - type: textarea
-
     id: actual
-
     attributes:
-
       label: Фактическое поведение
-
     validations:
-
       required: true
 
-
-
   - type: textarea
-
     id: environment
-
     attributes:
-
       label: Окружение
-
       placeholder: |
-
         - Windows 10/11 (сборка …)
-
         - Размер и формат исходного изображения
-
     validations:
-
       required: true
 
-
-
   - type: textarea
-
     id: logs
-
     attributes:
-
       label: Логи / скриншоты
-
       description: После отправки можно перетащить изображения в комментарий к issue
-

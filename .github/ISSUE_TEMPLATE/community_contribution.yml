@@ -1,5 +1,5 @@
-name: "Вклад сообщества"
-description: Пресет дисплея, перевод, пример проекта или другой вклад
+name: "🤝 Вклад сообщества"
+description: Пресет дисплея, перевод интерфейса или пример проекта
 title: "[Community]: "
 labels: ["community", "help wanted"]
 body:

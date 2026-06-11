@@ -1,40 +1,8 @@
 blank_issues_enabled: false
-
 contact_links:
-
-  - name: "Roadmap"
-
-    url: https://github.com/DeeTech-Labs/PixelStudio/blob/main/ROADMAP.md
-
-    about: Планы развития и приоритеты
-
-  - name: "Документация"
-
-    url: https://github.com/DeeTech-Labs/PixelStudio/blob/main/README.md
-
-    about: Обзор проекта и быстрый старт
-
-  - name: "Сборка из исходников"
-
-    url: https://github.com/DeeTech-Labs/PixelStudio/blob/main/docs/building.md
-
-    about: CMake, Qt 6.8, windeployqt и установщик
-
-  - name: "Скачать релиз (Windows)"
-
+  - name: "📥 Скачать установщик"
     url: https://github.com/DeeTech-Labs/PixelStudio/releases
-
-    about: Готовый установщик PixelStudio-Setup-*.exe
-
-  - name: "Идеи (Discussions)"
-
+    about: "Не issue — готовый PixelStudio-Setup для Windows"
+  - name: "💬 Обсудить идею"
     url: https://github.com/DeeTech-Labs/PixelStudio/discussions/new?category=ideas
-
-    about: Обсуждение и голосование за идеи
-
-  - name: "Сообщить об уязвимости"
-
-    url: https://github.com/DeeTech-Labs/PixelStudio/security/advisories/new
-
-    about: Приватный security advisory (не публикуйте эксплойт в issue)
-
+    about: "Не issue — обсуждение и голосование в Discussions"
