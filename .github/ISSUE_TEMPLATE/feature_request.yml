@@ -8,7 +8,46 @@ body:
       value: |
         Кратко опишите задачу пользователя. Если есть аналог в других утилитах — укажите для сравнения.
 
-        **Опишите дисплей и контроллер** (SSD1306, ILI9341, ST7789…) — так проще оценить приоритет.
+        Текущие планы: [ROADMAP.md](https://github.com/DeeTech-Labs/PixelStudio/blob/main/ROADMAP.md).
+
+  - type: dropdown
+    id: display_type
+    attributes:
+      label: Тип дисплея
+      options:
+        - OLED (монохром)
+        - OLED (цветной)
+        - TFT / LCD (RGB)
+        - E-paper
+        - LED матрица
+        - Несколько типов
+        - Не применимо
+    validations:
+      required: true
+
+  - type: input
+    id: controller
+    attributes:
+      label: Контроллер / драйвер
+      description: SSD1306, ILI9341, ST7789… — перечислите все релевантные
+      placeholder: "ILI9341, ST7789"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: export_format
+    attributes:
+      label: Формат экспорта
+      options:
+        - C/C++ header (.h)
+        - Бинарный (.bin)
+        - Пакетный экспорт
+        - Sprite atlas
+        - Watch folder
+        - Несколько форматов
+        - Не применимо
+    validations:
+      required: true
 
   - type: textarea
     id: problem

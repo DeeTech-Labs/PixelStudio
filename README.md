@@ -186,6 +186,8 @@ Qt 6.8 Quick · C++17 · CMake · GitHub Actions
 |:--|:--|
 | [Сообщить об ошибке](https://github.com/DeeTech-Labs/PixelStudio/issues/new?template=bug_report.yml) | Баг с картинкой? Приложите PNG и профиль дисплея — разберём быстрее |
 | [Предложить улучшение](https://github.com/DeeTech-Labs/PixelStudio/issues/new?template=feature_request.yml) | Опишите дисплей и контроллер (SSD1306, ILI9341…) |
+| [Вклад сообщества](https://github.com/DeeTech-Labs/PixelStudio/issues/new?template=community_contribution.yml) | Пресет, перевод, пример проекта |
+| [Roadmap](ROADMAP.md) | Планы и приоритеты |
 | Уязвимости | [SECURITY.md](SECURITY.md) — private advisory |
 | Кодекс | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) |
 

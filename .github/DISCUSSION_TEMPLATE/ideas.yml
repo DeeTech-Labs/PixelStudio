@@ -1,0 +1,41 @@
+title: "Идея: "
+labels:
+  - enhancement
+  - roadmap
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Предложите идею для [roadmap](https://github.com/DeeTech-Labs/PixelStudio/blob/main/ROADMAP.md).
+        Голосуйте реакцией 👍 за чужие идеи — так проще расставить приоритеты.
+
+        Для багов используйте issue «Сообщить об ошибке», для готового вклада — «Вклад сообщества».
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Область
+      options:
+        - Конвертация / превью
+        - Экспорт (C, bin, batch, atlas)
+        - Профили дисплеев
+        - Интерфейс / UX
+        - Производительность
+        - Другое
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Задача пользователя
+      description: Какой сценарий (OLED/TFT, embedded) вы хотите упростить?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Предложение
+    validations:
+      required: true

@@ -1,0 +1,87 @@
+name: "Вклад сообщества"
+description: Пресет дисплея, перевод, пример проекта или другой вклад
+title: "[Community]: "
+labels: ["community", "help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо за желание помочь проекту!
+
+        - **Пресет дисплея** — опишите контроллер, разрешение и настройки; приложите `.json` или скрин инспектора.
+        - **Перевод** — укажите язык; можно приложить готовый `translations/<код>.json`.
+        - **Пример** — картинка → экспорт → как подключили на плате.
+
+        Перед отправкой посмотрите [ROADMAP.md](https://github.com/DeeTech-Labs/PixelStudio/blob/main/ROADMAP.md) и [CONTRIBUTING.md](https://github.com/DeeTech-Labs/PixelStudio/blob/main/CONTRIBUTING.md).
+
+  - type: dropdown
+    id: contribution_type
+    attributes:
+      label: Тип вклада
+      options:
+        - Пресет / профиль дисплея
+        - Перевод интерфейса
+        - Пример проекта (showcase)
+        - Документация
+        - Другое
+    validations:
+      required: true
+
+  - type: dropdown
+    id: display_type
+    attributes:
+      label: Тип дисплея
+      description: Для пресетов и примеров; для переводов — «Не применимо»
+      options:
+        - OLED (монохром)
+        - OLED (цветной)
+        - TFT / LCD (RGB)
+        - E-paper
+        - LED матрица
+        - Не применимо
+    validations:
+      required: true
+
+  - type: input
+    id: controller
+    attributes:
+      label: Контроллер / драйвер
+      placeholder: "SSD1306, ILI9341, ST7789…"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: export_format
+    attributes:
+      label: Формат экспорта
+      options:
+        - C/C++ header (.h)
+        - Бинарный (.bin)
+        - Несколько форматов
+        - Не применимо
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Описание вклада
+      description: Что вы предлагаете и как этим будут пользоваться другие
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Файлы / ссылки
+      description: JSON пресета, перевод, репозиторий с примером — или приложите после создания issue
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: pr_ready
+    attributes:
+      label: Готовность
+      options:
+        - label: Готов(а) оформить pull request самостоятельно
+        - label: Нужна помощь с оформлением PR

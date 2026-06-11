@@ -4,6 +4,20 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Moscow
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+    commit-message:
+      prefix: "ci"
     groups:
-      actions:
-        patterns: ["*"]
+      actions-github:
+        patterns:
+          - "actions/*"
+      actions-third-party:
+        patterns:
+          - "EndBug/*"
+          - "softprops/*"
+          - "github/codeql-action"

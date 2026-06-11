@@ -1,0 +1,30 @@
+name: Version check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "cmake/PixelStudioVersion.cmake"
+      - "CHANGELOG.md"
+      - ".github/workflows/version-check.yml"
+      - ".github/scripts/**"
+      - "cmake/ReadPixelStudioVersion.ps1"
+
+permissions:
+  contents: read
+
+jobs:
+  changelog-version:
+    name: SemVer and CHANGELOG
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate version and changelog
+        shell: pwsh
+        run: |
+          . ./.github/scripts/Test-ChangelogVersion.ps1
+          Test-ChangelogVersion -RepoRoot $PWD -BaseSha '${{ github.event.pull_request.base.sha }}'

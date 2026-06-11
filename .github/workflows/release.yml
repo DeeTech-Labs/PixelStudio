@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to publish, e.g. v0.1.0 or v1.2.3b"
+        description: "Tag to publish, e.g. v0.1.0 or v1.2.3-rc.1"
         required: true
         type: string
 
@@ -38,8 +38,8 @@ jobs:
           } else {
             '${{ github.ref_name }}'
           }
-          if ($t -notmatch '^v\d+(\.\d+){2}([a-zA-Z])?$') {
-            throw "Invalid tag: $t (expected vMajor.Minor.Patch or vMajor.Minor.Patchfix, e.g. v1.2.3b)"
+          if ($t -notmatch '^v\d+\.\d+\.\d+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$') {
+            throw "Invalid tag: $t (expected SemVer vX.Y.Z or vX.Y.Z-prerelease, e.g. v1.2.3 or v1.2.3-rc.1)"
           }
           "name=$t" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 

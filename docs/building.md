@@ -89,7 +89,7 @@ $qml = ".\src\qml"
 
 **Результат:** `installer\output\PixelStudio-Setup-<версия>.exe`
 
-Версия задаётся в [`cmake/PixelStudioVersion.cmake`](../cmake/PixelStudioVersion.cmake).
+Версия задаётся в [`cmake/PixelStudioVersion.cmake`](../cmake/PixelStudioVersion.cmake). Правила SemVer и публикации релиза — [docs/versioning.md](versioning.md).
 
 ## CI
 

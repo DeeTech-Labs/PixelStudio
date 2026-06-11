@@ -14,8 +14,8 @@ inline QString display()
     QString v = QString::number(kMajor) + QLatin1Char('.')
               + QString::number(kMinor) + QLatin1Char('.')
               + QString::number(kPatch);
-#if @PS_VERSION_HAS_FIX@
-    v += QStringLiteral("@PS_VERSION_FIX@");
+#if @PS_VERSION_HAS_PRERELEASE@
+    v += QLatin1Char('-') + QStringLiteral("@PS_VERSION_PRERELEASE@");
 #endif
     return v;
 }

@@ -1,6 +1,6 @@
 # Участие в разработке
 
-[← README](README.md) · [Сборка](docs/building.md) · [Issues](https://github.com/DeeTech-Labs/PixelStudio/issues)
+[← README](README.md) · [Сборка](docs/building.md) · [Версионирование](docs/versioning.md) · [Issues](https://github.com/DeeTech-Labs/PixelStudio/issues)
 
 Спасибо за интерес к PixelStudio. Ниже — правила и ориентиры для контрибьюторов.
 
@@ -11,6 +11,7 @@
 - [Стиль кода](#стиль-кода)
 - [Переводы](#переводы)
 - [Pull request](#pull-request)
+- [Версионирование и релизы](#версионирование-и-релизы)
 - [Кодекс поведения](#кодекс-поведения)
 
 ## Перед началом
@@ -67,6 +68,18 @@
 1. Форк → ветка от `main`.
 2. Заполните [шаблон PR](.github/pull_request_template.md) на русском.
 
+## Roadmap и идеи
+
+- Планы: [ROADMAP.md](ROADMAP.md)
+- Новая фича — issue [«Предложить улучшение»](https://github.com/DeeTech-Labs/PixelStudio/issues/new?template=feature_request.yml) или [Discussions → Ideas](https://github.com/DeeTech-Labs/PixelStudio/discussions/new?category=ideas)
+- Готовый пресет, перевод или пример — [«Вклад сообщества»](https://github.com/DeeTech-Labs/PixelStudio/issues/new?template=community_contribution.yml)
+
+## Версионирование и релизы
+
+Проект следует [SemVer 2.0.0](https://semver.org/lang/ru/). Версия задаётся в `cmake/PixelStudioVersion.cmake`; публикация — через Git-тег `vX.Y.Z` или `vX.Y.Z-prerelease`.
+
+Подробно: [docs/versioning.md](docs/versioning.md).
+
 ## Кодекс поведения
 
 Участники следуют [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
@@ -75,4 +88,4 @@
 
 ---
 
-[← README](README.md) · [Сборка](docs/building.md)
+[← README](README.md) · [Сборка](docs/building.md) · [Версионирование](docs/versioning.md)

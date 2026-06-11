@@ -1,3 +1,9 @@
+## Связанные issue
+
+<!-- Closes #123 или «нет связанного issue — причина» -->
+
+Closes #
+
 ## Кратко
 
 <!-- Что меняется и зачем (1–3 предложения) -->
@@ -8,12 +14,16 @@
 - [ ] Новая возможность
 - [ ] Рефакторинг
 - [ ] Документация / CI
+- [ ] Вклад сообщества (пресет, перевод, пример)
 
 ## Чеклист
 
+- [ ] Связанный issue указан (или объяснено в описании, почему нет)
 - [ ] Локальная сборка по [docs/building.md](../docs/building.md) (Windows, Release)
 - [ ] CI **build.yml** зелёный (или объяснено, почему не применимо)
 - [ ] Пользовательские изменения — запись в `CHANGELOG.md` → `[Unreleased]`
+- [ ] При bump версии: обновлён `cmake/PixelStudioVersion.cmake` по [SemVer](../docs/versioning.md)
+- [ ] При bump версии: `CHANGELOG.md` содержит записи под `[Unreleased]` или секцию новой версии
 - [ ] Скриншоты в `docs/screenshots/` при изменении UI
 - [ ] Нет секретов и машинных путей (кроме примеров в документации)
 
@@ -27,4 +37,4 @@
 
 ---
 
-[CONTRIBUTING.md](../CONTRIBUTING.md) · [docs/building.md](../docs/building.md)
+[CONTRIBUTING.md](../CONTRIBUTING.md) · [docs/building.md](../docs/building.md) · [ROADMAP.md](../ROADMAP.md)
