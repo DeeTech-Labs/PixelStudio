@@ -21,6 +21,10 @@
 #include <cstdio>
 #include <cstdlib>
 
+#ifdef Q_OS_UNIX
+#include <unistd.h>
+#endif
+
 #ifdef Q_OS_WIN
 #include <io.h>
 #endif
