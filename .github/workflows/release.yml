@@ -181,15 +181,15 @@ jobs:
           cp "$win_file" "release-upload/$win_name"
           cp "$mac_file" "release-upload/$mac_name"
           cat > release-notes-extra.md <<EOF
-## Checksums
-
-| File | SHA256 |
-|------|--------|
-| $win_name | \`$win_hash\` |
-| $mac_name | \`$mac_hash\` |
-
-Built from tag \`${{ steps.tag.outputs.name }}\` on Windows x64 (Qt 6.8.2, MSVC 2022) and macOS universal (Qt 6.8.2, clang).
-EOF
+          ## Checksums
+          
+          | File | SHA256 |
+          |------|--------|
+          | $win_name | \`$win_hash\` |
+          | $mac_name | \`$mac_hash\` |
+          
+          Built from tag \`${{ steps.tag.outputs.name }}\` on Windows x64 (Qt 6.8.2, MSVC 2022) and macOS universal (Qt 6.8.2, clang).
+          EOF
           {
             echo "win_name=$win_name"
             echo "mac_name=$mac_name"
