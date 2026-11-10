@@ -75,7 +75,7 @@ $qml = ".\src\qml"
 Скрипт конфигурирует и собирает проект, запускает `windeployqt`, формирует staging и вызывает Inno Setup:
 
 ```powershell
-.\installer\build-installer.ps1 -QtDir "C:\Qt6\6.8.2\msvc2022_64"
+.\installer\windows-build-installer.ps1 -QtDir "C:\Qt6\6.8.2\msvc2022_64"
 ```
 
 | Параметр | По умолчанию | Описание |
@@ -106,9 +106,86 @@ Push и pull request в `main` проверяются workflow [build.yml](../.g
 | `windeployqt` не подхватывает QML | `--qmldir` → `src\qml` |
 | `Qt6ShaderTools.dll` not found | Установить модуль **qtshadertools** |
 | `qml/Qt5Compat/…` not found | Установить модуль **qt5compat** |
-| Не стартует после установки | Проверить `installer\staging\` или `Program Files\PixelStudio\`; рядом с exe — `qml\Qt5Compat\GraphicalEffects`; попробовать `-SkipPrune` |
+| Не стартует после установки | Проверить `installer\staging-windows\` или `Program Files\PixelStudio\`; рядом с exe — `qml\Qt5Compat\GraphicalEffects`; попробовать `-SkipPrune` |
 | SmartScreen на установщике | Неподписанный `.exe` — ожидаемо; для продакшена — Authenticode |
 
 ---
 
 [← README](../README.md) · [Участие](../CONTRIBUTING.md)
+
+## macOS
+
+### Требования
+
+1. **macOS 12+** (Apple Silicon или Intel; релиз — **universal binary** arm64 + x86_64).
+2. **Xcode Command Line Tools** (`xcode-select --install`).
+3. **Qt 6.8.2** (или совместимая 6.8.x) для `clang_64`:
+   - Qt Quick, Qt Quick Controls 2, Qt Svg
+   - модули **qt5compat** и **qtshadertools** (для QML deploy)
+4. **CMake** 3.16+ и **Ninja** (`brew install cmake ninja`).
+
+### Конфигурация и компиляция
+
+Из корня репозитория в Terminal:
+
+```bash
+export QT_DIR="$HOME/Qt/6.8.2/macos"
+
+chmod +x installer/macos-make-icns.sh
+installer/macos-make-icns.sh
+
+cmake -S . -B build/Release -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH="$QT_DIR" \
+  -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+cmake --build build/Release
+installer/macos-verify-universal.sh build/Release/PixelStudio.app
+```
+
+Результат: `build/Release/PixelStudio.app` (universal: arm64 + x86_64).
+
+Только arm64 (локальная отладка на Apple Silicon): `-DCMAKE_OSX_ARCHITECTURES=arm64`.
+
+### Запуск без deploy
+
+```bash
+open build/Release/PixelStudio.app
+```
+
+Для запуска из терминала с Qt в `PATH`:
+
+```bash
+export PATH="$QT_DIR/bin:$PATH"
+build/Release/PixelStudio.app/Contents/MacOS/PixelStudio
+```
+
+### Развёртывание runtime
+
+```bash
+export QT_DIR="$HOME/Qt/6.8.2/macos"
+"$QT_DIR/bin/macdeployqt" build/Release/PixelStudio.app \
+  -qmldir=src/qml -always-overwrite -no-strip \
+  -no-translations -skip-plugin-types=qmltooling
+```
+
+### Полный пайплайн DMG
+
+```bash
+export QT_DIR="$HOME/Qt/6.8.2/macos"
+chmod +x installer/macos-*.sh cmake/read-pixel-studio-version.sh
+installer/macos-build-bundle.sh
+installer/macos-make-dmg.sh
+```
+
+Результат: `installer/output/PixelStudio_<версия>_macos_universal.dmg` (unsigned).
+
+Переменные окружения для скриптов: `QT_DIR` или `QT_ROOT_DIR`, опционально `BUILD_DIR`, `SKIP_BUILD`, `SKIP_DEPLOY`, `SKIP_PRUNE`.
+
+### Gatekeeper (unsigned)
+
+Релизные DMG не подписаны. При первом запуске macOS может заблокировать приложение. Для локального теста:
+
+```bash
+xattr -cr /Applications/PixelStudio.app
+```

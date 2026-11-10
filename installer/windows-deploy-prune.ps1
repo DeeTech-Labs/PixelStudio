@@ -1,5 +1,5 @@
 # Deploy staging + prune helpers for PixelStudio installer pipeline.
-# Dot-source from build-installer.ps1.
+# Dot-source from windows-build-installer.ps1.
 
 Set-StrictMode -Version Latest
 

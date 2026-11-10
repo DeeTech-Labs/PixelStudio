@@ -230,7 +230,7 @@ MenuBar {
             onTriggered: WorkflowRouter.run("resetUi")
         }
         Action {
-            text: WorkflowRouter.shellTr("Open settings folder")
+            text: WorkflowRouter.shellTr("Open application data folder")
             onTriggered: WorkflowRouter.run("openSettingsFolder")
         }
         Action {

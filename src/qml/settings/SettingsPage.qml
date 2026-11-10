@@ -456,7 +456,7 @@ Item {
                             title: qsTr("Documents root")
                             description: qsTr("Default location for user documents.")
                             path: workspace.settings.documentsRoot
-                            emptyHint: qsTr("Default: Documents/PixelStudio")
+                            emptyHint: qsTr("Default: %1").arg(workspace.settings.defaultDocumentsRootHint)
                             pickTarget: 0
                             fallbackUrl: workspace.settings.documentsUrl
                             onClearRequested: workspace.settings.setDocumentsRoot("")
@@ -515,8 +515,8 @@ Item {
                             StudioButton {
                                 Layout.fillWidth: true
                                 studio: root.studio
-                                text: qsTr("Open app data folder")
-                                onClicked: workspace.project.openAppDataFolder()
+                                text: qsTr("Open application data folder")
+                                onClicked: workspace.project.openApplicationDataFolder()
                             }
                             StudioButton {
                                 Layout.fillWidth: true

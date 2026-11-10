@@ -305,7 +305,7 @@ void ProjectController::openUserDocumentsFolder()
     QDesktopServices::openUrl(QUrl::fromLocalFile(AppPaths::userDocumentsRoot()));
 }
 
-void ProjectController::openAppDataFolder()
+void ProjectController::openApplicationDataFolder()
 {
     QDesktopServices::openUrl(QUrl::fromLocalFile(AppPaths::dataRoot()));
 }

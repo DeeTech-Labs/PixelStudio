@@ -1,0 +1,62 @@
+name: Setup macOS Qt build environment
+description: Qt 6.8.2 desktop kit for PixelStudio macOS CI
+
+inputs:
+  qt-version:
+    description: Qt version (aqtinstall)
+    required: false
+    default: "6.8.2"
+  modules:
+    description: Extra aqt modules (space-separated); qt5compat + qtshadertools for QML deploy
+    required: false
+    default: "qt5compat qtshadertools"
+
+runs:
+  using: composite
+  steps:
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{ inputs.qt-version }}
+        host: mac
+        target: desktop
+        arch: clang_64
+        cache: true
+        cache-key-prefix: pixelstudio-qt-macos-${{ inputs.qt-version }}-${{ inputs.modules }}
+        modules: ${{ inputs.modules }}
+
+    - name: Verify Qt
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ -z "${QT_ROOT_DIR:-}" ]]; then
+          echo "QT_ROOT_DIR is not set" >&2
+          exit 1
+        fi
+        if [[ ! -x "$QT_ROOT_DIR/bin/qmake" ]]; then
+          echo "Qt not found under QT_ROOT_DIR=$QT_ROOT_DIR" >&2
+          exit 1
+        fi
+        ge="$QT_ROOT_DIR/qml/Qt5Compat/GraphicalEffects/qmldir"
+        if [[ ! -f "$ge" ]]; then
+          echo "Qt5Compat GraphicalEffects missing ($ge). Set action input modules=qt5compat." >&2
+          exit 1
+        fi
+        shader_tools="$QT_ROOT_DIR/lib/QtShaderTools.framework"
+        if [[ ! -d "$shader_tools" ]]; then
+          echo "QtShaderTools.framework missing ($shader_tools). Add qtshadertools to action modules." >&2
+          exit 1
+        fi
+        qt_core="$QT_ROOT_DIR/lib/QtCore.framework/Versions/A/QtCore"
+        if [[ ! -f "$qt_core" ]]; then
+          echo "QtCore binary missing ($qt_core)" >&2
+          exit 1
+        fi
+        qt_lipo="$(lipo -info "$qt_core")"
+        echo "$qt_lipo"
+        if [[ "$qt_lipo" != *"arm64"* ]] || [[ "$qt_lipo" != *"x86_64"* ]]; then
+          echo "Qt kit must be universal (arm64 + x86_64). Got: $qt_lipo" >&2
+          exit 1
+        fi
+        cmake --version
+        "$QT_ROOT_DIR/bin/qmake" -query QT_VERSION

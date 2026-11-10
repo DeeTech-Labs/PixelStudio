@@ -210,3 +210,7 @@ PixelStudio развивается благодаря всем, кто сооб�
 **[MIT License](LICENSE)** · [NOTICE.txt](NOTICE.txt)
 
 *Сделано на Qt · Windows x64*
+
+## macOS
+
+Ветка сборки поддерживает universal-приложение для macOS 12+ (arm64 и x86_64). Инструкции сборки и создания DMG: [docs/building.md](docs/building.md#macos).

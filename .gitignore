@@ -82,6 +82,8 @@ CMakeLists.txt.user*
 .uic/
 /build*/
 /installer/staging/
+/installer/staging-windows/
+/installer/staging-macos/
 /installer/generated/
 /installer/output/
 .cursor/

@@ -8,11 +8,16 @@ namespace AppPaths {
 inline constexpr const char *kOrganization = "DeeTech";
 inline constexpr const char *kApplication = "PixelStudio";
 
-// %AppData%/DeeTech/PixelStudio — settings, session, derived cache (no user projects).
+// Application data (QStandardPaths::AppDataLocation): settings, session, cache, logs.
 QString dataRoot();
 
-// Documents/PixelStudio — projects, exports, watch folders, referenced assets.
+// User documents tree: projects, exports, watch folders, referenced assets.
 QString userDocumentsRoot();
+
+// Human-readable default paths for UI hints (platform-aware, ~ for home).
+QString formatDisplayPath(const QString &absolutePath);
+QString defaultDocumentsRootHint();
+QString defaultApplicationDataHint();
 
 QString appSettingsFile();
 QString sessionSettingsFile();
@@ -21,7 +26,7 @@ QString projectsDir();
 QString exportsDir();
 QString watchDir();
 
-// User-editable translation bundles (%AppData%/DeeTech/PixelStudio/translations).
+// User-editable translation bundles under dataRoot()/translations.
 QString userTranslationsDir();
 
 // Application logs and crash dumps under dataRoot()/logs.

@@ -178,6 +178,16 @@ QUrl AppSettings::watchUrl() const
     return QUrl::fromLocalFile(AppPaths::watchDir());
 }
 
+QString AppSettings::defaultDocumentsRootHint() const
+{
+    return AppPaths::defaultDocumentsRootHint();
+}
+
+QString AppSettings::defaultApplicationDataHint() const
+{
+    return AppPaths::defaultApplicationDataHint();
+}
+
 void AppSettings::applyStoragePathChange()
 {
     AppPaths::ensureStorageDirs();

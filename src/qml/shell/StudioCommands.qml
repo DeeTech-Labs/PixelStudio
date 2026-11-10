@@ -84,7 +84,7 @@ QtObject {
             { label: "Preferences…", command: "preferences", shortcut: "Ctrl+," },
             { separator: true },
             { label: "Reset UI defaults", command: "resetUi" },
-            { label: "Open settings folder", command: "openSettingsFolder" },
+            { label: "Open application data folder", command: "openSettingsFolder" },
             { label: "Import settings backup…", command: "importSettings" },
             { label: "Export settings backup…", command: "exportSettings" },
             { label: "Reset session", command: "resetSession" },

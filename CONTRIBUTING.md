@@ -89,3 +89,7 @@
 ---
 
 [← README](README.md) · [Сборка](docs/building.md) · [Версионирование](docs/versioning.md)
+
+## Проверка macOS
+
+Для изменений упаковки соберите universal-приложение и проверьте обе архитектуры. Команды: [docs/building.md](docs/building.md#macos).

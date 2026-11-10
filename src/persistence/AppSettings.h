@@ -28,6 +28,8 @@ class AppSettings : public QObject
     Q_PROPERTY(QUrl projectsUrl READ projectsUrl NOTIFY storagePathsChanged)
     Q_PROPERTY(QUrl exportsUrl READ exportsUrl NOTIFY storagePathsChanged)
     Q_PROPERTY(QUrl watchUrl READ watchUrl NOTIFY storagePathsChanged)
+    Q_PROPERTY(QString defaultDocumentsRootHint READ defaultDocumentsRootHint CONSTANT)
+    Q_PROPERTY(QString defaultApplicationDataHint READ defaultApplicationDataHint CONSTANT)
     Q_PROPERTY(CodeSyntaxTheme *codeSyntax READ codeSyntax CONSTANT)
 
 public:
@@ -52,6 +54,8 @@ public:
     QUrl projectsUrl() const;
     QUrl exportsUrl() const;
     QUrl watchUrl() const;
+    QString defaultDocumentsRootHint() const;
+    QString defaultApplicationDataHint() const;
 
     Q_INVOKABLE QVariantList availableLanguages() const;
     Q_INVOKABLE void resetUiDefaults();
