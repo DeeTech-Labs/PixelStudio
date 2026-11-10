@@ -236,8 +236,8 @@ void CrashHandler::install()
     sigemptyset(&action.sa_mask);
     action.sa_flags = SA_SIGINFO;
 
-    const int signals[] = {SIGSEGV, SIGABRT, SIGBUS, SIGILL, SIGFPE};
-    for (int signum : signals) {
+    const int fatalSignals[] = {SIGSEGV, SIGABRT, SIGBUS, SIGILL, SIGFPE};
+    for (int signum : fatalSignals) {
         if (sigaction(signum, &action, &g_previousHandlers[signum]) != 0)
             continue;
     }
@@ -257,8 +257,8 @@ void CrashHandler::uninstall()
     if (!g_installed)
         return;
 
-    const int signals[] = {SIGSEGV, SIGABRT, SIGBUS, SIGILL, SIGFPE};
-    for (int signum : signals)
+    const int fatalSignals[] = {SIGSEGV, SIGABRT, SIGBUS, SIGILL, SIGFPE};
+    for (int signum : fatalSignals)
         sigaction(signum, &g_previousHandlers[signum], nullptr);
     g_installed = false;
 #endif
