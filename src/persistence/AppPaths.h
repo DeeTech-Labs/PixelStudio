@@ -29,10 +29,10 @@ QString watchDir();
 // User-editable translation bundles under dataRoot()/translations.
 QString userTranslationsDir();
 
-// Logs and crash reports under dataRoot()/logs.
+// Application logs and crash dumps under dataRoot()/logs.
 QString logsDir();
 
-// Derived/runtime data under dataRoot()/cache (regenerable).
+// Derived/runtime data under dataRoot()/cache (regenerable, not authoritative).
 QString cacheDir();
 QString tabCacheDir();
 QString recentThumbnailsDir();

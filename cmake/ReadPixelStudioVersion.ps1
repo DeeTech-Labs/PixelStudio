@@ -1,6 +1,24 @@
 # Parses cmake/PixelStudioVersion.cmake — single reader for PowerShell tooling.
 Set-StrictMode -Version Latest
 
+function Test-SemVerPrerelease {
+    param(
+        [Parameter(Mandatory)][string]$Prerelease
+    )
+
+    foreach ($id in $Prerelease.Split('.')) {
+        if ($id -eq '') {
+            throw "Invalid PS_VERSION_PRERELEASE '$Prerelease': empty identifier."
+        }
+        if ($id -match '[^0-9A-Za-z-]') {
+            throw "Invalid PS_VERSION_PRERELEASE '$Prerelease': identifier '$id' must contain only [0-9A-Za-z-]."
+        }
+        if ($id -match '^\d+$' -and $id -match '^0\d') {
+            throw "Invalid PS_VERSION_PRERELEASE '$Prerelease': numeric identifier '$id' must not have leading zeros."
+        }
+    }
+}
+
 function Read-PixelStudioVersion {
     param(
         [string]$RepoRoot = ""
@@ -22,20 +40,24 @@ function Read-PixelStudioVersion {
     $minor = [int]$Matches[1]
     if ($t -notmatch 'set\(PS_VERSION_PATCH\s+(\d+)\)') { throw "PS_VERSION_PATCH not found in $cmake" }
     $patch = [int]$Matches[1]
-    if ($t -notmatch 'set\(PS_VERSION_FIX\s+"([^"]*)"\)') { throw "PS_VERSION_FIX not found in $cmake" }
-    $fix = $Matches[1]
+    if ($t -notmatch 'set\(PS_VERSION_PRERELEASE\s+"([^"]*)"\)') { throw "PS_VERSION_PRERELEASE not found in $cmake" }
+    $prerelease = $Matches[1]
 
-    $display = if ($fix) { "$major.$minor.$patch$fix" } else { "$major.$minor.$patch" }
+    if ($prerelease) {
+        Test-SemVerPrerelease -Prerelease $prerelease
+    }
+
+    $display = if ($prerelease) { "$major.$minor.$patch-$prerelease" } else { "$major.$minor.$patch" }
     $info = "$major.$minor.$patch.0"
 
     return [PSCustomObject]@{
-        Major   = $major
-        Minor   = $minor
-        Patch   = $patch
-        Fix     = $fix
-        Display = $display
-        Info    = $info
-        Tag     = "v$display"
+        Major      = $major
+        Minor      = $minor
+        Patch      = $patch
+        Prerelease = $prerelease
+        Display    = $display
+        Info       = $info
+        Tag        = "v$display"
     }
 }
 
@@ -66,6 +88,10 @@ function Test-PixelStudioReleaseTag {
         [string]$RepoRoot = ""
     )
 
+    if ($Tag -notmatch '^v\d+\.\d+\.\d+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$') {
+        throw "Invalid SemVer tag '$Tag' (expected vX.Y.Z or vX.Y.Z-prerelease, e.g. v1.2.3 or v1.2.3-rc.1)."
+    }
+
     $ver = Read-PixelStudioVersion -RepoRoot $RepoRoot
     if ($Tag -ne $ver.Tag) {
         throw "Git tag '$Tag' does not match cmake version '$($ver.Tag)' (cmake/PixelStudioVersion.cmake)."
@@ -76,5 +102,5 @@ function Test-PixelStudioReleaseTag {
 # Прямой запуск: .\cmake\ReadPixelStudioVersion.ps1
 # Dot-source (без вывода): . .\cmake\ReadPixelStudioVersion.ps1
 if ($MyInvocation.InvocationName -ne '.') {
-    Read-PixelStudioVersion | Format-List Display, Tag, Info, Major, Minor, Patch, Fix
+    Read-PixelStudioVersion | Format-List Display, Tag, Info, Major, Minor, Patch, Prerelease
 }

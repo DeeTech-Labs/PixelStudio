@@ -1,18 +1,33 @@
 # Сборка PixelStudio
 
-## Windows
+[← README](../README.md) · [Участие](../CONTRIBUTING.md)
 
-### Требования
+> **Платформа:** Windows x64 &nbsp;·&nbsp; **Qt:** 6.8.x (MSVC 2022) &nbsp;·&nbsp; **Сборщик:** CMake + Ninja
 
-1. **Visual Studio 2022** — рабочая нагрузка «Разработка классических приложений на C++», MSVC v143 x64.
-2. **Qt 6.8.2** (или совместимая 6.8.x) для `msvc2022_64`:
-   - Qt Quick
-   - Qt Quick Controls 2
-   - Qt Svg
-3. **CMake** 3.16+ и **Ninja** в `PATH`.
-4. По желанию: **Inno Setup 6** для установщика Windows.
+## Содержание
 
-### Конфигурация и компиляция
+- [Требования](#требования)
+- [1. Конфигурация и компиляция](#1-конфигурация-и-компиляция)
+- [2. Запуск без установки](#2-запуск-без-установки)
+- [3. Развёртывание runtime](#3-развёртывание-runtime)
+- [4. Установщик Windows](#4-установщик-windows)
+- [CI](#ci)
+- [Устранение неполадок](#устранение-неполадок)
+
+## Требования
+
+| Компонент | Версия / примечание |
+|-----------|---------------------|
+| Visual Studio 2022 | Рабочая нагрузка «Разработка классических приложений на C++», MSVC v143 x64 |
+| Qt | 6.8.2 или совместимая 6.8.x, kit `msvc2022_64` |
+| Модули Qt | Quick, Quick Controls 2, Svg |
+| CMake | 3.16+ |
+| Ninja | В `PATH` |
+| Inno Setup 6 | Опционально — для сборки установщика |
+
+Во всех примерах ниже `$qt` — корень Qt kit (каталог с `bin\qmake.exe`), например `C:\Qt6\6.8.2\msvc2022_64`.
+
+## 1. Конфигурация и компиляция
 
 Из корня репозитория в PowerShell:
 
@@ -26,15 +41,13 @@ cmake -S . -B build\Release -G Ninja `
 cmake --build build\Release
 ```
 
-Исполняемый файл: `build\Release\PixelStudio.exe`.
+**Результат:** `build\Release\PixelStudio.exe`
 
-Если CMake не находит Qt, проверьте, что `CMAKE_PREFIX_PATH` указывает на корень kit (каталог с `bin\qmake.exe`).
+Если CMake не находит Qt — проверьте `CMAKE_PREFIX_PATH`.
 
-### Запуск без установки
+## 2. Запуск без установки
 
 После сборки DLL и QML-плагины не копируются автоматически. В Qt Creator / Visual Studio используйте окружение kit.
-
-Запуск из PowerShell:
 
 ```powershell
 $qt = "C:\Qt6\6.8.2\msvc2022_64"
@@ -43,7 +56,9 @@ $env:PATH = "$qt\bin;$env:PATH"
 & ".\build\Release\PixelStudio.exe"
 ```
 
-### Развёртывание runtime (для распространения)
+## 3. Развёртывание runtime
+
+Для распространения собранного `.exe` без установщика:
 
 ```powershell
 $qt = "C:\Qt6\6.8.2\msvc2022_64"
@@ -55,9 +70,9 @@ $qml = ".\src\qml"
 
 Команда заполнит `build\Release` нужными DLL и QML-зависимостями.
 
-### Полный пайплайн установщика
+## 4. Установщик Windows
 
-Скрипт при необходимости конфигурирует и собирает проект, запускает `windeployqt`, формирует staging (без артефактов сборки и лишних runtime-файлов), затем вызывает Inno Setup:
+Скрипт конфигурирует и собирает проект, запускает `windeployqt`, формирует staging и вызывает Inno Setup:
 
 ```powershell
 .\installer\windows-build-installer.ps1 -QtDir "C:\Qt6\6.8.2\msvc2022_64"
@@ -70,11 +85,33 @@ $qml = ".\src\qml"
 | `-IsccPath` | авто | Путь к `ISCC.exe` |
 | `-SkipBuild` | — | Только deploy / stage / installer |
 | `-SkipDeploy` | — | Пропустить `windeployqt` |
-| `-SkipPrune` | — | Не удалять лишние runtime-файлы (только артефакты сборки) |
+| `-SkipPrune` | — | Не удалять лишние runtime-файлы |
 
-Результат: `installer\output\PixelStudio-Setup-<версия>.exe`.
+**Результат:** `installer\output\PixelStudio-Setup-<версия>.exe`
 
-Версия: [`cmake/PixelStudioVersion.cmake`](../cmake/PixelStudioVersion.cmake).
+Версия задаётся в [`cmake/PixelStudioVersion.cmake`](../cmake/PixelStudioVersion.cmake). Правила SemVer и публикации релиза — [docs/versioning.md](versioning.md).
+
+## CI
+
+Push и pull request в `main` проверяются workflow [build.yml](../.github/workflows/build.yml): Release-сборка и артефакт `PixelStudio.exe`.
+
+Окружение: [setup-windows-qt](../.github/actions/setup-windows-qt) — Qt 6.8.2, модули **qt5compat** и **qtshadertools**.
+
+## Устранение неполадок
+
+| Проблема | Решение |
+|----------|---------|
+| `Could not find Qt6` | `-DCMAKE_PREFIX_PATH` → корень MSVC kit |
+| Ninja / компилятор не найден | Запуск из «x64 Native Tools» или Developer PowerShell |
+| `windeployqt` не подхватывает QML | `--qmldir` → `src\qml` |
+| `Qt6ShaderTools.dll` not found | Установить модуль **qtshadertools** |
+| `qml/Qt5Compat/…` not found | Установить модуль **qt5compat** |
+| Не стартует после установки | Проверить `installer\staging-windows\` или `Program Files\PixelStudio\`; рядом с exe — `qml\Qt5Compat\GraphicalEffects`; попробовать `-SkipPrune` |
+| SmartScreen на установщике | Неподписанный `.exe` — ожидаемо; для продакшена — Authenticode |
+
+---
+
+[← README](../README.md) · [Участие](../CONTRIBUTING.md)
 
 ## macOS
 
@@ -152,30 +189,3 @@ installer/macos-make-dmg.sh
 ```bash
 xattr -cr /Applications/PixelStudio.app
 ```
-
-## CI
-
-| Workflow | Триггер | Результат |
-|----------|---------|-----------|
-| [`.github/workflows/build.yml`](../.github/workflows/build.yml) | push/PR → `main` | `PixelStudio.exe` + `PixelStudio.app` (artifacts) |
-| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*.*.*` или вручную | Windows installer + macOS DMG → GitHub Release |
-| [`.github/workflows/labels.yml`](../.github/workflows/labels.yml) | изменение `.github/labels.yml` | Синхронизация меток |
-
-Окружение Windows: [`.github/actions/setup-windows-qt`](../.github/actions/setup-windows-qt). macOS: [`.github/actions/setup-macos-qt`](../.github/actions/setup-macos-qt). Модули **qt5compat** и **qtshadertools** нужны на обеих платформах.
-
-## Устранение неполадок
-
-| Проблема | Что сделать |
-|----------|-------------|
-| `Could not find Qt6` | Указать `-DCMAKE_PREFIX_PATH` на корень MSVC kit |
-| Ninja / компилятор не найден | «x64 Native Tools» или Developer PowerShell |
-| `windeployqt` не подхватывает QML | `--qmldir` → `src\qml` |
-| `windeployqt` / `Qt6ShaderTools.dll` not found | В CI установить модуль **qtshadertools** (см. setup-windows-qt) |
-| `windeployqt` / `qml/Qt5Compat/…` not found | В CI/local Qt должен быть модуль **qt5compat** |
-| Приложение не стартует после установки | Проверить `installer\staging-windows\PixelStudio.exe`; при необходимости `-SkipPrune` |
-| SmartScreen при запуске установщика | Неподписанный `.exe` — нормально; для продакшена нужна подпись Authenticode (сертификат) |
-| Приложение не стартует после установки | Запуск из `Program Files\PixelStudio`, проверить наличие `qml\Qt5Compat\GraphicalEffects` рядом с exe |
-| macOS: «повреждено» / Gatekeeper | Unsigned build — `xattr -cr PixelStudio.app` или Системные настройки → Конфиденциальность |
-| macOS: `PixelStudio.icns` missing | Запустить `installer/macos-make-icns.sh` (требует macOS) |
-| macOS: `macdeployqt` / Qt5Compat | Установить модули **qt5compat** и **qtshadertools** в Qt kit |
-| macOS: universal / `lipo` failed | Qt kit `clang_64` должен быть universal; пересоберите с `-DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"` |

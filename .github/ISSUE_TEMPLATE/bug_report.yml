@@ -1,5 +1,5 @@
-name: "Сообщить об ошибке"
-description: Неверное поведение, сбой или регрессия
+name: "🐛 Баг"
+description: Что-то сломалось, упало или работает не так, как ожидали
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -7,14 +7,17 @@ body:
     attributes:
       value: |
         Опишите проблему максимально конкретно: версия, шаги, ожидаемый и фактический результат.
-        Скриншоты и пример изображения (без персональных данных) сильно ускоряют разбор.
+
+        **Баг с картинкой?** Приложите PNG — разберём быстрее.
+
+        Логи: **Настройки → Данные → Открыть папку логов** (приложите последний файл, если есть).
 
   - type: input
     id: version
     attributes:
       label: Версия PixelStudio
       description: Из «О программе», установщика или тега GitHub
-      placeholder: "из «О программе» или cmake/PixelStudioVersion.cmake"
+      placeholder: "0.2.1 или 0.3.0-beta"
     validations:
       required: true
 
@@ -28,6 +31,51 @@ body:
         - Другое
     validations:
       required: true
+
+  - type: dropdown
+    id: display_type
+    attributes:
+      label: Тип дисплея
+      options:
+        - OLED (монохром)
+        - OLED (цветной)
+        - TFT / LCD (RGB)
+        - E-paper
+        - LED матрица
+        - Другое
+        - Не применимо
+    validations:
+      required: true
+
+  - type: input
+    id: controller
+    attributes:
+      label: Контроллер / драйвер
+      description: SSD1306, ILI9341, ST7789… — или «не знаю»
+      placeholder: "SSD1306"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: export_format
+    attributes:
+      label: Формат экспорта
+      options:
+        - C/C++ header (.h)
+        - Бинарный (.bin)
+        - Несколько форматов
+        - Не применимо
+    validations:
+      required: true
+
+  - type: input
+    id: display_preset
+    attributes:
+      label: Пресет / профиль в PixelStudio
+      description: Имя пресета из инспектора, если использовали
+      placeholder: "Icon, Splash, пользовательский…"
+    validations:
+      required: false
 
   - type: textarea
     id: steps
@@ -60,8 +108,7 @@ body:
       label: Окружение
       placeholder: |
         - Windows 10/11 (сборка …)
-        - Профиль дисплея / пресет (Icon, Splash, …)
-        - Размер и формат изображения
+        - Размер и формат исходного изображения
     validations:
       required: true
 

@@ -10,9 +10,17 @@
   color: "d876e3"
   description: "Вопрос по использованию"
 
-- name: build
-  color: "fbca04"
-  description: "Сборка, CI/CD, установщик"
+- name: community
+  color: "1d76db"
+  description: "Вклад сообщества: пресеты, переводы, примеры"
+
+- name: translation
+  color: "5319e7"
+  description: "Локализация и переводы"
+
+- name: roadmap
+  color: "0e8a16"
+  description: "Запланировано в roadmap"
 
 - name: documentation
   color: "0075ca"
@@ -33,3 +41,11 @@
 - name: "good first issue"
   color: "7057ff"
   description: "Подходит для первого вклада"
+
+- name: security
+  color: "b60205"
+  description: "Безопасность (только для внутренней разметки)"
+
+- name: dependencies
+  color: "0366d6"
+  description: "Обновления зависимостей (Dependabot)"

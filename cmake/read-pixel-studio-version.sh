@@ -14,7 +14,7 @@ read_pixel_studio_version() {
         return 1
     fi
 
-    local content major minor patch fix display info tag
+    local content major minor patch prerelease display info tag
     content="$(<"$cmake_file")"
 
     if [[ ! "$content" =~ set\(PS_VERSION_MAJOR[[:space:]]+([0-9]+)\) ]]; then
@@ -35,14 +35,27 @@ read_pixel_studio_version() {
     fi
     patch="${BASH_REMATCH[1]}"
 
-    if [[ ! "$content" =~ set\(PS_VERSION_FIX[[:space:]]+\"([^\"]*)\"\) ]]; then
-        echo "PS_VERSION_FIX not found in $cmake_file" >&2
+    if [[ ! "$content" =~ set\(PS_VERSION_PRERELEASE[[:space:]]+\"([^\"]*)\"\) ]]; then
+        echo "PS_VERSION_PRERELEASE not found in $cmake_file" >&2
         return 1
     fi
-    fix="${BASH_REMATCH[1]}"
+    prerelease="${BASH_REMATCH[1]}"
 
-    if [[ -n "$fix" ]]; then
-        display="${major}.${minor}.${patch}${fix}"
+    if [[ -n "$prerelease" ]]; then
+        if [[ ! "$prerelease" =~ ^[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*$ ]]; then
+            echo "Invalid PS_VERSION_PRERELEASE: $prerelease" >&2
+            return 1
+        fi
+        local identifier
+        local identifiers
+        IFS='.' read -r -a identifiers <<< "$prerelease"
+        for identifier in "${identifiers[@]}"; do
+            if [[ "$identifier" =~ ^0[0-9]+$ ]]; then
+                echo "Numeric prerelease identifier has a leading zero: $identifier" >&2
+                return 1
+            fi
+        done
+        display="${major}.${minor}.${patch}-${prerelease}"
     else
         display="${major}.${minor}.${patch}"
     fi
@@ -52,7 +65,7 @@ read_pixel_studio_version() {
     PS_VERSION_MAJOR="$major"
     PS_VERSION_MINOR="$minor"
     PS_VERSION_PATCH="$patch"
-    PS_VERSION_FIX="$fix"
+    PS_VERSION_PRERELEASE="$prerelease"
     PS_VERSION_DISPLAY="$display"
     PS_VERSION_INFO="$info"
     PS_VERSION_TAG="$tag"

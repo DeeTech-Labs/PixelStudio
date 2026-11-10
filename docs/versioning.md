@@ -1,45 +1,77 @@
 # Версионирование
 
-## Формат
+[← README](../README.md)
 
-**`Major.Minor.Patch`** или **`Major.Minor.Patch` + fix**, например:
+PixelStudio следует [Semantic Versioning 2.0.0](https://semver.org/lang/ru/): `MAJOR.MINOR.PATCH[-prerelease]`.
 
-| Отображение | CMake (`PixelStudioVersion.cmake`) |
-|-------------|-----------------------------------|
-| `0.1.0` | `MAJOR=0`, `MINOR=1`, `PATCH=0`, `FIX=""` |
-| `0.1.0b` | `MAJOR=0`, `MINOR=1`, `PATCH=0`, `FIX="b"` |
-| `1.2.3b` | `MAJOR=1`, `MINOR=2`, `PATCH=3`, `FIX="b"` |
+## Единый источник
 
-- **Major** — `PS_VERSION_MAJOR`
-- **Minor** — `PS_VERSION_MINOR`
-- **Patch** — `PS_VERSION_PATCH`
-- **fix** — `PS_VERSION_FIX` (одна латинская буква/символ в cmake, без точки перед ней)
+Версия задаётся в одном файле:
 
-Единый источник правды: [`cmake/PixelStudioVersion.cmake`](../cmake/PixelStudioVersion.cmake).  
-Теги Git и установщик: `v0.1.0`, `v1.2.3b`.
+[`cmake/PixelStudioVersion.cmake`](../cmake/PixelStudioVersion.cmake)
 
-PowerShell: `.\cmake\ReadPixelStudioVersion.ps1`
+```cmake
+set(PS_VERSION_MAJOR 0)
+set(PS_VERSION_MINOR 2)
+set(PS_VERSION_PATCH 1)
+set(PS_VERSION_PRERELEASE "")   # пусто = стабильный релиз
+```
 
-## Изменение версии
+Отсюда автоматически берутся:
 
-Перед релизом обновите [`cmake/PixelStudioVersion.cmake`](../cmake/PixelStudioVersion.cmake) вручную:
+- строка в «О программе» и заголовке окна;
+- Git-тег релиза (`v0.2.1`, `v0.3.0-rc.1`, …);
+- имя установщика `PixelStudio-Setup-<версия>.exe`;
+- проверка CI при публикации release.
 
-| Тип релиза | Semver | CMake |
-|------------|--------|--------|
-| Patch (по умолчанию) | +0.0.1 | `PS_VERSION_PATCH++`, `FIX=""` |
-| Minor | +0.1.0 | `PS_VERSION_MINOR++`, `PATCH=0`, `FIX=""` |
-| Major | +1.0.0 | `PS_VERSION_MAJOR++`, `MINOR=0`, `PATCH=0`, `FIX=""` |
-| Только суффикс fix | `1.2.3` → `1.2.3b` | только `PS_VERSION_FIX` (например `"b"`) |
+Проверить текущую версию локально:
 
-### Только fix (`1.2.3` → `1.2.3b`)
+```powershell
+.\cmake\ReadPixelStudioVersion.ps1
+```
 
-1. В cmake: выставить `PS_VERSION_FIX "b"` (цифры не трогать)
-2. `CHANGELOG.md` → `[Unreleased]`
-3. Тег и релиз: **`v1.2.3b`**
-4. Push тега → workflow [Release](../.github/workflows/release.yml)
+## Когда увеличивать номер
+
+| Изменение | Версия | Пример |
+|-----------|--------|--------|
+| Обратно несовместимые изменения публичного поведения | **MAJOR** | `0.2.1` → `1.0.0` |
+| Новая функциональность без поломки совместимости | **MINOR** | `0.2.1` → `0.3.0` |
+| Исправления багов | **PATCH** | `0.2.1` → `0.2.2` |
+
+Пока проект на **0.y.z**, публичный API считается нестабильным ([SemVer §4](https://semver.org/lang/ru/#spec-semver)).
+
+## Предрелизные версии
+
+Нестабильные сборки обозначаются **через дефис**, не суффиксом к патчу:
+
+| Статус | `PS_VERSION_PRERELEASE` | Тег | Отображение |
+|--------|-------------------------|-----|-------------|
+| Стабильный | `""` | `v0.2.1` | `0.2.1` |
+| Бета | `"beta"` | `v0.3.0-beta` | `0.3.0-beta` |
+| Бета с номером | `"beta.2"` | `v0.3.0-beta.2` | `0.3.0-beta.2` |
+| Release candidate | `"rc.1"` | `v0.3.0-rc.1` | `0.3.0-rc.1` |
+
+Идентификаторы — только `[0-9A-Za-z-]`, разделённые точками; числовые идентификаторы без ведущих нулей.
 
 ## Публикация релиза
 
-1. Актуальный [`cmake/PixelStudioVersion.cmake`](../cmake/PixelStudioVersion.cmake)
-2. `git tag v1.2.3` → `git push origin v1.2.3`
-3. CI Release соберёт `PixelStudio-Setup-<version>.exe` (тег должен совпадать с cmake); заметки — `CHANGELOG.md` и автогенерация GitHub
+1. Обновите `cmake/PixelStudioVersion.cmake`.
+2. Перенесите записи из `[Unreleased]` в новую секцию [`CHANGELOG.md`](../CHANGELOG.md).
+3. Закоммитьте, создайте и запушьте тег **точно** как `PS_VERSION_TAG` (например `v0.2.2`):
+
+   ```powershell
+   git tag v0.2.2
+   git push origin v0.2.2
+   ```
+
+4. Workflow [release.yml](../.github/workflows/release.yml) соберёт установщик и опубликует GitHub Release.
+
+Тег должен совпадать с cmake — иначе CI завершится с ошибкой.
+
+## Исторические теги
+
+Релиз `v0.2.0b` (2026-06-09) опубликован до перехода на SemVer-предрелизы; в CHANGELOG он остаётся как `[0.2.0b]`. Новые предрелизы используют формат `-beta`, `-rc.1` и т.д.
+
+---
+
+[← README](../README.md) · [Сборка](building.md)
